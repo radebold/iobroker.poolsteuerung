@@ -3,7 +3,14 @@
     "name": "poolsteuerung",
     "version": "0.0.2",
     "title": "Poolsteuerung",
-    "desc": "Adapter zur Steuerung eines Salzwasserpools",
+    "titleLang": {
+      "en": "Poolsteuerung",
+      "de": "Poolsteuerung"
+    },
+    "desc": {
+      "en": "Saltwater pool control adapter",
+      "de": "Adapter zur Steuerung eines Salzwasserpools"
+    },
     "authors": [
       "Thomas Radebold"
     ],
@@ -20,14 +27,95 @@
     "adminUI": {
       "config": "json"
     },
+    "messagebox": true,
     "loglevel": "info",
     "type": "hardware"
   },
   "native": {
+    "adapterEnabled": true,
+    "debugMode": false,
+    "pollIntervalMin": 5,
+    "poolDiameterM": 4.6,
+    "poolWaterHeightM": 1.1,
+    "poolVolumeM3": 18.3,
+    "globalEnableStateId": "",
+    "phDoseEnableStateId": "0_userdata.0.Pool.PH.freigabe",
     "phStateId": "ph803w.0.N7EtmEWYCMVBROOHzkV9zT.ph.value_korr",
     "orpStateId": "ph803w.0.N7EtmEWYCMVBROOHzkV9zT.orp.value_korr",
+    "waterTempStateId": "",
+    "outsideTempStateId": "",
+    "pvPowerStateId": "",
+    "batterySocStateId": "",
+    "batteryFullStateId": "",
+    "gridPowerStateId": "",
     "phPumpSocketStateId": "sonoff.0.SonoffDosierpumpePool.POWER",
     "chlorinatorSocketStateId": "sonoff.0.SonoffEP2A.POWER",
-    "circulationPumpSocketStateId": "sonoff.0.SonoffSP18.POWER"
-  }
+    "circulationPumpSocketStateId": "sonoff.0.SonoffSP18.POWER",
+    "heatpumpTuyaStateId": "",
+    "phEnabled": true,
+    "phTarget": 7.2,
+    "phMinDelta": 0.0,
+    "phPumpFlowMlMin": 16.0,
+    "phMinusConcentrationPercent": 14.7,
+    "phMaxRuntimeSec": 300,
+    "phDosingPauseMin": 120,
+    "phOnlyWhenPumpRunning": true,
+    "phDoseTimes": "12:00,15:00",
+    "phGranulateFactorPercent": 100,
+    "phLiquidFactorPercent": 100,
+    "phAllowManualDose": true,
+    "chlorinatorEnabled": true,
+    "orpOn": 720,
+    "orpOff": 780,
+    "chlorinatorMinOnMin": 5,
+    "chlorinatorMinOffMin": 3,
+    "chlorinatorOnlyWhenPumpRunning": true,
+    "chlorinatorAutoEnabled": true,
+    "chlorinatorStopTime": "15:30",
+    "pumpEnabled": true,
+    "pumpStartTime": "11:00",
+    "pumpEndTime": "17:00",
+    "pumpRequiredForPh": true,
+    "pumpRequiredForChlorinator": true,
+    "pumpRequiredForHeatpump": true,
+    "heatpumpEnabled": false,
+    "heatpumpTargetTemp": 26.0,
+    "heatpumpMinWaterTemp": 18.0,
+    "heatpumpOnlyWithPvSurplus": true,
+    "heatpumpMinBatterySoc": 95,
+    "heatpumpRequiresBatteryFull": false,
+    "heatpumpOnlyWhenPumpRunning": true
+  },
+  "protectedNative": [],
+  "encryptedNative": [],
+  "objects": [],
+  "instanceObjects": [
+    {
+      "_id": "info.connection",
+      "type": "state",
+      "common": {
+        "name": "Connection",
+        "type": "boolean",
+        "role": "indicator.connected",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.overall.message",
+      "type": "state",
+      "common": {
+        "name": "Overall status message",
+        "type": "string",
+        "role": "text",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    }
+  ],
+  "version": "0.0.2"
 }

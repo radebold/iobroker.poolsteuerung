@@ -5,6 +5,19 @@
   "main": "main.js",
   "author": "Thomas Radebold",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/radebold/iobroker.poolsteuerung"
+  },
+  "keywords": [
+    "iobroker",
+    "pool",
+    "salzwasser",
+    "chlorinator",
+    "ph",
+    "orp",
+    "heatpump"
+  ],
   "dependencies": {
     "@iobroker/adapter-core": "^3.2.3"
   }
