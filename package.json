@@ -19,8 +19,5 @@
   ],
   "dependencies": {
     "@iobroker/adapter-core": "^3.2.3"
-  },
-  "scripts": {
-    "install": "node node_modules/iobroker.js-controller/iobroker.js install poolsteuerung"
   }
 }
