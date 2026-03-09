@@ -10,30 +10,10 @@ class Poolsteuerung extends utils.Adapter {
         });
 
         this.on('ready', this.onReady.bind(this));
-        this.on('stateChange', this.onStateChange.bind(this));
-        this.on('unload', this.onUnload.bind(this));
     }
 
     async onReady() {
         this.log.info('poolsteuerung adapter started');
-        await this.setStateAsync('info.connection', true, true);
-        await this.setStateAsync('status.overall.message', 'Adapter gestartet - Standardwerte aus vorhandenen Skripten geladen', true);
-    }
-
-    async onUnload(callback) {
-        try {
-            await this.setStateAsync('info.connection', false, true);
-            callback();
-        } catch (e) {
-            callback();
-        }
-    }
-
-    onStateChange(id, state) {
-        if (!state) return;
-        if (!state.ack) {
-            this.log.debug(`stateChange ${id}: ${state.val}`);
-        }
     }
 }
 
