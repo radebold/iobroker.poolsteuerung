@@ -1,0 +1,84 @@
+{
+  "common": {
+    "name": "poolpilot",
+    "version": "0.0.1",
+    "news": {
+      "0.0.1": {
+        "en": "Initial starter version",
+        "de": "Erste Starter-Version"
+      }
+    },
+    "titleLang": {
+      "en": "Pool Pilot",
+      "de": "Pool Pilot"
+    },
+    "desc": {
+      "en": "Saltwater pool automation adapter",
+      "de": "Adapter zur Automatisierung eines Salzwasserpools"
+    },
+    "authors": [
+      "Thomas Radebold"
+    ],
+    "keywords": [
+      "pool",
+      "ph",
+      "orp",
+      "chlorine",
+      "heating",
+      "pv"
+    ],
+    "license": "MIT",
+    "platform": "Javascript/Node.js",
+    "mode": "daemon",
+    "type": "climate-control",
+    "icon": "poolpilot.png",
+    "enabled": true,
+    "extIcon": "https://raw.githubusercontent.com/radebold/iobroker.poolpilot/main/admin/poolpilot.png",
+    "readme": "https://github.com/radebold/iobroker.poolpilot/blob/main/README.md",
+    "loglevel": "info",
+    "connectionType": "local",
+    "dataSource": "poll",
+    "adminUI": {
+      "config": "json"
+    },
+    "dependencies": [
+      {
+        "js-controller": ">=5.0.0"
+      }
+    ]
+  },
+  "native": {
+    "phSensorId": "ph803w.0.N7EtmEWYCMVBROOHzkV9zT.ph.value_korr",
+    "orpSensorId": "ph803w.0.N7EtmEWYCMVBROOHzkV9zT.orp.value_korr",
+    "waterTempSensorId": "",
+    "solarSurplusStateId": "",
+    "batteryFullStateId": "",
+    "dosingSocketId": "sonoff.0.SonoffDosierpumpePool.POWER",
+    "chlorinatorSocketId": "sonoff.0.SonoffChlorinator.POWER",
+    "circulationPumpSocketId": "sonoff.0.SonoffSP18.POWER",
+    "heatPumpSwitchId": "",
+    "poolDiameterM": 4.6,
+    "waterHeightM": 1.1,
+    "phTarget": 7.2,
+    "phMinDelta": 0.02,
+    "dosingMlPerMinute": 16,
+    "liquidFactorPercent": 50,
+    "granulateFactorPercent": 100,
+    "maxDosingSeconds": 300,
+    "autoDoseTimes": "12:00,15:00",
+    "orpOnMv": 720,
+    "orpOffMv": 780,
+    "orpMinOnMinutes": 5,
+    "orpMinOffMinutes": 3,
+    "pumpStartTime": "11:00",
+    "pumpStopTime": "17:00",
+    "chlorinatorStopTime": "15:30",
+    "heatTempTargetC": 27,
+    "heatTempHysteresisC": 0.5,
+    "requireSolarSurplus": true,
+    "requireBatteryFull": false,
+    "heatingEnabled": false
+  },
+  "objects": [],
+  "instanceObjects": []
+}

@@ -1,0 +1,60 @@
+{
+  "i18n": true,
+  "type": "tabs",
+  "items": {
+    "tab_general": {
+      "type": "panel",
+      "label": "General",
+      "items": {
+        "phSensorId": { "type": "text", "label": "pH sensor state ID", "newLine": true, "sm": 12 },
+        "orpSensorId": { "type": "text", "label": "ORP sensor state ID", "newLine": true, "sm": 12 },
+        "waterTempSensorId": { "type": "text", "label": "Water temperature state ID", "newLine": true, "sm": 12 },
+        "solarSurplusStateId": { "type": "text", "label": "Solar surplus state ID", "newLine": true, "sm": 12 },
+        "batteryFullStateId": { "type": "text", "label": "Battery full state ID", "newLine": true, "sm": 12 },
+        "dosingSocketId": { "type": "text", "label": "pH dosing socket state ID", "newLine": true, "sm": 12 },
+        "chlorinatorSocketId": { "type": "text", "label": "Chlorinator socket state ID", "newLine": true, "sm": 12 },
+        "circulationPumpSocketId": { "type": "text", "label": "Circulation pump socket state ID", "newLine": true, "sm": 12 },
+        "heatPumpSwitchId": { "type": "text", "label": "Heat pump switch state ID (Tuya)", "newLine": true, "sm": 12 }
+      }
+    },
+    "tab_pool": {
+      "type": "panel",
+      "label": "Pool",
+      "items": {
+        "poolDiameterM": { "type": "number", "label": "Pool diameter (m)", "min": 1, "max": 20, "step": 0.1, "newLine": true, "sm": 4 },
+        "waterHeightM": { "type": "number", "label": "Water height (m)", "min": 0.1, "max": 5, "step": 0.01, "sm": 4 },
+        "phTarget": { "type": "number", "label": "Target pH", "min": 6.5, "max": 8.5, "step": 0.01, "sm": 4 },
+        "phMinDelta": { "type": "number", "label": "Minimum delta pH", "min": 0, "max": 1, "step": 0.01, "newLine": true, "sm": 4 },
+        "dosingMlPerMinute": { "type": "number", "label": "Dosing pump flow (ml/min)", "min": 1, "max": 500, "step": 0.1, "sm": 4 },
+        "maxDosingSeconds": { "type": "number", "label": "Max dosing time (s)", "min": 1, "max": 3600, "step": 1, "sm": 4 },
+        "liquidFactorPercent": { "type": "number", "label": "Liquid factor (%)", "min": 0, "max": 300, "step": 1, "newLine": true, "sm": 4 },
+        "granulateFactorPercent": { "type": "number", "label": "Granulate factor (%)", "min": 0, "max": 300, "step": 1, "sm": 4 },
+        "autoDoseTimes": { "type": "text", "label": "Auto dose times (comma separated HH:MM)", "sm": 4 }
+      }
+    },
+    "tab_orp": {
+      "type": "panel",
+      "label": "ORP / Chlorinator",
+      "items": {
+        "orpOnMv": { "type": "number", "label": "ORP on threshold (mV)", "min": 0, "max": 1200, "step": 1, "newLine": true, "sm": 4 },
+        "orpOffMv": { "type": "number", "label": "ORP off threshold (mV)", "min": 0, "max": 1200, "step": 1, "sm": 4 },
+        "orpMinOnMinutes": { "type": "number", "label": "Minimum on time (min)", "min": 0, "max": 240, "step": 1, "sm": 4 },
+        "orpMinOffMinutes": { "type": "number", "label": "Minimum off time (min)", "min": 0, "max": 240, "step": 1, "newLine": true, "sm": 4 },
+        "pumpStartTime": { "type": "text", "label": "Pump start time HH:MM", "sm": 4 },
+        "pumpStopTime": { "type": "text", "label": "Pump stop time HH:MM", "sm": 4 },
+        "chlorinatorStopTime": { "type": "text", "label": "Chlorinator stop time HH:MM", "newLine": true, "sm": 4 }
+      }
+    },
+    "tab_heating": {
+      "type": "panel",
+      "label": "Heating",
+      "items": {
+        "heatingEnabled": { "type": "checkbox", "label": "Enable heat pump control", "newLine": true, "sm": 4 },
+        "heatTempTargetC": { "type": "number", "label": "Target water temperature (°C)", "min": 5, "max": 40, "step": 0.1, "sm": 4 },
+        "heatTempHysteresisC": { "type": "number", "label": "Temperature hysteresis (°C)", "min": 0.1, "max": 5, "step": 0.1, "sm": 4 },
+        "requireSolarSurplus": { "type": "checkbox", "label": "Require solar surplus", "newLine": true, "sm": 4 },
+        "requireBatteryFull": { "type": "checkbox", "label": "Require full house battery", "sm": 4 }
+      }
+    }
+  }
+}
