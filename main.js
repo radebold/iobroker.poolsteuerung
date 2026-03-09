@@ -3,7 +3,6 @@
 const utils = require('@iobroker/adapter-core');
 
 class Poolsteuerung extends utils.Adapter {
-
     constructor(options) {
         super({
             ...options,
@@ -18,6 +17,7 @@ class Poolsteuerung extends utils.Adapter {
     async onReady() {
         this.log.info('poolsteuerung adapter started');
         await this.setStateAsync('info.connection', true, true);
+        await this.setStateAsync('status.overall.message', 'Adapter gestartet - Admin-Konfiguration erweitert', true);
     }
 
     async onUnload(callback) {
@@ -38,7 +38,7 @@ class Poolsteuerung extends utils.Adapter {
 }
 
 if (require.main !== module) {
-    module.exports = (options) => new Poolsteuerung(options);
+    module.exports = options => new Poolsteuerung(options);
 } else {
     new Poolsteuerung();
 }

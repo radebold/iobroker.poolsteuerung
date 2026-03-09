@@ -12,9 +12,11 @@
   "keywords": [
     "iobroker",
     "pool",
+    "salzwasser",
     "chlorinator",
     "ph",
-    "saltwater"
+    "orp",
+    "heatpump"
   ],
   "dependencies": {
     "@iobroker/adapter-core": "^3.2.3"

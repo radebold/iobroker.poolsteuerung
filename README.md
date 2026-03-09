@@ -3,9 +3,15 @@
 
 Adapter zur Steuerung eines Salzwasserpools.
 
-## Funktionen
+## Aktueller Stand 0.0.1
 
-- pH-Minus Dosierpumpe
-- Chlorinatorsteuerung
-- Umwälzpumpe
-- Wärmepumpe (z.B. Tuya)
+Diese Version erweitert die Admin-Konfiguration mit den Reitern:
+
+- Allgemein
+- Sensoren
+- Aktoren
+- pH-Dosierung
+- Chlorinator
+- Pumpe & Wärmepumpe
+
+Die eigentliche Funktionslogik wird im nächsten Schritt in Module aufgeteilt.
