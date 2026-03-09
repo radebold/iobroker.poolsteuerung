@@ -1,15 +1,15 @@
 {
   "common": {
     "name": "poolsteuerung",
-    "version": "0.0.2",
+    "version": "0.0.1",
     "title": "PoolSteuerung",
     "titleLang": {
-      "de": "PoolSteuerung",
-      "en": "Pool control"
+      "en": "PoolSteuerung",
+      "de": "PoolSteuerung"
     },
     "desc": {
-      "de": "Adapter zur Steuerung eines Salzwasserpools",
-      "en": "Adapter for controlling a saltwater pool"
+      "en": "Adapter for saltwater pool control",
+      "de": "Adapter zur Steuerung eines Salzwasserpools"
     },
     "authors": [
       "Thomas Radebold"
@@ -22,9 +22,10 @@
     "keywords": [
       "pool",
       "salzwasser",
-      "ph",
       "chlorinator",
-      "wärmepumpe"
+      "ph",
+      "pumpe",
+      "w\u00e4rmepumpe"
     ],
     "readme": "https://github.com/radebold/ioBroker.PoolSteuerung/blob/main/README.md",
     "loglevel": "info",
@@ -40,14 +41,19 @@
     "enabled": true
   },
   "native": {
-    "phDoseEnabled": true,
+    "phEnabled": true,
     "chlorinatorEnabled": true,
     "pumpEnabled": true,
-    "heatpumpEnabled": true
+    "heatpumpEnabled": false,
+    "phTarget": 7.0,
+    "orpOn": 725,
+    "orpOff": 750,
+    "minWaterTempForHeating": 18,
+    "targetWaterTemp": 26
   },
   "protectedNative": [],
   "encryptedNative": [],
   "objects": [],
   "instanceObjects": [],
-  "version": "0.0.2"
+  "version": "0.0.1"
 }

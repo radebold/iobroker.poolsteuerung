@@ -1,28 +1,21 @@
 {
-  "i18n": true,
-  "type": "tabs",
+  "type": "panel",
   "items": {
-    "mainTab": {
-      "type": "panel",
-      "label": "Main settings",
-      "items": {
-        "phDoseEnabled": {
-          "type": "checkbox",
-          "label": "Enable pH dosing"
-        },
-        "chlorinatorEnabled": {
-          "type": "checkbox",
-          "label": "Enable chlorinator control"
-        },
-        "pumpEnabled": {
-          "type": "checkbox",
-          "label": "Enable circulation pump control"
-        },
-        "heatpumpEnabled": {
-          "type": "checkbox",
-          "label": "Enable heat pump control"
-        }
-      }
+    "phEnabled": {
+      "type": "checkbox",
+      "label": "pH Dosierung aktiv"
+    },
+    "chlorinatorEnabled": {
+      "type": "checkbox",
+      "label": "Chlorinator aktiv"
+    },
+    "pumpEnabled": {
+      "type": "checkbox",
+      "label": "Umw\u00e4lzpumpe aktiv"
+    },
+    "heatpumpEnabled": {
+      "type": "checkbox",
+      "label": "W\u00e4rmepumpe aktiv"
     }
   }
 }

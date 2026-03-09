@@ -1,48 +1,42 @@
-'use strict';
 
+'use strict';
 const utils = require('@iobroker/adapter-core');
 
 class Poolsteuerung extends utils.Adapter {
     constructor(options) {
-        super({ ...options, name: 'poolsteuerung' });
+        super({
+            ...options,
+            name: 'poolsteuerung'
+        });
+
         this.on('ready', this.onReady.bind(this));
-        this.on('unload', this.onUnload.bind(this));
         this.on('stateChange', this.onStateChange.bind(this));
+        this.on('unload', this.onUnload.bind(this));
     }
 
     async onReady() {
-        this.log.info('PoolSteuerung adapter started');
-
-        await this.setObjectNotExistsAsync('info.connection', {
-            type: 'state',
-            common: {
-                name: 'If adapter is connected',
-                type: 'boolean',
-                role: 'indicator.connected',
-                read: true,
-                write: false,
-                def: false
-            },
-            native: {}
-        });
-
-        await this.setStateAsync('info.connection', true, true);
-    }
-
-    onStateChange(id, state) {
-        if (!state || state.ack) {
-            return;
-        }
-        this.log.debug(`stateChange ${id} = ${JSON.stringify(state.val)}`);
+        this.log.info('Poolsteuerung adapter started');
+        await this.setState('info.connection', true, true);
     }
 
     onUnload(callback) {
-        this.setState('info.connection', false, true, () => callback());
+        try {
+            this.setState('info.connection', false, true);
+            callback();
+        } catch (e) {
+            callback();
+        }
+    }
+
+    onStateChange(id, state) {
+        if (state && !state.ack) {
+            this.log.debug(`State changed: ${id} = ${state.val}`);
+        }
     }
 }
 
 if (require.main !== module) {
-    module.exports = options => new Poolsteuerung(options);
+    module.exports = (options) => new Poolsteuerung(options);
 } else {
     new Poolsteuerung();
 }
