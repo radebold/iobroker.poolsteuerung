@@ -1,43 +1,48 @@
 
 'use strict';
-const utils = require('@iobroker/adapter-core');
+const utils=require('@iobroker/adapter-core');
+const Ph=require('./lib/ph');
+const Chlor=require('./lib/chlorinator');
+const Pump=require('./lib/pump');
 
-class Poolsteuerung extends utils.Adapter {
-    constructor(options) {
-        super({ ...options, name: 'poolsteuerung' });
-        this.on('ready', this.onReady.bind(this));
-        this.on('unload', this.onUnload.bind(this));
-    }
-
-    async onReady() {
-        this.log.info('poolsteuerung adapter started');
-        await this.setObjectNotExistsAsync('info.connection', {
-            type: 'state',
-            common: {
-                name: 'Connection',
-                type: 'boolean',
-                role: 'indicator.connected',
-                read: true,
-                write: false,
-                def: false
-            },
-            native: {}
-        });
-        await this.setStateAsync('info.connection', true, true);
-    }
-
-    async onUnload(callback) {
-        try {
-            await this.setStateAsync('info.connection', false, true);
-            callback();
-        } catch {
-            callback();
-        }
-    }
+class Poolsteuerung extends utils.Adapter{
+ constructor(options){
+  super({...options,name:'poolsteuerung'});
+  this.on('ready',this.onReady.bind(this));
+  this.on('unload',this.onUnload.bind(this));
+  this.on('stateChange',this.onStateChange.bind(this));
+  this.timer=null;
+  this.ph=new Ph(this); this.chlor=new Chlor(this); this.pump=new Pump(this);
+ }
+ async onReady(){
+  await this.mk('info.connection','boolean','indicator.connected',false,false);
+  await this.mk('status.ph.previewMl','number','value',0,false);
+  await this.mk('status.ph.previewRuntimeSec','number','value',0,false);
+  await this.mk('status.ph.lastAction','string','text','',false);
+  await this.mk('status.ph.lastDoseMl','number','value',0,false);
+  await this.mk('status.chlorinator.lastAction','string','text','',false);
+  await this.mk('status.pump.lastAction','string','text','',false);
+  await this.mk('control.manualDose','boolean','button',false,true);
+  await this.setStateAsync('info.connection',true,true);
+  this.subscribeStates('control.manualDose');
+  if(this.config.phStateId) this.subscribeForeignStates(this.config.phStateId);
+  if(this.config.orpStateId) this.subscribeForeignStates(this.config.orpStateId);
+  await this.ph.preview();
+  this.timer=setInterval(()=>this.loop(), Math.max(1,Number(this.config.pollIntervalMin)||1)*60000);
+  setTimeout(()=>this.loop(),2000);
+ }
+ async mk(id,type,role,def,write){
+  await this.setObjectNotExistsAsync(id,{type:'state',common:{name:id,type,role,read:true,write,def},native:{}});
+  if(!write) await this.setStateAsync(id,def,true);
+ }
+ async onStateChange(id,state){
+  if(!state) return;
+  if(id===`${this.namespace}.control.manualDose` && state.val===true && !state.ack){ await this.ph.dose('Manuell'); await this.setStateAsync('control.manualDose',false,true); }
+  if(id===this.config.phStateId) await this.ph.preview();
+ }
+ async loop(){ try{ await this.pump.tick(); await this.ph.preview(); await this.ph.tick(); await this.chlor.tick(); }catch(e){ this.log.error(e.message);} }
+ async unload(callback){ try{ if(this.timer) clearInterval(this.timer); await this.setStateAsync('info.connection',false,true); callback(); }catch{ callback(); } }
+ async num(id){ if(!id) return null; try{ const s=await this.getForeignStateAsync(id); const n=Number(s&&s.val); return isNaN(n)?null:n; }catch{return null;} }
+ async bool(id,fb){ if(!id) return fb; try{ const s=await this.getForeignStateAsync(id); return s?!!s.val:fb; }catch{return fb;} }
 }
-
-if (require.main !== module) {
-    module.exports = options => new Poolsteuerung(options);
-} else {
-    new Poolsteuerung();
-}
+if(require.main!==module){ module.exports=options=>new Poolsteuerung(options); } else { new Poolsteuerung(); }
