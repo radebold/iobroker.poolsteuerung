@@ -6,129 +6,225 @@
       "type": "panel",
       "label": "ALLGEMEIN",
       "items": {
-        "adapterEnabled": {
-          "type": "checkbox",
-          "label": "Adapter aktiv",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "adapterEnabled_info": {
-          "type": "staticText",
-          "text": "Schaltet die komplette Logik des Adapters global ein oder aus.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "debugMode": {
-          "type": "checkbox",
-          "label": "Debug-Modus",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "debugMode_info": {
-          "type": "staticText",
-          "text": "Aktiviert detaillierte Logmeldungen f\u00fcr Tests.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "pollIntervalMin": {
-          "type": "number",
-          "label": "Pr\u00fcfintervall (Minuten)",
+        "block_01_adapterEnabled": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
           "lg": 6,
-          "min": 1
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "adapterEnabled": {
+              "type": "checkbox",
+              "label": "Adapter aktiv",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "adapterEnabled_info": {
+              "type": "staticText",
+              "text": "Schaltet die komplette Logik des Adapters global ein oder aus.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "pollIntervalMin_info": {
-          "type": "staticText",
-          "text": "Zeitabstand in Minuten f\u00fcr die interne Steuerlogik.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "poolDiameterM": {
-          "type": "number",
-          "label": "Pooldurchmesser (m)",
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "step": 0.01
-        },
-        "poolDiameterM_info": {
-          "type": "staticText",
-          "text": "Innendurchmesser des Pools f\u00fcr Berechnungen.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "poolWaterHeightM": {
-          "type": "number",
-          "label": "Wasserh\u00f6he (m)",
+        "block_02_debugMode": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
           "lg": 6,
-          "step": 0.01
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "debugMode": {
+              "type": "checkbox",
+              "label": "Debug-Modus",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "debugMode_info": {
+              "type": "staticText",
+              "text": "Aktiviert detaillierte Logmeldungen f\u00fcr Tests.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "poolWaterHeightM_info": {
-          "type": "staticText",
-          "text": "Tats\u00e4chliche Wasserh\u00f6he im Pool.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "poolVolumeM3": {
-          "type": "number",
-          "label": "Poolvolumen (m\u00b3)",
+        "block_03_pollIntervalMin": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
           "lg": 6,
-          "step": 0.1
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "pollIntervalMin": {
+              "type": "number",
+              "label": "Pr\u00fcfintervall (Minuten)",
+              "sm": 12,
+              "md": 12,
+              "lg": 12,
+              "min": 1
+            },
+            "pollIntervalMin_info": {
+              "type": "staticText",
+              "text": "Zeitabstand in Minuten f\u00fcr die interne Steuerlogik.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "poolVolumeM3_info": {
-          "type": "staticText",
-          "text": "Optional fixes Poolvolumen f\u00fcr Dosierberechnung.",
-          "newLine": true,
+        "block_04_poolDiameterM": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "poolDiameterM": {
+              "type": "number",
+              "label": "Pooldurchmesser (m)",
+              "sm": 12,
+              "md": 12,
+              "lg": 12,
+              "step": 0.01
+            },
+            "poolDiameterM_info": {
+              "type": "staticText",
+              "text": "Innendurchmesser des Pools f\u00fcr Berechnungen.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "globalEnableStateId": {
-          "type": "text",
-          "label": "Allgemeine Freigabe State-ID",
+        "block_05_poolWaterHeightM": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "poolWaterHeightM": {
+              "type": "number",
+              "label": "Wasserh\u00f6he (m)",
+              "sm": 12,
+              "md": 12,
+              "lg": 12,
+              "step": 0.01
+            },
+            "poolWaterHeightM_info": {
+              "type": "staticText",
+              "text": "Tats\u00e4chliche Wasserh\u00f6he im Pool.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "globalEnableStateId_info": {
-          "type": "staticText",
-          "text": "Optionaler boolescher Datenpunkt, der den gesamten Adapter freigibt oder sperrt.",
-          "newLine": true,
+        "block_06_poolVolumeM3": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "poolVolumeM3": {
+              "type": "number",
+              "label": "Poolvolumen (m\u00b3)",
+              "sm": 12,
+              "md": 12,
+              "lg": 12,
+              "step": 0.1
+            },
+            "poolVolumeM3_info": {
+              "type": "staticText",
+              "text": "Optional fixes Poolvolumen f\u00fcr Dosierberechnung.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "phDoseEnableStateId": {
-          "type": "text",
-          "label": "Freigabe-State-ID pH-Dosierung",
+        "block_07_globalEnableStateId": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "globalEnableStateId": {
+              "type": "text",
+              "label": "Allgemeine Freigabe State-ID",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "globalEnableStateId_info": {
+              "type": "staticText",
+              "text": "Optionaler boolescher Datenpunkt, der den gesamten Adapter freigibt oder sperrt.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "phDoseEnableStateId_info": {
-          "type": "staticText",
-          "text": "Optionaler boolescher Datenpunkt, der nur die pH-Dosierung freigibt.",
-          "newLine": true,
+        "block_08_phDoseEnableStateId": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "phDoseEnableStateId": {
+              "type": "text",
+              "label": "Freigabe-State-ID pH-Dosierung",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "phDoseEnableStateId_info": {
+              "type": "staticText",
+              "text": "Optionaler boolescher Datenpunkt, der nur die pH-Dosierung freigibt.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         }
       }
     },
@@ -136,125 +232,221 @@
       "type": "panel",
       "label": "SENSOREN",
       "items": {
-        "phStateId": {
-          "type": "text",
-          "label": "State-ID pH",
+        "block_01_phStateId": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "phStateId": {
+              "type": "text",
+              "label": "State-ID pH",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "phStateId_info": {
+              "type": "staticText",
+              "text": "Datenpunkt mit aktuellem pH-Wert des Poolwassers.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "phStateId_info": {
-          "type": "staticText",
-          "text": "Datenpunkt mit aktuellem pH-Wert des Poolwassers.",
-          "newLine": true,
+        "block_02_orpStateId": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "orpStateId": {
+              "type": "text",
+              "label": "State-ID ORP",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "orpStateId_info": {
+              "type": "staticText",
+              "text": "Redox/ORP-Wert f\u00fcr Chlorinator-Regelung.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "orpStateId": {
-          "type": "text",
-          "label": "State-ID ORP",
+        "block_03_waterTempStateId": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "waterTempStateId": {
+              "type": "text",
+              "label": "State-ID Wassertemperatur",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "waterTempStateId_info": {
+              "type": "staticText",
+              "text": "Temperatur des Poolwassers.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "orpStateId_info": {
-          "type": "staticText",
-          "text": "Redox/ORP-Wert f\u00fcr Chlorinator-Regelung.",
-          "newLine": true,
+        "block_04_outsideTempStateId": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "outsideTempStateId": {
+              "type": "text",
+              "label": "State-ID Au\u00dfentemperatur",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "outsideTempStateId_info": {
+              "type": "staticText",
+              "text": "Optionale Au\u00dfentemperatur.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "waterTempStateId": {
-          "type": "text",
-          "label": "State-ID Wassertemperatur",
+        "block_05_pvPowerStateId": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "pvPowerStateId": {
+              "type": "text",
+              "label": "State-ID PV-Leistung / \u00dcberschuss",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "pvPowerStateId_info": {
+              "type": "staticText",
+              "text": "PV-\u00dcberschuss oder verf\u00fcgbare Solarleistung.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "waterTempStateId_info": {
-          "type": "staticText",
-          "text": "Temperatur des Poolwassers.",
-          "newLine": true,
+        "block_06_batterySocStateId": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "batterySocStateId": {
+              "type": "text",
+              "label": "State-ID Akku SoC",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "batterySocStateId_info": {
+              "type": "staticText",
+              "text": "Ladezustand des Hausakkus in Prozent.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "outsideTempStateId": {
-          "type": "text",
-          "label": "State-ID Au\u00dfentemperatur",
+        "block_07_batteryFullStateId": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "batteryFullStateId": {
+              "type": "text",
+              "label": "State-ID Akku voll",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "batteryFullStateId_info": {
+              "type": "staticText",
+              "text": "Boolescher Datenpunkt, ob der Akku voll geladen ist.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "outsideTempStateId_info": {
-          "type": "staticText",
-          "text": "Optionale Au\u00dfentemperatur.",
-          "newLine": true,
+        "block_08_gridPowerStateId": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
-        },
-        "pvPowerStateId": {
-          "type": "text",
-          "label": "State-ID PV-Leistung / \u00dcberschuss",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "pvPowerStateId_info": {
-          "type": "staticText",
-          "text": "PV-\u00dcberschuss oder verf\u00fcgbare Solarleistung.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "batterySocStateId": {
-          "type": "text",
-          "label": "State-ID Akku SoC",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "batterySocStateId_info": {
-          "type": "staticText",
-          "text": "Ladezustand des Hausakkus in Prozent.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "batteryFullStateId": {
-          "type": "text",
-          "label": "State-ID Akku voll",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "batteryFullStateId_info": {
-          "type": "staticText",
-          "text": "Boolescher Datenpunkt, ob der Akku voll geladen ist.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "gridPowerStateId": {
-          "type": "text",
-          "label": "State-ID Netzbezug / Einspeisung",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "gridPowerStateId_info": {
-          "type": "staticText",
-          "text": "Optionaler Datenpunkt f\u00fcr Netzbezug oder Einspeisung.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "gridPowerStateId": {
+              "type": "text",
+              "label": "State-ID Netzbezug / Einspeisung",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "gridPowerStateId_info": {
+              "type": "staticText",
+              "text": "Optionaler Datenpunkt f\u00fcr Netzbezug oder Einspeisung.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         }
       }
     },
@@ -262,65 +454,113 @@
       "type": "panel",
       "label": "AKTOREN",
       "items": {
-        "phPumpSocketStateId": {
-          "type": "text",
-          "label": "Dosierpumpe",
+        "block_01_phPumpSocketStateId": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "phPumpSocketStateId": {
+              "type": "text",
+              "label": "Dosierpumpe",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "phPumpSocketStateId_info": {
+              "type": "staticText",
+              "text": "Schaltbarer Datenpunkt der pH-Minus-Dosierpumpe.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "phPumpSocketStateId_info": {
-          "type": "staticText",
-          "text": "Schaltbarer Datenpunkt der pH-Minus-Dosierpumpe.",
-          "newLine": true,
+        "block_02_chlorinatorSocketStateId": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "chlorinatorSocketStateId": {
+              "type": "text",
+              "label": "Chlorinator",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "chlorinatorSocketStateId_info": {
+              "type": "staticText",
+              "text": "Schaltbarer Datenpunkt des Chlorinators.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "chlorinatorSocketStateId": {
-          "type": "text",
-          "label": "Chlorinator",
+        "block_03_circulationPumpSocketStateId": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "circulationPumpSocketStateId": {
+              "type": "text",
+              "label": "Umw\u00e4lzpumpe",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "circulationPumpSocketStateId_info": {
+              "type": "staticText",
+              "text": "Schaltbarer Datenpunkt der Poolpumpe.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "chlorinatorSocketStateId_info": {
-          "type": "staticText",
-          "text": "Schaltbarer Datenpunkt des Chlorinators.",
-          "newLine": true,
+        "block_04_heatpumpTuyaStateId": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
-        },
-        "circulationPumpSocketStateId": {
-          "type": "text",
-          "label": "Umw\u00e4lzpumpe",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "circulationPumpSocketStateId_info": {
-          "type": "staticText",
-          "text": "Schaltbarer Datenpunkt der Poolpumpe.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "heatpumpTuyaStateId": {
-          "type": "text",
-          "label": "W\u00e4rmepumpe",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "heatpumpTuyaStateId_info": {
-          "type": "staticText",
-          "text": "Schaltbarer Datenpunkt der W\u00e4rmepumpe.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "heatpumpTuyaStateId": {
+              "type": "text",
+              "label": "W\u00e4rmepumpe",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "heatpumpTuyaStateId_info": {
+              "type": "staticText",
+              "text": "Schaltbarer Datenpunkt der W\u00e4rmepumpe.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         }
       }
     },
@@ -328,189 +568,333 @@
       "type": "panel",
       "label": "PH-DOSIERUNG",
       "items": {
-        "phEnabled": {
-          "type": "checkbox",
-          "label": "pH-Regelung aktiv",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "phEnabled_info": {
-          "type": "staticText",
-          "text": "Aktiviert oder deaktiviert die automatische pH-Dosierlogik.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "phOnlyWhenPumpRunning": {
-          "type": "checkbox",
-          "label": "Nur dosieren wenn Umw\u00e4lzpumpe l\u00e4uft",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "phOnlyWhenPumpRunning_info": {
-          "type": "staticText",
-          "text": "Verhindert Dosierung, wenn die Umw\u00e4lzpumpe nicht eingeschaltet ist.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "phAllowManualDose": {
-          "type": "checkbox",
-          "label": "Manuelle Dosierung erlauben",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "phAllowManualDose_info": {
-          "type": "staticText",
-          "text": "Erlaubt sp\u00e4tere manuelle Startfunktionen f\u00fcr eine Test- oder Einzeldosierung.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "phTarget": {
-          "type": "number",
-          "label": "Soll-pH",
+        "block_01_phEnabled": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
           "lg": 6,
-          "step": 0.01
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "phEnabled": {
+              "type": "checkbox",
+              "label": "pH-Regelung aktiv",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "phEnabled_info": {
+              "type": "staticText",
+              "text": "Aktiviert oder deaktiviert die automatische pH-Dosierlogik.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "phTarget_info": {
-          "type": "staticText",
-          "text": "Zielwert, auf den der pH-Wert abgesenkt werden soll.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "phMinDelta": {
-          "type": "number",
-          "label": "Minimale Abweichung",
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "step": 0.01
-        },
-        "phMinDelta_info": {
-          "type": "staticText",
-          "text": "Erst ab dieser Abweichung \u00fcber dem Sollwert wird dosiert.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "phPumpFlowMlMin": {
-          "type": "number",
-          "label": "F\u00f6rdermenge Dosierpumpe (ml/min)",
+        "block_02_phOnlyWhenPumpRunning": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
           "lg": 6,
-          "step": 0.1
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "phOnlyWhenPumpRunning": {
+              "type": "checkbox",
+              "label": "Nur dosieren wenn Umw\u00e4lzpumpe l\u00e4uft",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "phOnlyWhenPumpRunning_info": {
+              "type": "staticText",
+              "text": "Verhindert Dosierung, wenn die Umw\u00e4lzpumpe nicht eingeschaltet ist.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "phPumpFlowMlMin_info": {
-          "type": "staticText",
-          "text": "Tats\u00e4chliche F\u00f6rderleistung der Dosierpumpe in Milliliter pro Minute.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "phMinusConcentrationPercent": {
-          "type": "number",
-          "label": "Konzentration pH-Minus (%)",
+        "block_03_phAllowManualDose": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
           "lg": 6,
-          "step": 0.1
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "phAllowManualDose": {
+              "type": "checkbox",
+              "label": "Manuelle Dosierung erlauben",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "phAllowManualDose_info": {
+              "type": "staticText",
+              "text": "Erlaubt sp\u00e4tere manuelle Startfunktionen f\u00fcr eine Test- oder Einzeldosierung.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "phMinusConcentrationPercent_info": {
-          "type": "staticText",
-          "text": "Konzentration des verwendeten pH-Minus-Mittels.",
-          "newLine": true,
+        "block_04_phTarget": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "phTarget": {
+              "type": "number",
+              "label": "Soll-pH",
+              "sm": 12,
+              "md": 12,
+              "lg": 12,
+              "step": 0.01
+            },
+            "phTarget_info": {
+              "type": "staticText",
+              "text": "Zielwert, auf den der pH-Wert abgesenkt werden soll.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "phMaxRuntimeSec": {
-          "type": "number",
-          "label": "Max. Laufzeit je Dosierung (Sek.)",
+        "block_05_phMinDelta": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "phMinDelta": {
+              "type": "number",
+              "label": "Minimale Abweichung",
+              "sm": 12,
+              "md": 12,
+              "lg": 12,
+              "step": 0.01
+            },
+            "phMinDelta_info": {
+              "type": "staticText",
+              "text": "Erst ab dieser Abweichung \u00fcber dem Sollwert wird dosiert.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "phMaxRuntimeSec_info": {
-          "type": "staticText",
-          "text": "Begrenzt eine einzelne Dosierung aus Sicherheitsgr\u00fcnden.",
-          "newLine": true,
+        "block_06_phPumpFlowMlMin": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "phPumpFlowMlMin": {
+              "type": "number",
+              "label": "F\u00f6rdermenge Dosierpumpe (ml/min)",
+              "sm": 12,
+              "md": 12,
+              "lg": 12,
+              "step": 0.1
+            },
+            "phPumpFlowMlMin_info": {
+              "type": "staticText",
+              "text": "Tats\u00e4chliche F\u00f6rderleistung der Dosierpumpe in Milliliter pro Minute.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "phDosingPauseMin": {
-          "type": "number",
-          "label": "Sperrzeit zwischen Dosierungen (Min.)",
+        "block_07_phMinusConcentrationPercent": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "phMinusConcentrationPercent": {
+              "type": "number",
+              "label": "Konzentration pH-Minus (%)",
+              "sm": 12,
+              "md": 12,
+              "lg": 12,
+              "step": 0.1
+            },
+            "phMinusConcentrationPercent_info": {
+              "type": "staticText",
+              "text": "Konzentration des verwendeten pH-Minus-Mittels.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "phDosingPauseMin_info": {
-          "type": "staticText",
-          "text": "Mindestwartezeit zwischen zwei Dosierl\u00e4ufen.",
-          "newLine": true,
+        "block_08_phMaxRuntimeSec": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "phMaxRuntimeSec": {
+              "type": "number",
+              "label": "Max. Laufzeit je Dosierung (Sek.)",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "phMaxRuntimeSec_info": {
+              "type": "staticText",
+              "text": "Begrenzt eine einzelne Dosierung aus Sicherheitsgr\u00fcnden.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "phDoseTimes": {
-          "type": "text",
-          "label": "Automatische Pr\u00fcfzeiten",
+        "block_09_phDosingPauseMin": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "phDosingPauseMin": {
+              "type": "number",
+              "label": "Sperrzeit zwischen Dosierungen (Min.)",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "phDosingPauseMin_info": {
+              "type": "staticText",
+              "text": "Mindestwartezeit zwischen zwei Dosierl\u00e4ufen.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "phDoseTimes_info": {
-          "type": "staticText",
-          "text": "Kommagetrennte Zeiten, zu denen der pH-Wert gepr\u00fcft und ggf. dosiert wird.",
-          "newLine": true,
+        "block_10_phDoseTimes": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "phDoseTimes": {
+              "type": "text",
+              "label": "Automatische Pr\u00fcfzeiten",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "phDoseTimes_info": {
+              "type": "staticText",
+              "text": "Kommagetrennte Zeiten, zu denen der pH-Wert gepr\u00fcft und ggf. dosiert wird.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "phGranulateFactorPercent": {
-          "type": "number",
-          "label": "Granulatfaktor (%)",
+        "block_11_phGranulateFactorPercent": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "phGranulateFactorPercent": {
+              "type": "number",
+              "label": "Granulatfaktor (%)",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "phGranulateFactorPercent_info": {
+              "type": "staticText",
+              "text": "Korrekturfaktor f\u00fcr Vergleichs- oder Hilfsberechnungen mit Granulat.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "phGranulateFactorPercent_info": {
-          "type": "staticText",
-          "text": "Korrekturfaktor f\u00fcr Vergleichs- oder Hilfsberechnungen mit Granulat.",
-          "newLine": true,
+        "block_12_phLiquidFactorPercent": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
-        },
-        "phLiquidFactorPercent": {
-          "type": "number",
-          "label": "Fl\u00fcssigfaktor (%)",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "phLiquidFactorPercent_info": {
-          "type": "staticText",
-          "text": "Korrekturfaktor f\u00fcr die Berechnung mit fl\u00fcssigem pH-Minus.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "phLiquidFactorPercent": {
+              "type": "number",
+              "label": "Fl\u00fcssigfaktor (%)",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "phLiquidFactorPercent_info": {
+              "type": "staticText",
+              "text": "Korrekturfaktor f\u00fcr die Berechnung mit fl\u00fcssigem pH-Minus.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         }
       }
     },
@@ -518,125 +902,221 @@
       "type": "panel",
       "label": "CHLORINATOR",
       "items": {
-        "chlorinatorEnabled": {
-          "type": "checkbox",
-          "label": "Chlorinator aktiv",
+        "block_01_chlorinatorEnabled": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "chlorinatorEnabled": {
+              "type": "checkbox",
+              "label": "Chlorinator aktiv",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "chlorinatorEnabled_info": {
+              "type": "staticText",
+              "text": "Aktiviert oder deaktiviert die automatische ORP-/Chlorinator-Regelung.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "chlorinatorEnabled_info": {
-          "type": "staticText",
-          "text": "Aktiviert oder deaktiviert die automatische ORP-/Chlorinator-Regelung.",
-          "newLine": true,
+        "block_02_chlorinatorOnlyWhenPumpRunning": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "chlorinatorOnlyWhenPumpRunning": {
+              "type": "checkbox",
+              "label": "Nur bei laufender Umw\u00e4lzpumpe",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "chlorinatorOnlyWhenPumpRunning_info": {
+              "type": "staticText",
+              "text": "Erlaubt den Chlorinator nur, wenn die Umw\u00e4lzpumpe l\u00e4uft.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "chlorinatorOnlyWhenPumpRunning": {
-          "type": "checkbox",
-          "label": "Nur bei laufender Umw\u00e4lzpumpe",
+        "block_03_chlorinatorAutoEnabled": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "chlorinatorAutoEnabled": {
+              "type": "checkbox",
+              "label": "ORP-Automatik aktiv",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "chlorinatorAutoEnabled_info": {
+              "type": "staticText",
+              "text": "Schaltet die automatische ORP-gesteuerte Ein-/Aus-Regelung ein.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "chlorinatorOnlyWhenPumpRunning_info": {
-          "type": "staticText",
-          "text": "Erlaubt den Chlorinator nur, wenn die Umw\u00e4lzpumpe l\u00e4uft.",
-          "newLine": true,
+        "block_04_orpOn": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "orpOn": {
+              "type": "number",
+              "label": "ORP EIN bei \u2264",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "orpOn_info": {
+              "type": "staticText",
+              "text": "Bei diesem oder niedrigeren ORP-Wert wird der Chlorinator eingeschaltet.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "chlorinatorAutoEnabled": {
-          "type": "checkbox",
-          "label": "ORP-Automatik aktiv",
+        "block_05_orpOff": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "orpOff": {
+              "type": "number",
+              "label": "ORP AUS bei >",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "orpOff_info": {
+              "type": "staticText",
+              "text": "Bei \u00dcberschreitung dieses ORP-Werts wird der Chlorinator ausgeschaltet.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "chlorinatorAutoEnabled_info": {
-          "type": "staticText",
-          "text": "Schaltet die automatische ORP-gesteuerte Ein-/Aus-Regelung ein.",
-          "newLine": true,
+        "block_06_chlorinatorMinOnMin": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "chlorinatorMinOnMin": {
+              "type": "number",
+              "label": "Mindest-EIN-Zeit (Min.)",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "chlorinatorMinOnMin_info": {
+              "type": "staticText",
+              "text": "Verhindert zu h\u00e4ufiges Abschalten kurz nach dem Einschalten.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "orpOn": {
-          "type": "number",
-          "label": "ORP EIN bei \u2264",
+        "block_07_chlorinatorMinOffMin": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "chlorinatorMinOffMin": {
+              "type": "number",
+              "label": "Mindest-AUS-Zeit (Min.)",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "chlorinatorMinOffMin_info": {
+              "type": "staticText",
+              "text": "Verhindert zu h\u00e4ufiges Wiedereinschalten kurz nach dem Ausschalten.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "orpOn_info": {
-          "type": "staticText",
-          "text": "Bei diesem oder niedrigeren ORP-Wert wird der Chlorinator eingeschaltet.",
-          "newLine": true,
+        "block_08_chlorinatorStopTime": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
-        },
-        "orpOff": {
-          "type": "number",
-          "label": "ORP AUS bei >",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "orpOff_info": {
-          "type": "staticText",
-          "text": "Bei \u00dcberschreitung dieses ORP-Werts wird der Chlorinator ausgeschaltet.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "chlorinatorMinOnMin": {
-          "type": "number",
-          "label": "Mindest-EIN-Zeit (Min.)",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "chlorinatorMinOnMin_info": {
-          "type": "staticText",
-          "text": "Verhindert zu h\u00e4ufiges Abschalten kurz nach dem Einschalten.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "chlorinatorMinOffMin": {
-          "type": "number",
-          "label": "Mindest-AUS-Zeit (Min.)",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "chlorinatorMinOffMin_info": {
-          "type": "staticText",
-          "text": "Verhindert zu h\u00e4ufiges Wiedereinschalten kurz nach dem Ausschalten.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "chlorinatorStopTime": {
-          "type": "text",
-          "label": "Abschaltzeit (HH:MM)",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "chlorinatorStopTime_info": {
-          "type": "staticText",
-          "text": "Optionale feste Uhrzeit, nach der der Chlorinator nicht mehr laufen soll.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "chlorinatorStopTime": {
+              "type": "text",
+              "label": "Abschaltzeit (HH:MM)",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "chlorinatorStopTime_info": {
+              "type": "staticText",
+              "text": "Optionale feste Uhrzeit, nach der der Chlorinator nicht mehr laufen soll.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         }
       }
     },
@@ -644,202 +1124,358 @@
       "type": "panel",
       "label": "PUMPE & W\u00c4RMEPUMPE",
       "items": {
-        "pumpEnabled": {
-          "type": "checkbox",
-          "label": "Umw\u00e4lzpumpe aktiv",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "pumpEnabled_info": {
-          "type": "staticText",
-          "text": "Aktiviert die zeitgesteuerte Pumpenlogik im Adapter.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "pumpRequiredForPh": {
-          "type": "checkbox",
-          "label": "Pumpe Voraussetzung f\u00fcr pH",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "pumpRequiredForPh_info": {
-          "type": "staticText",
-          "text": "Erzwingt laufende Umw\u00e4lzung, bevor pH dosiert werden darf.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "pumpRequiredForChlorinator": {
-          "type": "checkbox",
-          "label": "Pumpe Voraussetzung f\u00fcr Chlorinator",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "pumpRequiredForChlorinator_info": {
-          "type": "staticText",
-          "text": "Erzwingt laufende Umw\u00e4lzung, bevor der Chlorinator laufen darf.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "pumpRequiredForHeatpump": {
-          "type": "checkbox",
-          "label": "Pumpe Voraussetzung f\u00fcr W\u00e4rmepumpe",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "pumpRequiredForHeatpump_info": {
-          "type": "staticText",
-          "text": "Erzwingt laufende Umw\u00e4lzung, bevor die W\u00e4rmepumpe freigegeben wird.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "heatpumpEnabled": {
-          "type": "checkbox",
-          "label": "W\u00e4rmepumpe aktiv",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "heatpumpEnabled_info": {
-          "type": "staticText",
-          "text": "Aktiviert die sp\u00e4tere Heizlogik f\u00fcr die W\u00e4rmepumpe.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "heatpumpOnlyWithPvSurplus": {
-          "type": "checkbox",
-          "label": "Nur bei PV-\u00dcberschuss",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "heatpumpOnlyWithPvSurplus_info": {
-          "type": "staticText",
-          "text": "Heizen nur, wenn genug Solar\u00fcberschuss verf\u00fcgbar ist.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "heatpumpRequiresBatteryFull": {
-          "type": "checkbox",
-          "label": "Akku muss voll sein",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "heatpumpRequiresBatteryFull_info": {
-          "type": "staticText",
-          "text": "Heizfreigabe nur, wenn der Hausspeicher als voll gilt.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "heatpumpOnlyWhenPumpRunning": {
-          "type": "checkbox",
-          "label": "Nur wenn Umw\u00e4lzpumpe l\u00e4uft",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "heatpumpOnlyWhenPumpRunning_info": {
-          "type": "staticText",
-          "text": "W\u00e4rmepumpe nur freigeben, wenn die Umw\u00e4lzpumpe l\u00e4uft.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "pumpStartTime": {
-          "type": "text",
-          "label": "Pumpen-Startzeit (HH:MM)",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "pumpStartTime_info": {
-          "type": "staticText",
-          "text": "T\u00e4gliche Startzeit der Umw\u00e4lzpumpe.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "pumpEndTime": {
-          "type": "text",
-          "label": "Pumpen-Endzeit (HH:MM)",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "pumpEndTime_info": {
-          "type": "staticText",
-          "text": "T\u00e4gliche Abschaltzeit der Umw\u00e4lzpumpe.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "heatpumpTargetTemp": {
-          "type": "number",
-          "label": "Soll-Wassertemperatur",
+        "block_01_pumpEnabled": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
           "lg": 6,
-          "step": 0.1
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "pumpEnabled": {
+              "type": "checkbox",
+              "label": "Umw\u00e4lzpumpe aktiv",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "pumpEnabled_info": {
+              "type": "staticText",
+              "text": "Aktiviert die zeitgesteuerte Pumpenlogik im Adapter.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "heatpumpTargetTemp_info": {
-          "type": "staticText",
-          "text": "Gew\u00fcnschte Zieltemperatur des Poolwassers.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "heatpumpMinWaterTemp": {
-          "type": "number",
-          "label": "Mindest-Wassertemperatur",
+        "block_02_pumpRequiredForPh": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
           "lg": 6,
-          "step": 0.1
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "pumpRequiredForPh": {
+              "type": "checkbox",
+              "label": "Pumpe Voraussetzung f\u00fcr pH",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "pumpRequiredForPh_info": {
+              "type": "staticText",
+              "text": "Erzwingt laufende Umw\u00e4lzung, bevor pH dosiert werden darf.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "heatpumpMinWaterTemp_info": {
-          "type": "staticText",
-          "text": "Untergrenze bzw. Freigabeschwelle f\u00fcr die Heizlogik.",
-          "newLine": true,
+        "block_03_pumpRequiredForChlorinator": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "pumpRequiredForChlorinator": {
+              "type": "checkbox",
+              "label": "Pumpe Voraussetzung f\u00fcr Chlorinator",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "pumpRequiredForChlorinator_info": {
+              "type": "staticText",
+              "text": "Erzwingt laufende Umw\u00e4lzung, bevor der Chlorinator laufen darf.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "heatpumpMinBatterySoc": {
-          "type": "number",
-          "label": "Mindest-Akku-SoC (%)",
+        "block_04_pumpRequiredForHeatpump": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "pumpRequiredForHeatpump": {
+              "type": "checkbox",
+              "label": "Pumpe Voraussetzung f\u00fcr W\u00e4rmepumpe",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "pumpRequiredForHeatpump_info": {
+              "type": "staticText",
+              "text": "Erzwingt laufende Umw\u00e4lzung, bevor die W\u00e4rmepumpe freigegeben wird.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         },
-        "heatpumpMinBatterySoc_info": {
-          "type": "staticText",
-          "text": "Mindestladestand des Akkus, bevor die W\u00e4rmepumpe starten darf.",
-          "newLine": true,
+        "block_05_heatpumpEnabled": {
+          "type": "panel",
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "heatpumpEnabled": {
+              "type": "checkbox",
+              "label": "W\u00e4rmepumpe aktiv",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "heatpumpEnabled_info": {
+              "type": "staticText",
+              "text": "Aktiviert die sp\u00e4tere Heizlogik f\u00fcr die W\u00e4rmepumpe.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
+        },
+        "block_06_heatpumpOnlyWithPvSurplus": {
+          "type": "panel",
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "heatpumpOnlyWithPvSurplus": {
+              "type": "checkbox",
+              "label": "Nur bei PV-\u00dcberschuss",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "heatpumpOnlyWithPvSurplus_info": {
+              "type": "staticText",
+              "text": "Heizen nur, wenn genug Solar\u00fcberschuss verf\u00fcgbar ist.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
+        },
+        "block_07_heatpumpRequiresBatteryFull": {
+          "type": "panel",
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "heatpumpRequiresBatteryFull": {
+              "type": "checkbox",
+              "label": "Akku muss voll sein",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "heatpumpRequiresBatteryFull_info": {
+              "type": "staticText",
+              "text": "Heizfreigabe nur, wenn der Hausspeicher als voll gilt.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
+        },
+        "block_08_heatpumpOnlyWhenPumpRunning": {
+          "type": "panel",
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "heatpumpOnlyWhenPumpRunning": {
+              "type": "checkbox",
+              "label": "Nur wenn Umw\u00e4lzpumpe l\u00e4uft",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "heatpumpOnlyWhenPumpRunning_info": {
+              "type": "staticText",
+              "text": "W\u00e4rmepumpe nur freigeben, wenn die Umw\u00e4lzpumpe l\u00e4uft.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
+        },
+        "block_09_pumpStartTime": {
+          "type": "panel",
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "pumpStartTime": {
+              "type": "text",
+              "label": "Pumpen-Startzeit (HH:MM)",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "pumpStartTime_info": {
+              "type": "staticText",
+              "text": "T\u00e4gliche Startzeit der Umw\u00e4lzpumpe.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
+        },
+        "block_10_pumpEndTime": {
+          "type": "panel",
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "pumpEndTime": {
+              "type": "text",
+              "label": "Pumpen-Endzeit (HH:MM)",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "pumpEndTime_info": {
+              "type": "staticText",
+              "text": "T\u00e4gliche Abschaltzeit der Umw\u00e4lzpumpe.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
+        },
+        "block_11_heatpumpTargetTemp": {
+          "type": "panel",
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "heatpumpTargetTemp": {
+              "type": "number",
+              "label": "Soll-Wassertemperatur",
+              "sm": 12,
+              "md": 12,
+              "lg": 12,
+              "step": 0.1
+            },
+            "heatpumpTargetTemp_info": {
+              "type": "staticText",
+              "text": "Gew\u00fcnschte Zieltemperatur des Poolwassers.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
+        },
+        "block_12_heatpumpMinWaterTemp": {
+          "type": "panel",
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "heatpumpMinWaterTemp": {
+              "type": "number",
+              "label": "Mindest-Wassertemperatur",
+              "sm": 12,
+              "md": 12,
+              "lg": 12,
+              "step": 0.1
+            },
+            "heatpumpMinWaterTemp_info": {
+              "type": "staticText",
+              "text": "Untergrenze bzw. Freigabeschwelle f\u00fcr die Heizlogik.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
+        },
+        "block_13_heatpumpMinBatterySoc": {
+          "type": "panel",
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
+          "style": {
+            "marginBottom": 24
+          },
+          "items": {
+            "heatpumpMinBatterySoc": {
+              "type": "number",
+              "label": "Mindest-Akku-SoC (%)",
+              "sm": 12,
+              "md": 12,
+              "lg": 12
+            },
+            "heatpumpMinBatterySoc_info": {
+              "type": "staticText",
+              "text": "Mindestladestand des Akkus, bevor die W\u00e4rmepumpe starten darf.",
+              "newLine": true,
+              "style": {
+                "opacity": 0.85,
+                "paddingTop": 4
+              }
+            }
+          }
         }
       }
     }

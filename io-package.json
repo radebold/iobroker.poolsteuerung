@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "poolsteuerung",
-    "version": "0.0.3-beta1",
+    "version": "0.0.3-beta2",
     "title": "Poolsteuerung",
     "icon": "poolsteuerung.png",
     "materialize": true,
@@ -88,5 +88,5 @@
       "native": {}
     }
   ],
-  "version": "0.0.3-beta1"
+  "version": "0.0.3-beta2"
 }
