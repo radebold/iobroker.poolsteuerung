@@ -1,19 +1,10 @@
 
-# iobroker.poolsteuerung (TypeScript)
+# iobroker.poolsteuerung (TypeScript, installierbare Beta)
 
-Moderne ioBroker-Adapterstruktur mit TypeScript.
+Diese ZIP enthält:
+- TypeScript-Quellen unter `src/`
+- vorkompilierten JavaScript-Code unter `build/`
+- Admin-UI unter `admin/`
+- korrekt eingebundenes Icon in Root und `admin/`
 
-## Enthalten
-- `src/main.ts`
-- Controller für pH, Chlorinator, Pumpe und Wärmepumpe
-- `admin/jsonConfig.json`
-- TypeScript Build mit `tsc`
-
-## Build
-```bash
-npm install
-npm run build
-```
-
-## Ergebnis
-Der kompilierte Adapter liegt danach in `build/`.
+Da `main` auf `build/main.js` zeigt, ist die ZIP als installierbare Beta vorbereitet.

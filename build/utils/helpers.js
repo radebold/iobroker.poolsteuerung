@@ -1,0 +1,1 @@
+exports.parseTimes=s=>String(s||"").split(",").map(x=>x.trim()).filter(Boolean); exports.hhmm=()=>{const d=new Date(); return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;};

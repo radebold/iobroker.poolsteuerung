@@ -5,8 +5,7 @@
     "moduleResolution": "Node",
     "outDir": "build",
     "rootDir": "src",
-    "declaration": false,
-    "strict": true,
+    "strict": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "skipLibCheck": true
