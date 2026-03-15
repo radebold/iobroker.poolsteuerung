@@ -1,1 +1,1 @@
-# iobroker.poolsteuerung 0.1.0-beta5\n\nNeu: pH LiquidFactor standardmäßig 40 %, Maximaldosis pro Zyklus 70 ml, Debug-Logging mit rawMl und limitedMl, Simulationsmodus.
+beta6 start-fix with dose guard
