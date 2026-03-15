@@ -1,12 +1,14 @@
 
-# iobroker.poolsteuerung (TypeScript, volle Beta)
+# iobroker.poolsteuerung 0.1.0-beta4
 
-Diese ZIP enthält:
-- TypeScript-Quellen unter `src/`
-- vorkompilierten JavaScript-Code unter `build/`
-- Admin-UI unter `admin/`
-- erste echte Poollogik:
-  - pH Vorschau und automatische Dosierung
-  - Chlorinator/ORP Regelung
-  - Pumpen-Zeitfenster
-  - manuelle Dosierung per `control.manualDose`
+Enthält:
+- Debug-Modus mit ausführlichen Entscheidungen im Log
+- Simulationsmodus ohne echtes Schalten
+- pH Vorschau + Dosierlogik
+- Chlorinator ORP Logik
+- Pumpen-Zeitfenster
+- Debug-States:
+  - status.debug.lastCycle
+  - status.debug.lastDecision
+
+Empfohlen für Wintertests mit Test-States unter 0_userdata.0.PoolTest
