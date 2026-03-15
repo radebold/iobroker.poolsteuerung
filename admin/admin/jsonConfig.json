@@ -1,0 +1,298 @@
+{
+  "type": "tabs",
+  "width": "900px",
+  "items": {
+    "general": {
+      "type": "panel",
+      "label": "ALLGEMEIN",
+      "items": {
+        "adapterEnabled": {
+          "type": "checkbox",
+          "label": "Adapter aktiv",
+          "newLine": true
+        },
+        "debugMode": {
+          "type": "checkbox",
+          "label": "Debug-Modus",
+          "newLine": true
+        },
+        "simulateMode": {
+          "type": "checkbox",
+          "label": "Simulationsmodus",
+          "newLine": true
+        },
+        "pollIntervalMin": {
+          "type": "number",
+          "label": "Pr\u00fcfintervall (Minuten)",
+          "newLine": true
+        }
+      }
+    },
+    "sensors": {
+      "type": "panel",
+      "label": "SENSOREN",
+      "items": {
+        "phStateId": {
+          "type": "text",
+          "label": "State-ID pH",
+          "newLine": true
+        },
+        "orpStateId": {
+          "type": "text",
+          "label": "State-ID ORP",
+          "newLine": true
+        },
+        "waterTempStateId": {
+          "type": "text",
+          "label": "State-ID Wassertemperatur",
+          "newLine": true
+        },
+        "outsideTempStateId": {
+          "type": "text",
+          "label": "State-ID Au\u00dfentemperatur",
+          "newLine": true
+        },
+        "pvPowerStateId": {
+          "type": "text",
+          "label": "State-ID PV-Leistung",
+          "newLine": true
+        },
+        "gridFeedInStateId": {
+          "type": "text",
+          "label": "State-ID Netzeinspeisung",
+          "newLine": true
+        },
+        "gridSupplyStateId": {
+          "type": "text",
+          "label": "State-ID Netzbezug",
+          "newLine": true
+        },
+        "batterySocStateId": {
+          "type": "text",
+          "label": "State-ID Batterie SoC",
+          "newLine": true
+        },
+        "phDoseEnableStateId": {
+          "type": "text",
+          "label": "State-ID pH Freigabe",
+          "newLine": true
+        }
+      }
+    },
+    "actors": {
+      "type": "panel",
+      "label": "AKTOREN",
+      "items": {
+        "phPumpSocketStateId": {
+          "type": "text",
+          "label": "Dosierpumpe",
+          "newLine": true
+        },
+        "chlorinatorSocketStateId": {
+          "type": "text",
+          "label": "Chlorinator",
+          "newLine": true
+        },
+        "circulationPumpSocketStateId": {
+          "type": "text",
+          "label": "Umw\u00e4lzpumpe",
+          "newLine": true
+        },
+        "heatpumpPowerStateId": {
+          "type": "text",
+          "label": "W\u00e4rmepumpe Power",
+          "newLine": true
+        },
+        "heatpumpModeStateId": {
+          "type": "text",
+          "label": "W\u00e4rmepumpe Mode",
+          "newLine": true
+        },
+        "heatpumpSetTempStateId": {
+          "type": "text",
+          "label": "W\u00e4rmepumpe Solltemperatur",
+          "newLine": true
+        }
+      }
+    },
+    "ph": {
+      "type": "panel",
+      "label": "PH-DOSIERUNG",
+      "items": {
+        "phEnabled": {
+          "type": "checkbox",
+          "label": "pH aktiv",
+          "newLine": true
+        },
+        "phTarget": {
+          "type": "number",
+          "label": "Soll-pH",
+          "newLine": true
+        },
+        "phMinDelta": {
+          "type": "number",
+          "label": "Minimale Abweichung",
+          "newLine": true
+        },
+        "phPumpFlowMlMin": {
+          "type": "number",
+          "label": "F\u00f6rdermenge ml/min",
+          "newLine": true
+        },
+        "phLiquidFactorPercent": {
+          "type": "number",
+          "label": "Fl\u00fcssigfaktor %",
+          "newLine": true
+        },
+        "phMaxDoseMlPerCycle": {
+          "type": "number",
+          "label": "Max ml pro Zyklus",
+          "newLine": true
+        },
+        "phMaxRuntimeSec": {
+          "type": "number",
+          "label": "Max Laufzeit Sek",
+          "newLine": true
+        },
+        "phOnlyWhenPumpRunning": {
+          "type": "checkbox",
+          "label": "Nur wenn Pumpe l\u00e4uft",
+          "newLine": true
+        },
+        "phDoseTimes": {
+          "type": "text",
+          "label": "Pr\u00fcfzeiten",
+          "newLine": true
+        }
+      }
+    },
+    "chlor": {
+      "type": "panel",
+      "label": "CHLORINATOR",
+      "items": {
+        "chlorinatorEnabled": {
+          "type": "checkbox",
+          "label": "Chlorinator aktiv",
+          "newLine": true
+        },
+        "chlorinatorAutoEnabled": {
+          "type": "checkbox",
+          "label": "ORP-Automatik aktiv",
+          "newLine": true
+        },
+        "chlorinatorOnlyWhenPumpRunning": {
+          "type": "checkbox",
+          "label": "Nur bei laufender Pumpe",
+          "newLine": true
+        },
+        "orpOn": {
+          "type": "number",
+          "label": "ORP EIN bei <=",
+          "newLine": true
+        },
+        "orpOff": {
+          "type": "number",
+          "label": "ORP AUS bei >",
+          "newLine": true
+        },
+        "chlorinatorMinOnMin": {
+          "type": "number",
+          "label": "Mindest-EIN-Zeit (Min)",
+          "newLine": true
+        },
+        "chlorinatorMinOffMin": {
+          "type": "number",
+          "label": "Mindest-AUS-Zeit (Min)",
+          "newLine": true
+        },
+        "chlorinatorStopTime": {
+          "type": "text",
+          "label": "Abschaltzeit",
+          "newLine": true
+        }
+      }
+    },
+    "pump": {
+      "type": "panel",
+      "label": "PUMPE",
+      "items": {
+        "pumpEnabled": {
+          "type": "checkbox",
+          "label": "Pumpe aktiv",
+          "newLine": true
+        },
+        "pumpStartTime": {
+          "type": "text",
+          "label": "Startzeit",
+          "newLine": true
+        },
+        "pumpEndTime": {
+          "type": "text",
+          "label": "Endzeit",
+          "newLine": true
+        }
+      }
+    },
+    "heat": {
+      "type": "panel",
+      "label": "W\u00c4RMEPUMPE",
+      "items": {
+        "heatpumpEnabled": {
+          "type": "checkbox",
+          "label": "W\u00e4rmepumpe aktiv",
+          "newLine": true
+        },
+        "heatpumpTargetTemp": {
+          "type": "number",
+          "label": "Solltemperatur",
+          "newLine": true
+        },
+        "heatpumpPvMinFeedInW": {
+          "type": "number",
+          "label": "Min PV Einspeisung W",
+          "newLine": true
+        },
+        "heatpumpMinBatterySoc": {
+          "type": "number",
+          "label": "Min Batterie SoC %",
+          "newLine": true
+        },
+        "heatpumpBatteryFullSoc": {
+          "type": "number",
+          "label": "Akku voll ab %",
+          "newLine": true
+        },
+        "heatpumpMinWaterTemp": {
+          "type": "number",
+          "label": "Min Wassertemperatur",
+          "newLine": true
+        },
+        "heatpumpOnlyWhenPumpRunning": {
+          "type": "checkbox",
+          "label": "Nur wenn Pumpe l\u00e4uft",
+          "newLine": true
+        },
+        "heatpumpOnlyWithPvSurplus": {
+          "type": "checkbox",
+          "label": "Nur mit PV-\u00dcberschuss",
+          "newLine": true
+        },
+        "heatpumpRequiresBatteryFull": {
+          "type": "checkbox",
+          "label": "Akku muss voll sein",
+          "newLine": true
+        },
+        "heatpumpMinOnMin": {
+          "type": "number",
+          "label": "Mindestlaufzeit Min",
+          "newLine": true
+        },
+        "heatpumpMinOffMin": {
+          "type": "number",
+          "label": "Mindestpause Min",
+          "newLine": true
+        }
+      }
+    }
+  }
+}
