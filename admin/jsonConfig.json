@@ -1,88 +1,40 @@
 {
   "type": "tabs",
-  "width": "900px",
   "items": {
     "general": {
       "type": "panel",
-      "label": "Allgemein",
-      "items": {
-        "adapterEnabled": {
-          "type": "checkbox",
-          "label": "Adapter aktiv",
-          "newLine": true
-        },
-        "debugMode": {
-          "type": "checkbox",
-          "label": "Debug-Modus",
-          "newLine": true
-        },
-        "simulateMode": {
-          "type": "checkbox",
-          "label": "Simulationsmodus",
-          "newLine": true
-        },
-        "pollIntervalMin": {
-          "type": "number",
-          "label": "Pr\u00fcfintervall",
-          "newLine": true
-        }
-      }
+      "label": "ALLGEMEIN",
+      "items": {}
+    },
+    "sensors": {
+      "type": "panel",
+      "label": "SENSOREN",
+      "items": {}
+    },
+    "actors": {
+      "type": "panel",
+      "label": "AKTOREN",
+      "items": {}
+    },
+    "ph": {
+      "type": "panel",
+      "label": "PH-DOSIERUNG",
+      "items": {}
+    },
+    "chlor": {
+      "type": "panel",
+      "label": "CHLORINATOR",
+      "items": {}
+    },
+    "pump": {
+      "type": "panel",
+      "label": "PUMPE",
+      "items": {}
     },
     "heat": {
       "type": "panel",
-      "label": "W\u00e4rmepumpe",
-      "items": {
-        "heatpumpEnabled": {
-          "type": "checkbox",
-          "label": "W\u00e4rmepumpe aktiv",
-          "newLine": true
-        },
-        "heatpumpPowerStateId": {
-          "type": "text",
-          "label": "Power-State",
-          "newLine": true
-        },
-        "heatpumpModeStateId": {
-          "type": "text",
-          "label": "Mode-State",
-          "newLine": true
-        },
-        "heatpumpSetTempStateId": {
-          "type": "text",
-          "label": "SetTemp-State",
-          "newLine": true
-        },
-        "waterTempStateId": {
-          "type": "text",
-          "label": "Wassertemperatur-State",
-          "newLine": true
-        },
-        "gridFeedInStateId": {
-          "type": "text",
-          "label": "Netzeinspeisung-State",
-          "newLine": true
-        },
-        "batterySocStateId": {
-          "type": "text",
-          "label": "Batterie SoC-State",
-          "newLine": true
-        },
-        "heatpumpTargetTemp": {
-          "type": "number",
-          "label": "Solltemperatur",
-          "newLine": true
-        },
-        "heatpumpPvMinFeedInW": {
-          "type": "number",
-          "label": "Min PV Einspeisung W",
-          "newLine": true
-        },
-        "heatpumpMinBatterySoc": {
-          "type": "number",
-          "label": "Min Batterie SoC %",
-          "newLine": true
-        }
-      }
+      "label": "W\u00c4RMEPUMPE",
+      "items": {}
     }
   }
 }

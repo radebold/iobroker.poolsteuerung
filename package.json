@@ -1,7 +1,7 @@
 {
   "name": "iobroker.poolsteuerung",
-  "version": "0.1.0-beta7",
-  "description": "ioBroker adapter for saltwater pool control",
+  "version": "0.1.0-beta8",
+  "description": "Pool automation adapter",
   "author": "Thomas Radebold",
   "license": "MIT",
   "main": "build/main.js",
