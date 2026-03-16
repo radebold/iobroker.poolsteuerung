@@ -1,6 +1,6 @@
 {
   "name": "iobroker.poolsteuerung",
-  "version": "0.1.0-beta8b",
+  "version": "0.1.1",
   "description": "Pool automation adapter",
   "author": "Thomas Radebold",
   "license": "MIT",
