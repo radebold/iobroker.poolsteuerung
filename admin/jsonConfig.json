@@ -9,22 +9,26 @@
         "adapterEnabled": {
           "type": "checkbox",
           "label": "Adapter aktiv",
-          "newLine": true
+          "newLine": true,
+          "help": "Schaltet die komplette Automatik ein oder aus."
         },
         "debugMode": {
           "type": "checkbox",
           "label": "Debug-Modus",
-          "newLine": true
+          "newLine": true,
+          "help": "Schreibt zus\u00e4tzliche Informationen ins Log."
         },
         "simulateMode": {
           "type": "checkbox",
           "label": "Simulationsmodus",
-          "newLine": true
+          "newLine": true,
+          "help": "Es werden keine echten Aktoren geschaltet."
         },
         "pollIntervalMin": {
           "type": "number",
           "label": "Pr\u00fcfintervall (Minuten)",
-          "newLine": true
+          "newLine": true,
+          "help": "Zeitabstand zwischen den Steuerzyklen."
         },
         "poolDiameterM": {
           "type": "number",

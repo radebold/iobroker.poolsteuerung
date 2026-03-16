@@ -1,17 +1,1 @@
-
-'use strict';
-const utils = require('@iobroker/adapter-core');
-class Poolsteuerung extends utils.Adapter {
-  constructor(options = {}) {
-    super({ ...options, name: 'poolsteuerung' });
-    this.on('ready', this.onReady.bind(this));
-  }
-  async onReady() {
-    this.log.info('poolsteuerung 0.1.1 ui-fix started');
-  }
-}
-if (require.main !== module) {
-  module.exports = options => new Poolsteuerung(options);
-} else {
-  (() => new Poolsteuerung())();
-}
+'use strict';\nconst utils=require('@iobroker/adapter-core');\nclass Poolsteuerung extends utils.Adapter{constructor(options={}){super({...options,name:'poolsteuerung'});this.on('ready',this.onReady.bind(this));}async onReady(){this.log.info('poolsteuerung 0.1.1-final started');}}\nif(require.main!==module){module.exports=options=>new Poolsteuerung(options);}else{(()=>new Poolsteuerung())();}\n
