@@ -1,25 +1,178 @@
 {
   "type": "tabs",
+  "width": "900px",
   "items": {
     "general": {
       "type": "panel",
-      "label": "Allgemein",
+      "label": "ALLGEMEIN",
       "items": {
+        "adapterEnabled": {
+          "type": "checkbox",
+          "label": "Adapter aktiv",
+          "newLine": true
+        },
+        "debugMode": {
+          "type": "checkbox",
+          "label": "Debug-Modus",
+          "newLine": true
+        },
+        "simulateMode": {
+          "type": "checkbox",
+          "label": "Simulationsmodus",
+          "newLine": true
+        },
+        "pollIntervalMin": {
+          "type": "number",
+          "label": "Pr\u00fcfintervall (Minuten)",
+          "newLine": true,
+          "help": "Wie oft alle Werte neu gelesen und die HTML-Ausgabe aktualisiert wird."
+        },
         "poolDiameterM": {
           "type": "text",
           "label": "Pooldurchmesser (m)",
-          "help": "z.B. 4.60 oder 4,60",
-          "newLine": true
+          "newLine": true,
+          "help": "z. B. 4.60 oder 4,60"
         },
         "poolWaterHeightM": {
           "type": "text",
           "label": "Wasserh\u00f6he (m)",
-          "help": "z.B. 1.10 oder 1,10",
+          "newLine": true,
+          "help": "z. B. 1.10 oder 1,10"
+        },
+        "poolVolumeM3": {
+          "type": "text",
+          "label": "Poolvolumen (m\u00b3)",
+          "newLine": true,
+          "help": "Wird beim Adapterstart / Poll neu berechnet.",
+          "disabled": true
+        }
+      }
+    },
+    "ph": {
+      "type": "panel",
+      "label": "PH-DOSIERUNG",
+      "items": {
+        "phStateId": {
+          "type": "text",
+          "label": "State-ID pH",
           "newLine": true
         },
-        "poolVolumeInfo": {
-          "type": "staticText",
-          "text": "Poolvolumen wird automatisch beim Speichern neu berechnet"
+        "phDoseEnableStateId": {
+          "type": "text",
+          "label": "State-ID pH Freigabe",
+          "newLine": true
+        },
+        "phPumpSocketStateId": {
+          "type": "text",
+          "label": "Dosierpumpe",
+          "newLine": true
+        }
+      }
+    },
+    "chlor": {
+      "type": "panel",
+      "label": "CHLORINATOR",
+      "items": {
+        "orpStateId": {
+          "type": "text",
+          "label": "State-ID ORP",
+          "newLine": true
+        },
+        "chlorinatorSocketStateId": {
+          "type": "text",
+          "label": "Chlorinator",
+          "newLine": true
+        }
+      }
+    },
+    "circulation": {
+      "type": "panel",
+      "label": "UMW\u00c4LZPUMPE",
+      "items": {
+        "circulationPumpSocketStateId": {
+          "type": "text",
+          "label": "Umw\u00e4lzpumpe",
+          "newLine": true
+        }
+      }
+    },
+    "heat": {
+      "type": "panel",
+      "label": "W\u00c4RMEPUMPE",
+      "items": {
+        "waterTempStateId": {
+          "type": "text",
+          "label": "State-ID Wassertemperatur",
+          "newLine": true
+        },
+        "outsideTempStateId": {
+          "type": "text",
+          "label": "State-ID Au\u00dfentemperatur",
+          "newLine": true
+        },
+        "heatpumpPowerStateId": {
+          "type": "text",
+          "label": "W\u00e4rmepumpe Power",
+          "newLine": true
+        },
+        "heatpumpModeStateId": {
+          "type": "text",
+          "label": "W\u00e4rmepumpe Mode",
+          "newLine": true
+        },
+        "heatpumpSetTempStateId": {
+          "type": "text",
+          "label": "W\u00e4rmepumpe Solltemperatur",
+          "newLine": true
+        },
+        "heatpumpTargetTemp": {
+          "type": "number",
+          "label": "Solltemperatur",
+          "newLine": true
+        }
+      }
+    },
+    "solar": {
+      "type": "panel",
+      "label": "SOLAR",
+      "items": {
+        "pvPowerStateId": {
+          "type": "text",
+          "label": "State-ID PV-Leistung",
+          "newLine": true
+        },
+        "gridFeedInStateId": {
+          "type": "text",
+          "label": "State-ID Netzeinspeisung",
+          "newLine": true
+        },
+        "gridSupplyStateId": {
+          "type": "text",
+          "label": "State-ID Netzbezug",
+          "newLine": true
+        },
+        "batterySocStateId": {
+          "type": "text",
+          "label": "State-ID Batterie SoC",
+          "newLine": true
+        }
+      }
+    },
+    "vis": {
+      "type": "panel",
+      "label": "VIS / HTML",
+      "items": {
+        "tabletInfo": {
+          "type": "text",
+          "label": "Tablet HTML-Objekt: poolsteuerung.0.vis.htmlTablet",
+          "newLine": true,
+          "disabled": true
+        },
+        "phoneInfo": {
+          "type": "text",
+          "label": "iPhone HTML-Objekt: poolsteuerung.0.vis.htmlPhone",
+          "newLine": true,
+          "disabled": true
         }
       }
     }
