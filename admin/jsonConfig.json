@@ -6,47 +6,6 @@
       "type": "panel",
       "label": "ALLGEMEIN",
       "items": {
-        "h1": {
-          "type": "header",
-          "text": "Pooldaten",
-          "size": 2
-        },
-        "i1": {
-          "type": "staticText",
-          "text": "Durchmesser und Wasserh\u00f6he bestimmen das Poolvolumen. Nachkommastellen sind erlaubt.",
-          "style": {
-            "opacity": 0.8,
-            "fontSize": 12,
-            "paddingBottom": 8
-          }
-        },
-        "poolDiameterM": {
-          "type": "number",
-          "label": "Pooldurchmesser (m)",
-          "newLine": true,
-          "help": "Innendurchmesser des Pools, z. B. 4.60",
-          "step": 0.01
-        },
-        "poolWaterHeightM": {
-          "type": "number",
-          "label": "Wasserh\u00f6he (m)",
-          "newLine": true,
-          "help": "Aktuelle Wasserh\u00f6he, z. B. 1.10",
-          "step": 0.01
-        },
-        "poolVolumeM3": {
-          "type": "number",
-          "label": "Poolvolumen (m\u00b3)",
-          "newLine": true,
-          "help": "Automatisch berechneter Richtwert.",
-          "disabled": true,
-          "step": 0.01
-        },
-        "h2": {
-          "type": "header",
-          "text": "Adapter",
-          "size": 2
-        },
         "adapterEnabled": {
           "type": "checkbox",
           "label": "Adapter aktiv",
@@ -67,6 +26,25 @@
           "label": "Pr\u00fcfintervall (Minuten)",
           "newLine": true,
           "step": 1
+        },
+        "poolDiameterM": {
+          "type": "number",
+          "label": "Pooldurchmesser (m)",
+          "newLine": true,
+          "step": 0.01
+        },
+        "poolWaterHeightM": {
+          "type": "number",
+          "label": "Wasserh\u00f6he (m)",
+          "newLine": true,
+          "step": 0.01
+        },
+        "poolVolumeM3": {
+          "type": "number",
+          "label": "Poolvolumen (m\u00b3)",
+          "newLine": true,
+          "step": 0.01,
+          "disabled": true
         }
       }
     },
@@ -74,11 +52,6 @@
       "type": "panel",
       "label": "PH-DOSIERUNG",
       "items": {
-        "h1": {
-          "type": "header",
-          "text": "Sensor & Aktor",
-          "size": 2
-        },
         "phStateId": {
           "type": "text",
           "label": "State-ID pH",
@@ -93,11 +66,6 @@
           "type": "text",
           "label": "Dosierpumpe",
           "newLine": true
-        },
-        "h2": {
-          "type": "header",
-          "text": "Regelung",
-          "size": 2
         },
         "phEnabled": {
           "type": "checkbox",
@@ -156,11 +124,6 @@
       "type": "panel",
       "label": "CHLORINATOR",
       "items": {
-        "h1": {
-          "type": "header",
-          "text": "Sensor & Aktor",
-          "size": 2
-        },
         "orpStateId": {
           "type": "text",
           "label": "State-ID ORP",
@@ -170,11 +133,6 @@
           "type": "text",
           "label": "Chlorinator",
           "newLine": true
-        },
-        "h2": {
-          "type": "header",
-          "text": "Regelung",
-          "size": 2
         },
         "chlorinatorEnabled": {
           "type": "checkbox",
@@ -226,20 +184,10 @@
       "type": "panel",
       "label": "UMW\u00c4LZPUMPE",
       "items": {
-        "h1": {
-          "type": "header",
-          "text": "Aktor",
-          "size": 2
-        },
         "circulationPumpSocketStateId": {
           "type": "text",
           "label": "Umw\u00e4lzpumpe",
           "newLine": true
-        },
-        "h2": {
-          "type": "header",
-          "text": "Zeitsteuerung",
-          "size": 2
         },
         "pumpEnabled": {
           "type": "checkbox",
@@ -262,11 +210,6 @@
       "type": "panel",
       "label": "W\u00c4RMEPUMPE",
       "items": {
-        "h1": {
-          "type": "header",
-          "text": "Sensoren & Aktoren",
-          "size": 2
-        },
         "waterTempStateId": {
           "type": "text",
           "label": "State-ID Wassertemperatur",
@@ -291,11 +234,6 @@
           "type": "text",
           "label": "W\u00e4rmepumpe Solltemperatur",
           "newLine": true
-        },
-        "h2": {
-          "type": "header",
-          "text": "Regelung",
-          "size": 2
         },
         "heatpumpEnabled": {
           "type": "checkbox",
@@ -347,11 +285,6 @@
       "type": "panel",
       "label": "SOLAR",
       "items": {
-        "h1": {
-          "type": "header",
-          "text": "Energie-States",
-          "size": 2
-        },
         "pvPowerStateId": {
           "type": "text",
           "label": "State-ID PV-Leistung",
@@ -371,11 +304,6 @@
           "type": "text",
           "label": "State-ID Batterie SoC",
           "newLine": true
-        },
-        "h2": {
-          "type": "header",
-          "text": "Freigaben",
-          "size": 2
         },
         "heatpumpPvMinFeedInW": {
           "type": "number",
@@ -401,19 +329,17 @@
       "type": "panel",
       "label": "STATUS",
       "items": {
-        "h1": {
-          "type": "header",
-          "text": "Status\u00fcbersicht",
-          "size": 2
+        "statusHint1": {
+          "type": "text",
+          "label": "Hinweis",
+          "newLine": true,
+          "disabled": true
         },
-        "i1": {
-          "type": "staticText",
-          "text": "Live-Werte findest du unter poolsteuerung.0.status.* im Objektbaum.",
-          "style": {
-            "opacity": 0.8,
-            "fontSize": 12,
-            "paddingBottom": 8
-          }
+        "statusHint2": {
+          "type": "text",
+          "label": "Live-Werte unter poolsteuerung.0.status.*",
+          "newLine": true,
+          "disabled": true
         }
       }
     },
@@ -421,19 +347,17 @@
       "type": "panel",
       "label": "DIAGNOSE",
       "items": {
-        "h1": {
-          "type": "header",
-          "text": "Diagnose",
-          "size": 2
+        "diagHint1": {
+          "type": "text",
+          "label": "Hinweis",
+          "newLine": true,
+          "disabled": true
         },
-        "i1": {
-          "type": "staticText",
-          "text": "Nutze f\u00fcr Tests debugMode=true und simulateMode=true.",
-          "style": {
-            "opacity": 0.8,
-            "fontSize": 12,
-            "paddingBottom": 8
-          }
+        "diagHint2": {
+          "type": "text",
+          "label": "F\u00fcr Tests: debugMode=true und simulateMode=true",
+          "newLine": true,
+          "disabled": true
         }
       }
     }
