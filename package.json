@@ -1,9 +1,10 @@
 {
   "name": "iobroker.poolsteuerung",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "Pool automation adapter",
-  "main": "build/main.js",
+  "author": "Thomas Radebold",
   "license": "MIT",
+  "main": "build/main.js",
   "dependencies": {
     "@iobroker/adapter-core": "^3.2.3"
   }

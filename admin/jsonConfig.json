@@ -1,5 +1,6 @@
 {
   "type": "tabs",
+  "width": "900px",
   "items": {
     "general": {
       "type": "panel",
@@ -12,25 +13,30 @@
         },
         "i1": {
           "type": "staticText",
-          "text": "Durchmesser und Wasserh\u00f6he bestimmen automatisch das Poolvolumen."
+          "text": "Durchmesser und Wasserh\u00f6he bestimmen das Poolvolumen.",
+          "style": {
+            "opacity": 0.8,
+            "fontSize": 12,
+            "paddingBottom": 8
+          }
         },
         "poolDiameterM": {
           "type": "number",
           "label": "Pooldurchmesser (m)",
           "newLine": true,
-          "help": "Innendurchmesser des Pools"
+          "help": "Innendurchmesser des Pools."
         },
         "poolWaterHeightM": {
           "type": "number",
           "label": "Wasserh\u00f6he (m)",
           "newLine": true,
-          "help": "Aktuelle Wasserh\u00f6he"
+          "help": "Aktuelle Wasserh\u00f6he."
         },
         "poolVolumeM3": {
           "type": "number",
           "label": "Poolvolumen (m\u00b3)",
           "newLine": true,
-          "help": "Automatisch berechnet",
+          "help": "Automatisch berechneter Richtwert.",
           "disabled": true
         },
         "h2": {
@@ -41,27 +47,211 @@
         "adapterEnabled": {
           "type": "checkbox",
           "label": "Adapter aktiv",
-          "newLine": true
+          "newLine": true,
+          "help": "Schaltet die komplette Poolautomatik ein oder aus."
         },
         "debugMode": {
           "type": "checkbox",
-          "label": "Debug Mode",
+          "label": "Debug-Modus",
+          "newLine": true,
+          "help": "Schreibt zus\u00e4tzliche Entscheidungen und Werte ins Log."
+        },
+        "simulateMode": {
+          "type": "checkbox",
+          "label": "Simulationsmodus",
+          "newLine": true,
+          "help": "Es werden keine echten Aktoren geschaltet."
+        },
+        "pollIntervalMin": {
+          "type": "number",
+          "label": "Pr\u00fcfintervall (Minuten)",
+          "newLine": true,
+          "help": "Zeitabstand zwischen den Steuerzyklen."
+        }
+      }
+    },
+    "ph": {
+      "type": "panel",
+      "label": "PH-DOSIERUNG",
+      "items": {
+        "h1": {
+          "type": "header",
+          "text": "Sensor & Aktor",
+          "size": 2
+        },
+        "phStateId": {
+          "type": "text",
+          "label": "State-ID pH",
+          "newLine": true,
+          "help": "Datenpunkt f\u00fcr den aktuellen pH-Wert."
+        },
+        "phDoseEnableStateId": {
+          "type": "text",
+          "label": "State-ID pH Freigabe",
+          "newLine": true,
+          "help": "Boolescher Freigabe-Datenpunkt f\u00fcr die Dosierung."
+        },
+        "phPumpSocketStateId": {
+          "type": "text",
+          "label": "Dosierpumpe",
+          "newLine": true,
+          "help": "Schaltbarer Datenpunkt der pH-Dosierpumpe."
+        },
+        "h2": {
+          "type": "header",
+          "text": "Regelung",
+          "size": 2
+        },
+        "phEnabled": {
+          "type": "checkbox",
+          "label": "pH aktiv",
+          "newLine": true
+        },
+        "phTarget": {
+          "type": "number",
+          "label": "Soll-pH",
+          "newLine": true
+        },
+        "phMinDelta": {
+          "type": "number",
+          "label": "Minimale Abweichung",
+          "newLine": true
+        },
+        "phPumpFlowMlMin": {
+          "type": "number",
+          "label": "F\u00f6rdermenge ml/min",
+          "newLine": true
+        },
+        "phLiquidFactorPercent": {
+          "type": "number",
+          "label": "Fl\u00fcssigfaktor %",
+          "newLine": true
+        },
+        "phMaxDoseMlPerCycle": {
+          "type": "number",
+          "label": "Max ml pro Zyklus",
+          "newLine": true
+        },
+        "phMaxRuntimeSec": {
+          "type": "number",
+          "label": "Max Laufzeit Sek",
+          "newLine": true
+        },
+        "phOnlyWhenPumpRunning": {
+          "type": "checkbox",
+          "label": "Nur wenn Umw\u00e4lzpumpe l\u00e4uft",
+          "newLine": true
+        },
+        "phDoseTimes": {
+          "type": "text",
+          "label": "Pr\u00fcfzeiten",
+          "newLine": true,
+          "help": "Kommagetrennte Uhrzeiten, z. B. 12:00,15:00."
+        }
+      }
+    },
+    "chlor": {
+      "type": "panel",
+      "label": "CHLORINATOR",
+      "items": {
+        "h1": {
+          "type": "header",
+          "text": "Sensor & Aktor",
+          "size": 2
+        },
+        "orpStateId": {
+          "type": "text",
+          "label": "State-ID ORP",
+          "newLine": true,
+          "help": "Datenpunkt f\u00fcr den aktuellen Redox-/ORP-Wert."
+        },
+        "chlorinatorSocketStateId": {
+          "type": "text",
+          "label": "Chlorinator",
+          "newLine": true,
+          "help": "Schaltbarer Datenpunkt des Chlorinators."
+        },
+        "h2": {
+          "type": "header",
+          "text": "Regelung",
+          "size": 2
+        },
+        "chlorinatorEnabled": {
+          "type": "checkbox",
+          "label": "Chlorinator aktiv",
+          "newLine": true
+        },
+        "chlorinatorAutoEnabled": {
+          "type": "checkbox",
+          "label": "ORP-Automatik aktiv",
+          "newLine": true
+        },
+        "chlorinatorOnlyWhenPumpRunning": {
+          "type": "checkbox",
+          "label": "Nur bei laufender Umw\u00e4lzpumpe",
+          "newLine": true
+        },
+        "orpOn": {
+          "type": "number",
+          "label": "ORP EIN bei <=",
+          "newLine": true
+        },
+        "orpOff": {
+          "type": "number",
+          "label": "ORP AUS bei >",
+          "newLine": true
+        },
+        "chlorinatorMinOnMin": {
+          "type": "number",
+          "label": "Mindest-EIN-Zeit (Min)",
+          "newLine": true
+        },
+        "chlorinatorMinOffMin": {
+          "type": "number",
+          "label": "Mindest-AUS-Zeit (Min)",
+          "newLine": true
+        },
+        "chlorinatorStopTime": {
+          "type": "text",
+          "label": "Abschaltzeit",
           "newLine": true
         }
       }
     },
-    "pump": {
+    "circulation": {
       "type": "panel",
       "label": "UMW\u00c4LZPUMPE",
       "items": {
         "h1": {
           "type": "header",
-          "text": "Umw\u00e4lzpumpe",
+          "text": "Aktor",
           "size": 2
         },
-        "i1": {
-          "type": "staticText",
-          "text": "Steuert die Pool\u2011Umw\u00e4lzpumpe."
+        "circulationPumpSocketStateId": {
+          "type": "text",
+          "label": "Umw\u00e4lzpumpe",
+          "newLine": true,
+          "help": "Schaltbarer Datenpunkt der Pool-Umw\u00e4lzpumpe."
+        },
+        "h2": {
+          "type": "header",
+          "text": "Zeitsteuerung",
+          "size": 2
+        },
+        "pumpEnabled": {
+          "type": "checkbox",
+          "label": "Umw\u00e4lzpumpe aktiv",
+          "newLine": true
+        },
+        "pumpStartTime": {
+          "type": "text",
+          "label": "Startzeit",
+          "newLine": true
+        },
+        "pumpEndTime": {
+          "type": "text",
+          "label": "Endzeit",
+          "newLine": true
         }
       }
     },
@@ -71,12 +261,78 @@
       "items": {
         "h1": {
           "type": "header",
-          "text": "W\u00e4rmepumpe",
+          "text": "Sensoren & Aktoren",
           "size": 2
         },
-        "i1": {
-          "type": "staticText",
-          "text": "Hier wird die Pool\u2011W\u00e4rmepumpe konfiguriert."
+        "waterTempStateId": {
+          "type": "text",
+          "label": "State-ID Wassertemperatur",
+          "newLine": true
+        },
+        "outsideTempStateId": {
+          "type": "text",
+          "label": "State-ID Au\u00dfentemperatur",
+          "newLine": true
+        },
+        "heatpumpPowerStateId": {
+          "type": "text",
+          "label": "W\u00e4rmepumpe Power",
+          "newLine": true
+        },
+        "heatpumpModeStateId": {
+          "type": "text",
+          "label": "W\u00e4rmepumpe Mode",
+          "newLine": true
+        },
+        "heatpumpSetTempStateId": {
+          "type": "text",
+          "label": "W\u00e4rmepumpe Solltemperatur",
+          "newLine": true
+        },
+        "h2": {
+          "type": "header",
+          "text": "Regelung",
+          "size": 2
+        },
+        "heatpumpEnabled": {
+          "type": "checkbox",
+          "label": "W\u00e4rmepumpe aktiv",
+          "newLine": true
+        },
+        "heatpumpTargetTemp": {
+          "type": "number",
+          "label": "Solltemperatur",
+          "newLine": true
+        },
+        "heatpumpMinWaterTemp": {
+          "type": "number",
+          "label": "Min Wassertemperatur",
+          "newLine": true
+        },
+        "heatpumpOnlyWhenPumpRunning": {
+          "type": "checkbox",
+          "label": "Nur wenn Umw\u00e4lzpumpe l\u00e4uft",
+          "newLine": true
+        },
+        "heatpumpOnlyWithPvSurplus": {
+          "type": "checkbox",
+          "label": "Nur mit PV-\u00dcberschuss",
+          "newLine": true
+        },
+        "heatpumpRequiresBatteryFull": {
+          "type": "checkbox",
+          "label": "Akku muss voll sein",
+          "newLine": true
+        },
+        "heatpumpMinOnMin": {
+          "type": "number",
+          "label": "Mindestlaufzeit Min",
+          "newLine": true
+        },
+        "heatpumpMinOffMin": {
+          "type": "number",
+          "label": "Mindestpause Min",
+          "newLine": true
         }
       }
     },
@@ -86,12 +342,146 @@
       "items": {
         "h1": {
           "type": "header",
-          "text": "PV / Batterie",
+          "text": "Energie-States",
+          "size": 2
+        },
+        "pvPowerStateId": {
+          "type": "text",
+          "label": "State-ID PV-Leistung",
+          "newLine": true,
+          "help": "Aktuelle Gesamtleistung deiner PV-Anlage in Watt."
+        },
+        "gridFeedInStateId": {
+          "type": "text",
+          "label": "State-ID Netzeinspeisung",
+          "newLine": true,
+          "help": "Echter \u00dcberschuss ins Netz in Watt."
+        },
+        "gridSupplyStateId": {
+          "type": "text",
+          "label": "State-ID Netzbezug",
+          "newLine": true,
+          "help": "Netzbezug in Watt."
+        },
+        "batterySocStateId": {
+          "type": "text",
+          "label": "State-ID Batterie SoC",
+          "newLine": true,
+          "help": "Ladezustand der Hausbatterie in Prozent."
+        },
+        "h2": {
+          "type": "header",
+          "text": "Freigaben",
+          "size": 2
+        },
+        "heatpumpPvMinFeedInW": {
+          "type": "number",
+          "label": "Min PV Einspeisung W",
+          "newLine": true
+        },
+        "heatpumpMinBatterySoc": {
+          "type": "number",
+          "label": "Min Batterie SoC %",
+          "newLine": true
+        },
+        "heatpumpBatteryFullSoc": {
+          "type": "number",
+          "label": "Akku voll ab %",
+          "newLine": true
+        }
+      }
+    },
+    "status": {
+      "type": "panel",
+      "label": "STATUS",
+      "items": {
+        "h1": {
+          "type": "header",
+          "text": "Hinweis",
           "size": 2
         },
         "i1": {
           "type": "staticText",
-          "text": "PV\u2011\u00dcberschuss und Batterie\u2011SOC."
+          "text": "Dieser Reiter ist als \u00dcbersicht gedacht. Die Live-Werte kommen aktuell aus dem Objektbaum unter poolsteuerung.0.status.*",
+          "style": {
+            "opacity": 0.8,
+            "fontSize": 12,
+            "paddingBottom": 8
+          }
+        },
+        "s1": {
+          "type": "text",
+          "label": "Status pH Vorschau ml",
+          "newLine": true,
+          "help": "Objekt: poolsteuerung.0.status.ph.previewMl",
+          "disabled": true
+        },
+        "s2": {
+          "type": "text",
+          "label": "Status Chlorinator letzte Aktion",
+          "newLine": true,
+          "help": "Objekt: poolsteuerung.0.status.chlorinator.lastAction",
+          "disabled": true
+        },
+        "s3": {
+          "type": "text",
+          "label": "Status Umw\u00e4lzpumpe letzte Aktion",
+          "newLine": true,
+          "help": "Objekt: poolsteuerung.0.status.pump.lastAction",
+          "disabled": true
+        },
+        "s4": {
+          "type": "text",
+          "label": "Status W\u00e4rmepumpe Grund",
+          "newLine": true,
+          "help": "Objekt: poolsteuerung.0.status.heatpump.lastReason",
+          "disabled": true
+        },
+        "s5": {
+          "type": "text",
+          "label": "Status letzter Zyklus",
+          "newLine": true,
+          "help": "Objekt: poolsteuerung.0.status.debug.lastCycle",
+          "disabled": true
+        }
+      }
+    },
+    "diagnose": {
+      "type": "panel",
+      "label": "DIAGNOSE",
+      "items": {
+        "h1": {
+          "type": "header",
+          "text": "Hinweis",
+          "size": 2
+        },
+        "i1": {
+          "type": "staticText",
+          "text": "Die eigentlichen Diagnosewerte stehen im Objektbaum unter poolsteuerung.0.status.* und im Log bei aktiviertem Debug-Modus.",
+          "style": {
+            "opacity": 0.8,
+            "fontSize": 12,
+            "paddingBottom": 8
+          }
+        },
+        "d1": {
+          "type": "checkbox",
+          "label": "Debug-Modus",
+          "newLine": true,
+          "help": "Aktiviert zus\u00e4tzliche Logeintr\u00e4ge."
+        },
+        "d2": {
+          "type": "checkbox",
+          "label": "Simulationsmodus",
+          "newLine": true,
+          "help": "Es werden keine echten Aktoren geschaltet."
+        },
+        "d3": {
+          "type": "text",
+          "label": "Wichtig",
+          "newLine": true,
+          "help": "Nutze f\u00fcr Tests debugMode=true und simulateMode=true.",
+          "disabled": true
         }
       }
     }
