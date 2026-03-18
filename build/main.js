@@ -108,14 +108,15 @@ class Poolsteuerung extends utils.Adapter {
 
     return `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=980,height=730">
 <style>
-:root{--bg:#0b1220;--card:#101a2b;--card2:#132238;--line:rgba(255,255,255,.08);--text:#f8fafc;--muted:#94a3b8;--accent:#38bdf8;--ok:#22c55e;--off:#ef4444}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text)}
+:root{--bg:#09111d;--card:#0f1b2d;--card2:#14253d;--line:rgba(255,255,255,.08);--text:#f8fafc;--muted:#9fb0c7;--accent:#38bdf8;--ok:#22c55e;--off:#ef4444}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top left,#10203a 0%,#09111d 42%,#070d18 100%);font-family:Arial,Helvetica,sans-serif;color:var(--text)}
 .wrap{width:980px;height:730px;padding:16px;overflow:hidden}
 .grid{display:grid;grid-template-columns:430px 250px 252px;gap:16px;height:100%}
-.card{background:linear-gradient(180deg,rgba(16,26,43,.98),rgba(19,34,56,.98));border:1px solid var(--line);border-radius:24px;padding:18px;box-shadow:0 12px 30px rgba(0,0,0,.28)}
-.title{font-size:20px;font-weight:700;letter-spacing:.2px}.sub{font-size:12px;color:var(--muted);margin-top:6px}
-.tempMain{font-size:96px;font-weight:700;line-height:.95;margin:22px 0 12px}
-.unit{font-size:28px;color:var(--muted);font-weight:600}
+.card{background:linear-gradient(180deg,rgba(15,27,45,.98),rgba(20,37,61,.98));border:1px solid var(--line);border-radius:24px;padding:18px;box-shadow:0 16px 34px rgba(0,0,0,.30)}
+.title{font-size:20px;font-weight:700;letter-spacing:.2px}
+.sub{font-size:12px;color:var(--muted);margin-top:6px}
+.tempMain{font-size:96px;font-weight:800;line-height:.95;margin:20px 0 12px;letter-spacing:-2px}
+.unit{font-size:28px;color:var(--muted);font-weight:600;margin-left:4px}
 .metricGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:10px}
 .metric{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:18px;padding:14px}
 .metric .k{font-size:13px;color:var(--muted);margin-bottom:6px}
@@ -126,12 +127,15 @@ class Poolsteuerung extends utils.Adapter {
 .energyRow .v{font-size:20px;font-weight:700}
 .statusWrap{display:grid;gap:10px;margin-top:10px}
 .statusItem{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
-.statusName{font-size:18px;font-weight:700}.statusHint{font-size:12px;color:var(--muted);margin-top:3px}
-.pill{min-width:88px;text-align:center;padding:8px 12px;border-radius:999px;font-size:13px;font-weight:700;color:#fff}
-.on{background:linear-gradient(180deg,#34d399,#22c55e)}.off{background:linear-gradient(180deg,#f87171,#ef4444)}
+.statusName{font-size:17px;font-weight:700}
+.statusHint{font-size:12px;color:var(--muted);margin-top:3px}
+.pill{min-width:86px;text-align:center;padding:9px 12px;border-radius:999px;font-size:13px;font-weight:800;color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.16)}
+.on{background:linear-gradient(180deg,#34d399,#22c55e)}
+.off{background:linear-gradient(180deg,#f87171,#ef4444)}
 .headBadge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.22);color:#7dd3fc;font-size:12px;margin-top:10px}
+.glow{box-shadow:0 0 0 1px rgba(56,189,248,.06),0 10px 24px rgba(2,132,199,.08)}
 </style></head><body><div class="wrap"><div class="grid">
-<div class="card">
+<div class="card glow">
   <div class="title">Poolsteuerung</div>
   <div class="sub">Aktualisiert: ${esc(data.updated)}</div>
   <div class="headBadge">Live Status</div>

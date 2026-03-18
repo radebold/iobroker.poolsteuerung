@@ -1,11 +1,5 @@
 {
   "name": "iobroker.poolsteuerung",
-  "version": "0.3.1",
-  "description": "Pool automation adapter with built-in VIS HTML states",
-  "author": "Thomas Radebold",
-  "license": "MIT",
-  "main": "build/main.js",
-  "dependencies": {
-    "@iobroker/adapter-core": "^3.2.3"
-  }
+  "version": "0.3.5",
+  "main": "build/main.js"
 }

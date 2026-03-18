@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.3.1",
+    "version": "0.3.5",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -10,37 +10,6 @@
     "materializeTab": true,
     "adminUI": {
       "config": "json"
-    },
-    "authors": [
-      "Thomas Radebold"
-    ],
-    "loglevel": "info"
-  },
-  "native": {
-    "adapterEnabled": true,
-    "debugMode": true,
-    "simulateMode": false,
-    "pollIntervalMin": 1,
-    "poolDiameterM": "4.60",
-    "poolWaterHeightM": "1.10",
-    "poolVolumeM3": "18.28",
-    "phStateId": "ph803w.0.N7EtmEWYCMVBROOHzkV9zT.ph.value_korr",
-    "orpStateId": "ph803w.0.N7EtmEWYCMVBROOHzkV9zT.orp.value_korr",
-    "waterTempStateId": "tuya.0.83174025e8db848dc0df.102",
-    "outsideTempStateId": "tuya.0.83174025e8db848dc0df.124",
-    "pvPowerStateId": "sun2000-modbus.0.inputPower",
-    "gridFeedInStateId": "sun2000-modbus.0.grid.feedIn",
-    "gridSupplyStateId": "sun2000-modbus.0.grid.supplyFrom",
-    "batterySocStateId": "sun2000-modbus.0.storage.stateOfCharge",
-    "phDoseEnableStateId": "0_userdata.0.Pool.PH.freigabe",
-    "phPumpSocketStateId": "sonoff.0.SonoffDosierpumpePool.POWER",
-    "chlorinatorSocketStateId": "sonoff.0.SonoffChlorinator.POWER",
-    "circulationPumpSocketStateId": "sonoff.0.SonoffSP18.POWER",
-    "heatpumpPowerStateId": "tuya.0.83174025e8db848dc0df.1",
-    "heatpumpModeStateId": "tuya.0.83174025e8db848dc0df.105",
-    "heatpumpSetTempStateId": "tuya.0.83174025e8db848dc0df.106",
-    "heatpumpTargetTemp": 24
-  },
-  "objects": [],
-  "instanceObjects": []
+    }
+  }
 }
