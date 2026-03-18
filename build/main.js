@@ -157,16 +157,20 @@ class Poolsteuerung extends utils.Adapter {
     ].join('');
 
     return `<!DOCTYPE html>
-<html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=390,initial-scale=1.0,viewport-fit=cover">
 <style>
-:root{--bg:#0f172a;--card:#111827;--line:#334155;--text:#f8fafc;--muted:#94a3b8;--ok:#22c55e;--off:#ef4444}
+:root{--line:#334155;--ok:#22c55e;--off:#ef4444;--text:#f8fafc;--muted:#94a3b8}
 *{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#0b1220,#111827);font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:var(--text)}
-.wrap{padding:14px;max-width:390px;margin:0 auto}.card{background:rgba(17,24,39,.96);border:1px solid var(--line);border-radius:20px;padding:14px;margin-bottom:12px}
-.h1{font-size:24px;font-weight:700}.sub{font-size:12px;color:var(--muted);margin-top:4px}.temp{font-size:56px;font-weight:700;line-height:1;margin:14px 0}
-.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.box{background:rgba(15,23,42,.5);border:1px solid var(--line);border-radius:14px;padding:10px}
-.k{font-size:12px;color:var(--muted);margin-bottom:4px}.v{font-size:26px;font-weight:700}.row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(148,163,184,.12)}.row:last-child{border-bottom:none}
-.statusItem{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(148,163,184,.12)}.statusItem:last-child{border-bottom:none}
-.pill{min-width:74px;text-align:center;padding:7px 10px;border-radius:999px;font-size:12px;font-weight:700;color:#fff}.on{background:var(--ok)}.off{background:var(--off)}
+.wrap{width:390px;min-height:844px;padding:12px;overflow:hidden;margin:0 auto}
+.card{background:rgba(17,24,39,.96);border:1px solid var(--line);border-radius:18px;padding:12px;margin-bottom:10px}
+.h1{font-size:22px;font-weight:700}.sub{font-size:11px;color:var(--muted);margin-top:4px}
+.temp{font-size:52px;font-weight:700;line-height:1;margin:12px 0}
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.box{background:rgba(15,23,42,.5);border:1px solid var(--line);border-radius:12px;padding:9px}
+.k{font-size:11px;color:var(--muted);margin-bottom:4px}.v{font-size:24px;font-weight:700}
+.row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(148,163,184,.12);font-size:15px}.row:last-child{border-bottom:none}
+.statusItem{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(148,163,184,.12);font-size:15px}.statusItem:last-child{border-bottom:none}
+.pill{min-width:72px;text-align:center;padding:7px 10px;border-radius:999px;font-size:12px;font-weight:700;color:#fff}.on{background:var(--ok)}.off{background:var(--off)}
 </style></head><body><div class="wrap">
 <div class="card">
   <div class="h1">Poolsteuerung</div>
@@ -180,7 +184,7 @@ class Poolsteuerung extends utils.Adapter {
   </div>
 </div>
 <div class="card">
-  <div class="h1" style="font-size:20px">Energie</div>
+  <div class="h1" style="font-size:18px">Energie</div>
   <div class="row"><div>PV</div><div><b>${esc(data.pv)} W</b></div></div>
   <div class="row"><div>Einspeisung</div><div><b>${esc(data.feedIn)} W</b></div></div>
   <div class="row"><div>Netzbezug</div><div><b>${esc(data.gridSupply)} W</b></div></div>
@@ -188,7 +192,7 @@ class Poolsteuerung extends utils.Adapter {
   <div class="row"><div>Freigabe</div><div><b>${esc(data.heatReason)}</b></div></div>
 </div>
 <div class="card">
-  <div class="h1" style="font-size:20px">Aktoren</div>
+  <div class="h1" style="font-size:18px">Aktoren</div>
   ${status}
 </div>
 </div></body></html>`;
