@@ -111,7 +111,7 @@ class Poolsteuerung extends utils.Adapter {
 <style>
 :root{--bg:#0f172a;--card:#111827;--card2:#1f2937;--line:#334155;--text:#f8fafc;--muted:#94a3b8;--ok:#22c55e;--off:#ef4444}
 *{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#0b1220,#111827);font-family:Arial,Helvetica,sans-serif;color:var(--text)}
-.wrap{width:100%;height:100%;padding:20px}.grid{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:16px}
+.wrap{width:980px;height:730px;padding:16px;overflow:hidden}.grid{display:grid;grid-template-columns:420px 260px 260px;gap:12px}
 .card{background:linear-gradient(180deg,rgba(17,24,39,.95),rgba(31,41,55,.95));border:1px solid var(--line);border-radius:22px;padding:18px}
 .title{font-size:30px;font-weight:700}.sub{font-size:13px;color:var(--muted);margin-top:6px}
 .tempMain{font-size:82px;font-weight:700;line-height:1;margin:18px 0 8px}.unit{font-size:28px;color:var(--muted)}
