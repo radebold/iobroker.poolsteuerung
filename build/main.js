@@ -106,44 +106,57 @@ class Poolsteuerung extends utils.Adapter {
       this.statusItemHtml('Wärmepumpe', 'Solar / Batterie', data.heatpumpOn, false),
     ].join('');
 
-    return `<!DOCTYPE html>
-<html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+    return `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=980,height=730">
 <style>
-:root{--bg:#0f172a;--card:#111827;--card2:#1f2937;--line:#334155;--text:#f8fafc;--muted:#94a3b8;--ok:#22c55e;--off:#ef4444}
-*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#0b1220,#111827);font-family:Arial,Helvetica,sans-serif;color:var(--text)}
-.wrap{width:980px;height:730px;padding:16px;overflow:hidden}.grid{display:grid;grid-template-columns:420px 260px 260px;gap:12px}
-.card{background:linear-gradient(180deg,rgba(17,24,39,.95),rgba(31,41,55,.95));border:1px solid var(--line);border-radius:22px;padding:18px}
-.title{font-size:30px;font-weight:700}.sub{font-size:13px;color:var(--muted);margin-top:6px}
-.tempMain{font-size:82px;font-weight:700;line-height:1;margin:18px 0 8px}.unit{font-size:28px;color:var(--muted)}
-.row{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(148,163,184,.12);padding:12px 0;font-size:20px}.row:last-child{border-bottom:none}
-.label{color:var(--muted)}.value{font-weight:700}.miniGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:14px}
-.mini{background:rgba(15,23,42,.5);border:1px solid var(--line);border-radius:16px;padding:14px}.mini .k{font-size:14px;color:var(--muted);margin-bottom:6px}.mini .v{font-size:34px;font-weight:700}
-.status{display:grid;gap:12px}.statusItem{display:flex;justify-content:space-between;align-items:center;background:rgba(15,23,42,.5);border:1px solid var(--line);border-radius:16px;padding:14px}
-.statusName{font-size:20px;font-weight:700}.statusHint{font-size:13px;color:var(--muted);margin-top:3px}.pill{min-width:96px;text-align:center;padding:10px 12px;border-radius:999px;font-size:15px;font-weight:700;color:#fff}.on{background:var(--ok)}.off{background:var(--off)}
+:root{--bg:#0b1220;--card:#101a2b;--card2:#132238;--line:rgba(255,255,255,.08);--text:#f8fafc;--muted:#94a3b8;--accent:#38bdf8;--ok:#22c55e;--off:#ef4444}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text)}
+.wrap{width:980px;height:730px;padding:16px;overflow:hidden}
+.grid{display:grid;grid-template-columns:430px 250px 252px;gap:16px;height:100%}
+.card{background:linear-gradient(180deg,rgba(16,26,43,.98),rgba(19,34,56,.98));border:1px solid var(--line);border-radius:24px;padding:18px;box-shadow:0 12px 30px rgba(0,0,0,.28)}
+.title{font-size:20px;font-weight:700;letter-spacing:.2px}.sub{font-size:12px;color:var(--muted);margin-top:6px}
+.tempMain{font-size:96px;font-weight:700;line-height:.95;margin:22px 0 12px}
+.unit{font-size:28px;color:var(--muted);font-weight:600}
+.metricGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:10px}
+.metric{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:18px;padding:14px}
+.metric .k{font-size:13px;color:var(--muted);margin-bottom:6px}
+.metric .v{font-size:24px;font-weight:700}
+.energyList{display:grid;gap:10px;margin-top:10px}
+.energyRow{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.energyRow .k{font-size:13px;color:var(--muted)}
+.energyRow .v{font-size:20px;font-weight:700}
+.statusWrap{display:grid;gap:10px;margin-top:10px}
+.statusItem{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.statusName{font-size:18px;font-weight:700}.statusHint{font-size:12px;color:var(--muted);margin-top:3px}
+.pill{min-width:88px;text-align:center;padding:8px 12px;border-radius:999px;font-size:13px;font-weight:700;color:#fff}
+.on{background:linear-gradient(180deg,#34d399,#22c55e)}.off{background:linear-gradient(180deg,#f87171,#ef4444)}
+.headBadge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.22);color:#7dd3fc;font-size:12px;margin-top:10px}
 </style></head><body><div class="wrap"><div class="grid">
 <div class="card">
   <div class="title">Poolsteuerung</div>
   <div class="sub">Aktualisiert: ${esc(data.updated)}</div>
-  <div class="tempMain">${esc(data.poolTemp)} <span class="unit">°C</span></div>
-  <div class="miniGrid">
-    <div class="mini"><div class="k">pH</div><div class="v">${esc(data.ph)}</div></div>
-    <div class="mini"><div class="k">ORP</div><div class="v">${esc(data.orp)}</div></div>
-    <div class="mini"><div class="k">Außen</div><div class="v">${esc(data.outsideTemp)}°C</div></div>
-    <div class="mini"><div class="k">Solltemp</div><div class="v">${esc(data.targetTemp)}°C</div></div>
+  <div class="headBadge">Live Status</div>
+  <div class="tempMain">${esc(data.poolTemp)}<span class="unit">°C</span></div>
+  <div class="metricGrid">
+    <div class="metric"><div class="k">pH</div><div class="v">${esc(data.ph)}</div></div>
+    <div class="metric"><div class="k">ORP</div><div class="v">${esc(data.orp)}</div></div>
+    <div class="metric"><div class="k">Außentemperatur</div><div class="v">${esc(data.outsideTemp)}°C</div></div>
+    <div class="metric"><div class="k">Solltemperatur</div><div class="v">${esc(data.targetTemp)}°C</div></div>
   </div>
 </div>
 <div class="card">
-  <div class="title" style="font-size:24px">Solar / Energie</div>
-  <div class="row"><div class="label">PV-Leistung</div><div class="value">${esc(data.pv)} W</div></div>
-  <div class="row"><div class="label">Netzeinspeisung</div><div class="value">${esc(data.feedIn)} W</div></div>
-  <div class="row"><div class="label">Netzbezug</div><div class="value">${esc(data.gridSupply)} W</div></div>
-  <div class="row"><div class="label">Batterie SoC</div><div class="value">${esc(data.battery)} %</div></div>
-  <div class="row"><div class="label">Heizfreigabe</div><div class="value">${esc(data.heatReason)}</div></div>
-  <div class="row"><div class="label">Poolvolumen</div><div class="value">${esc(data.volume)} m³</div></div>
+  <div class="title">Solar / Energie</div>
+  <div class="energyList">
+    <div class="energyRow"><div class="k">PV-Leistung</div><div class="v">${esc(data.pv)} W</div></div>
+    <div class="energyRow"><div class="k">Netzeinspeisung</div><div class="v">${esc(data.feedIn)} W</div></div>
+    <div class="energyRow"><div class="k">Netzbezug</div><div class="v">${esc(data.gridSupply)} W</div></div>
+    <div class="energyRow"><div class="k">Batterie SoC</div><div class="v">${esc(data.battery)} %</div></div>
+    <div class="energyRow"><div class="k">Heizfreigabe</div><div class="v">${esc(data.heatReason)}</div></div>
+    <div class="energyRow"><div class="k">Poolvolumen</div><div class="v">${esc(data.volume)} m³</div></div>
+  </div>
 </div>
 <div class="card">
-  <div class="title" style="font-size:24px">Aktoren</div>
-  <div class="status">${status}</div>
+  <div class="title">Aktoren</div>
+  <div class="statusWrap">${status}</div>
 </div>
 </div></div></body></html>`;
   }
@@ -157,20 +170,16 @@ class Poolsteuerung extends utils.Adapter {
     ].join('');
 
     return `<!DOCTYPE html>
-<html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=390,initial-scale=1.0,viewport-fit=cover">
+<html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <style>
-:root{--line:#334155;--ok:#22c55e;--off:#ef4444;--text:#f8fafc;--muted:#94a3b8}
+:root{--bg:#0f172a;--card:#111827;--line:#334155;--text:#f8fafc;--muted:#94a3b8;--ok:#22c55e;--off:#ef4444}
 *{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#0b1220,#111827);font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:var(--text)}
-.wrap{width:390px;min-height:844px;padding:12px;overflow:hidden;margin:0 auto}
-.card{background:rgba(17,24,39,.96);border:1px solid var(--line);border-radius:18px;padding:12px;margin-bottom:10px}
-.h1{font-size:22px;font-weight:700}.sub{font-size:11px;color:var(--muted);margin-top:4px}
-.temp{font-size:52px;font-weight:700;line-height:1;margin:12px 0}
-.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-.box{background:rgba(15,23,42,.5);border:1px solid var(--line);border-radius:12px;padding:9px}
-.k{font-size:11px;color:var(--muted);margin-bottom:4px}.v{font-size:24px;font-weight:700}
-.row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(148,163,184,.12);font-size:15px}.row:last-child{border-bottom:none}
-.statusItem{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(148,163,184,.12);font-size:15px}.statusItem:last-child{border-bottom:none}
-.pill{min-width:72px;text-align:center;padding:7px 10px;border-radius:999px;font-size:12px;font-weight:700;color:#fff}.on{background:var(--ok)}.off{background:var(--off)}
+.wrap{padding:14px;max-width:390px;margin:0 auto}.card{background:rgba(17,24,39,.96);border:1px solid var(--line);border-radius:20px;padding:14px;margin-bottom:12px}
+.h1{font-size:24px;font-weight:700}.sub{font-size:12px;color:var(--muted);margin-top:4px}.temp{font-size:56px;font-weight:700;line-height:1;margin:14px 0}
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.box{background:rgba(15,23,42,.5);border:1px solid var(--line);border-radius:14px;padding:10px}
+.k{font-size:12px;color:var(--muted);margin-bottom:4px}.v{font-size:26px;font-weight:700}.row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(148,163,184,.12)}.row:last-child{border-bottom:none}
+.statusItem{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(148,163,184,.12)}.statusItem:last-child{border-bottom:none}
+.pill{min-width:74px;text-align:center;padding:7px 10px;border-radius:999px;font-size:12px;font-weight:700;color:#fff}.on{background:var(--ok)}.off{background:var(--off)}
 </style></head><body><div class="wrap">
 <div class="card">
   <div class="h1">Poolsteuerung</div>
@@ -184,7 +193,7 @@ class Poolsteuerung extends utils.Adapter {
   </div>
 </div>
 <div class="card">
-  <div class="h1" style="font-size:18px">Energie</div>
+  <div class="h1" style="font-size:20px">Energie</div>
   <div class="row"><div>PV</div><div><b>${esc(data.pv)} W</b></div></div>
   <div class="row"><div>Einspeisung</div><div><b>${esc(data.feedIn)} W</b></div></div>
   <div class="row"><div>Netzbezug</div><div><b>${esc(data.gridSupply)} W</b></div></div>
@@ -192,7 +201,7 @@ class Poolsteuerung extends utils.Adapter {
   <div class="row"><div>Freigabe</div><div><b>${esc(data.heatReason)}</b></div></div>
 </div>
 <div class="card">
-  <div class="h1" style="font-size:18px">Aktoren</div>
+  <div class="h1" style="font-size:20px">Aktoren</div>
   ${status}
 </div>
 </div></body></html>`;
