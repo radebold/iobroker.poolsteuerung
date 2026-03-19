@@ -2,9 +2,14 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.3.9.1",
+    "version": "0.3.9-beta1",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
-    "type": "hardware"
+    "type": "hardware",
+    "materialize": true,
+    "materializeTab": true,
+    "adminUI": {
+      "config": "json"
+    }
   }
 }
