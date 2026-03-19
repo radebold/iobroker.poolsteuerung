@@ -200,14 +200,6 @@ class Poolsteuerung extends utils.Adapter {
     await this.setStateAsync('info.poolVolume', volume, true);
   }
 
-
-  wrapHtmlForVis(htmlContent) {
-    const escaped = String(htmlContent)
-      .replace(/&/g, '&amp;')
-      .replace(/"/g, '&quot;');
-    return `<iframe style="width:100%;height:100%;border:0;display:block;border-radius:18px;background:transparent;" srcdoc="${escaped}"></iframe>`;
-  }
-
   async renderVis() {
     const ph = this.fmt(await this.getNumber(this.config.phStateId, 2), 2);
     const orp = this.fmt(await this.getNumber(this.config.orpStateId, 0), 0);
@@ -235,8 +227,8 @@ class Poolsteuerung extends utils.Adapter {
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
-    await this.setStateAsync('vis.htmlTablet', this.wrapHtmlForVis(tablet), true);
-    await this.setStateAsync('vis.htmlPhone', this.wrapHtmlForVis(phone), true);
+    await this.setStateAsync('vis.htmlTablet', tablet, true);
+    await this.setStateAsync('vis.htmlPhone', phone, true);
     await this.ensureState('status.debug.lastVisUpdate', 'string', 'text', '', false);
     await this.setStateAsync('status.debug.lastVisUpdate', data.updated, true);
   }
@@ -318,3 +310,10 @@ if (require.main !== module) {
 } else {
   (() => new Poolsteuerung())();
 }
+
+    await this.ensureState('vis.urlTablet', 'string', 'text.url', '', false);
+    await this.ensureState('vis.urlPhone', 'string', 'text.url', '', false);
+    await this.writeFileAsync('vis.0', 'user/pool/tablet.html', tablet);
+    await this.writeFileAsync('vis.0', 'user/pool/phone.html', phone);
+    await this.setStateAsync('vis.urlTablet', '/vis.0/user/pool/tablet.html', true);
+    await this.setStateAsync('vis.urlPhone', '/vis.0/user/pool/phone.html', true);
