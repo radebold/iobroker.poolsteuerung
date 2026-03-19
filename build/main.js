@@ -78,18 +78,24 @@ class Poolsteuerung extends utils.Adapter {
     return n === null || n === undefined || !Number.isFinite(n) ? fallback : n.toFixed(digits);
   }
 
-  buttonHtml(label, targetId, value, kind = 'default') {
-    const safeLabel = esc(label);
-    const safeId = String(targetId || '').replace(/'/g, "\\'");
-    const safeVal = typeof value === 'boolean' ? (value ? 'true' : 'false') : `'${String(value).replace(/'/g, "\\'")}'`;
-    return `<button class="ctlBtn ${kind}" onclick="if(window.vis&&vis.setValue){vis.setValue('${safeId}', ${safeVal});}">${safeLabel}</button>`;
-  }
-
   statusItemHtml(name, hint, state, compact = false) {
     if (compact) {
-      return `<div class="statusItem"><div>${esc(name)}</div><div class="pill ${state ? 'on' : 'off'}">${state ? 'EIN' : 'AUS'}</div></div>`;
+      return `
+        <div class="statusItem">
+          <div>${esc(name)}</div>
+          <div class="pill ${state ? 'on' : 'off'}">${state ? 'EIN' : 'AUS'}</div>
+        </div>
+      `;
     }
-    return `<div class="statusItem"><div class="statusLeft"><div class="statusName">${esc(name)}</div><div class="statusHint">${esc(hint)}</div></div><div class="pill ${state ? 'on' : 'off'}">${state ? 'EIN' : 'AUS'}</div></div>`;
+    return `
+      <div class="statusItem">
+        <div>
+          <div class="statusName">${esc(name)}</div>
+          <div class="statusHint">${esc(hint)}</div>
+        </div>
+        <div class="pill ${state ? 'on' : 'off'}">${state ? 'EIN' : 'AUS'}</div>
+      </div>
+    `;
   }
 
   buildTabletHtml(data) {
@@ -100,134 +106,183 @@ class Poolsteuerung extends utils.Adapter {
       this.statusItemHtml('Wärmepumpe', 'Solar / Batterie', data.heatpumpOn, false),
     ].join('');
 
-    const controls = `
-      <div class="controlsGrid">
-        ${this.buttonHtml('Pumpe EIN', this.config.circulationPumpSocketStateId, true, 'green')}
-        ${this.buttonHtml('Pumpe AUS', this.config.circulationPumpSocketStateId, false, 'red')}
-        ${this.buttonHtml('Chlor EIN', this.config.chlorinatorSocketStateId, true, 'green')}
-        ${this.buttonHtml('Chlor AUS', this.config.chlorinatorSocketStateId, false, 'red')}
-        ${this.buttonHtml('WP EIN', this.config.heatpumpPowerStateId, true, 'green')}
-        ${this.buttonHtml('WP AUS', this.config.heatpumpPowerStateId, false, 'red')}
-      </div>`;
-
     return `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=980,height=730">
 <style>
 :root{
-  --bg:#07111f; --bg2:#0c1729; --card:#0f1d33; --card2:#12243f; --line:rgba(255,255,255,.08);
-  --text:#f8fafc; --muted:#98a8be; --accent:#38bdf8; --ok:#22c55e; --off:#ef4444; --warn:#f59e0b;
+  --bg:#07101c;
+  --panel:#0f1b2d;
+  --panel2:#14253d;
+  --line:rgba(255,255,255,.08);
+  --lineSoft:rgba(255,255,255,.05);
+  --text:#f8fafc;
+  --muted:#96a8c3;
+  --accent:#56c7ff;
+  --accentSoft:rgba(86,199,255,.12);
+  --ok:#22c55e;
+  --ok2:#34d399;
+  --off:#ef4444;
+  --off2:#f87171;
+  --shadow:0 18px 40px rgba(0,0,0,.34);
 }
 *{box-sizing:border-box}
 body{
   margin:0;
-  background:
-    radial-gradient(circle at 15% 0%, rgba(56,189,248,.12), transparent 30%),
-    radial-gradient(circle at 100% 20%, rgba(34,197,94,.08), transparent 25%),
-    linear-gradient(180deg,var(--bg2),var(--bg));
-  font-family:Arial,Helvetica,sans-serif;
   color:var(--text);
+  font-family:Arial,Helvetica,sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(35,99,170,.26) 0%, rgba(14,25,42,0) 34%),
+    radial-gradient(circle at bottom right, rgba(12,94,154,.20) 0%, rgba(7,16,28,0) 26%),
+    linear-gradient(180deg,#091321 0%,#07101c 100%);
 }
 .wrap{width:980px;height:730px;padding:16px;overflow:hidden}
-.grid{display:grid;grid-template-columns:430px 238px 264px;gap:16px;height:100%}
+.grid{
+  display:grid;
+  grid-template-columns:410px 245px 277px;
+  gap:16px;
+  height:100%;
+}
 .card{
-  background:linear-gradient(180deg,rgba(15,29,51,.96),rgba(18,36,63,.96));
+  position:relative;
+  background:linear-gradient(180deg,rgba(15,27,45,.98),rgba(20,37,61,.98));
   border:1px solid var(--line);
   border-radius:26px;
   padding:18px;
-  box-shadow:0 18px 40px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.04);
+  box-shadow:var(--shadow);
 }
-.hero{
-  display:flex;justify-content:space-between;align-items:flex-start;gap:12px
-}
-.title{font-size:20px;font-weight:800;letter-spacing:.2px}
-.sub{font-size:12px;color:var(--muted);margin-top:6px}
+.heroHeader{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.title{font-size:20px;font-weight:700;letter-spacing:.2px}
+.sub{font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}
 .badge{
-  display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;
-  background:rgba(56,189,248,.10);border:1px solid rgba(56,189,248,.20);color:#7dd3fc;
-  font-size:12px;font-weight:700;white-space:nowrap
+  display:inline-flex;align-items:center;gap:8px;
+  margin-top:12px;
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(86,199,255,.22);
+  background:var(--accentSoft);
+  color:#8bd9ff;
+  font-size:12px;
+  width:max-content;
 }
-.tempWrap{margin-top:18px;display:flex;align-items:flex-end;gap:8px}
-.tempMain{font-size:102px;font-weight:900;line-height:.9;letter-spacing:-3px}
-.unit{font-size:28px;color:var(--muted);font-weight:700;padding-bottom:10px}
-.metricGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:14px}
+.tempRow{display:flex;align-items:flex-end;gap:8px;margin:18px 0 14px}
+.tempMain{
+  font-size:98px;
+  font-weight:800;
+  line-height:.9;
+  letter-spacing:-2px;
+  text-shadow:0 3px 18px rgba(255,255,255,.08);
+}
+.unit{
+  font-size:30px;
+  color:var(--muted);
+  font-weight:600;
+  padding-bottom:12px;
+}
+.metricGrid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+}
 .metric{
-  background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:18px;padding:14px;
-  min-height:94px;
+  background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.02));
+  border:1px solid var(--lineSoft);
+  border-radius:18px;
+  padding:14px;
+  min-height:98px;
 }
-.metric .k{font-size:12px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em}
-.metric .v{font-size:28px;font-weight:800}
-.metric .s{font-size:12px;color:var(--muted);margin-top:4px}
+.metric .k{
+  font-size:13px;
+  color:var(--muted);
+  margin-bottom:8px;
+}
+.metric .v{
+  font-size:24px;
+  font-weight:700;
+}
 .energyList,.statusWrap{display:grid;gap:10px;margin-top:12px}
 .energyRow,.statusItem{
-  display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.03);
-  border:1px solid var(--line);border-radius:16px;padding:12px 14px
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:center;
+  background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.02));
+  border:1px solid var(--lineSoft);
+  border-radius:18px;
+  padding:12px 14px;
 }
-.energyRow .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-.energyRow .v{font-size:19px;font-weight:800;text-align:right;max-width:118px}
-.statusLeft{display:flex;flex-direction:column;gap:3px}
-.statusName{font-size:16px;font-weight:800}
-.statusHint{font-size:11px;color:var(--muted)}
+.energyRow{min-height:58px}
+.statusItem{min-height:74px}
+.energyRow .k,.statusHint{
+  font-size:12px;
+  color:var(--muted);
+}
+.energyRow .v{
+  font-size:18px;
+  font-weight:700;
+  text-align:right;
+  max-width:126px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.statusName{
+  font-size:17px;
+  font-weight:700;
+  margin-bottom:4px;
+}
 .pill{
-  min-width:86px;text-align:center;padding:9px 12px;border-radius:999px;font-size:13px;font-weight:900;color:#fff;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.18)
+  min-width:84px;
+  text-align:center;
+  padding:9px 12px;
+  border-radius:999px;
+  font-size:13px;
+  font-weight:800;
+  color:#fff;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16);
 }
-.on{background:linear-gradient(180deg,#34d399,#22c55e)}
-.off{background:linear-gradient(180deg,#f87171,#ef4444)}
-.controlsTitle{font-size:14px;font-weight:800;margin-top:14px;margin-bottom:10px;color:#cfe4ff}
-.controlsGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-.ctlBtn{
-  border:none;border-radius:14px;padding:12px 10px;font-size:13px;font-weight:900;color:#fff;cursor:pointer;
-  background:linear-gradient(180deg,#334155,#1f2937);box-shadow:0 8px 18px rgba(0,0,0,.22)
+.on{background:linear-gradient(180deg,var(--ok2),var(--ok))}
+.off{background:linear-gradient(180deg,var(--off2),var(--off))}
+.cardGlow:before{
+  content:'';
+  position:absolute;inset:0;
+  border-radius:26px;
+  pointer-events:none;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
 }
-.ctlBtn.green{background:linear-gradient(180deg,#34d399,#22c55e)}
-.ctlBtn.red{background:linear-gradient(180deg,#f87171,#ef4444)}
-.note{font-size:10px;color:var(--muted);margin-top:8px;line-height:1.35}
-hr.sep{border:none;border-top:1px solid rgba(255,255,255,.06);margin:14px 0}
+.smallIcon{opacity:.92;margin-right:6px}
 </style></head><body><div class="wrap"><div class="grid">
-  <div class="card">
-    <div class="hero">
-      <div>
-        <div class="title">Poolsteuerung</div>
-        <div class="sub">Aktualisiert: ${esc(data.updated)}</div>
-      </div>
-      <div class="badge">Live</div>
-    </div>
-
-    <div class="tempWrap">
-      <div class="tempMain">${esc(data.poolTemp)}</div>
-      <div class="unit">°C</div>
-    </div>
-
-    <div class="metricGrid">
-      <div class="metric"><div class="k">pH-Wert</div><div class="v">${esc(data.ph)}</div><div class="s">aktuell</div></div>
-      <div class="metric"><div class="k">ORP / Redox</div><div class="v">${esc(data.orp)}</div><div class="s">mV</div></div>
-      <div class="metric"><div class="k">Außentemperatur</div><div class="v">${esc(data.outsideTemp)}°C</div><div class="s">außen</div></div>
-      <div class="metric"><div class="k">Solltemperatur</div><div class="v">${esc(data.targetTemp)}°C</div><div class="s">Wärmepumpe</div></div>
-      <div class="metric"><div class="k">Pooldurchmesser</div><div class="v">${esc(data.poolDiameter)} m</div><div class="s">innen</div></div>
-      <div class="metric"><div class="k">Wasserhöhe</div><div class="v">${esc(data.poolHeight)} m</div><div class="s">aktuell</div></div>
-    </div>
+<div class="card cardGlow">
+  <div class="heroHeader">
+    <div class="title">Poolsteuerung</div>
+    <div class="sub">Aktualisiert: ${esc(data.updated)}</div>
   </div>
-
-  <div class="card">
-    <div class="title">Solar / Energie</div>
-    <div class="energyList">
-      <div class="energyRow"><div class="k">PV-Leistung</div><div class="v">${esc(data.pv)} W</div></div>
-      <div class="energyRow"><div class="k">Netzeinspeisung</div><div class="v">${esc(data.feedIn)} W</div></div>
-      <div class="energyRow"><div class="k">Netzbezug</div><div class="v">${esc(data.gridSupply)} W</div></div>
-      <div class="energyRow"><div class="k">Batterie SoC</div><div class="v">${esc(data.battery)} %</div></div>
-      <div class="energyRow"><div class="k">Heizfreigabe</div><div class="v">${esc(data.heatReason)}</div></div>
-      <div class="energyRow"><div class="k">Poolvolumen</div><div class="v">${esc(data.volume)} m³</div></div>
-      <div class="energyRow"><div class="k">Letztes Update</div><div class="v">${esc(data.updatedShort)}</div></div>
-    </div>
+  <div class="badge">● Live Status</div>
+  <div class="tempRow">
+    <div class="tempMain">${esc(data.poolTemp)}</div>
+    <div class="unit">°C</div>
   </div>
-
-  <div class="card">
-    <div class="title">Aktoren & Steuerung</div>
-    <div class="statusWrap">${status}</div>
-    <hr class="sep">
-    <div class="controlsTitle">Schalten</div>
-    ${controls}
-    <div class="note">Die Buttons verwenden im VIS-HTML-Widget den Aufruf vis.setValue(...).</div>
+  <div class="metricGrid">
+    <div class="metric"><div class="k"><span class="smallIcon">🧪</span>pH</div><div class="v">${esc(data.ph)}</div></div>
+    <div class="metric"><div class="k"><span class="smallIcon">⚡</span>ORP</div><div class="v">${esc(data.orp)}</div></div>
+    <div class="metric"><div class="k"><span class="smallIcon">🌡</span>Außentemperatur</div><div class="v">${esc(data.outsideTemp)}°C</div></div>
+    <div class="metric"><div class="k"><span class="smallIcon">🎯</span>Solltemperatur</div><div class="v">${esc(data.targetTemp)}°C</div></div>
   </div>
+</div>
+
+<div class="card cardGlow">
+  <div class="title">Solar / Energie</div>
+  <div class="energyList">
+    <div class="energyRow"><div class="k">PV-Leistung</div><div class="v">${esc(data.pv)} W</div></div>
+    <div class="energyRow"><div class="k">Netzeinspeisung</div><div class="v">${esc(data.feedIn)} W</div></div>
+    <div class="energyRow"><div class="k">Netzbezug</div><div class="v">${esc(data.gridSupply)} W</div></div>
+    <div class="energyRow"><div class="k">Batterie SoC</div><div class="v">${esc(data.battery)} %</div></div>
+    <div class="energyRow"><div class="k">Heizfreigabe</div><div class="v">${esc(data.heatReason)}</div></div>
+    <div class="energyRow"><div class="k">Poolvolumen</div><div class="v">${esc(data.volume)} m³</div></div>
+  </div>
+</div>
+
+<div class="card cardGlow">
+  <div class="title">Aktoren</div>
+  <div class="statusWrap">${status}</div>
+</div>
 </div></div></body></html>`;
   }
 
@@ -298,10 +353,7 @@ hr.sep{border:none;border-top:1px solid rgba(255,255,255,.06);margin:14px 0}
 
     const data = {
       updated: new Date().toLocaleString('de-DE'),
-      updatedShort: new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
       ph, orp, poolTemp, outsideTemp, pv, feedIn, gridSupply, battery, targetTemp, heatReason, volume,
-      poolDiameter: this.fmt(parseNum(this.config.poolDiameterM), 2, '--'),
-      poolHeight: this.fmt(parseNum(this.config.poolWaterHeightM), 2, '--'),
       pumpOn: await this.getBool(this.config.circulationPumpSocketStateId),
       chlorOn: await this.getBool(this.config.chlorinatorSocketStateId),
       phPumpOn: await this.getBool(this.config.phPumpSocketStateId),
