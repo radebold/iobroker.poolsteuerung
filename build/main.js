@@ -145,7 +145,7 @@ class Poolsteuerung extends utils.Adapter {
   <div class="title" style="font-size:24px">Aktoren</div>
   <div class="status">${status}</div>
 </div>
-</div></div>${debugInfo}</body></html>`;
+</div></div></body></html>`;
   }
 
   buildPhoneHtml(data) {
@@ -191,7 +191,7 @@ class Poolsteuerung extends utils.Adapter {
   <div class="h1" style="font-size:20px">Aktoren</div>
   ${status}
 </div>
-</div>${debugInfo}</body></html>`;
+</div></body></html>`;
   }
 
   async updateComputedStates() {
@@ -227,8 +227,15 @@ class Poolsteuerung extends utils.Adapter {
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
+    await this.ensureState('vis.urlTablet', 'string', 'text.url', '', false);
+    await this.ensureState('vis.urlPhone', 'string', 'text.url', '', false);
     await this.setStateAsync('vis.htmlTablet', tablet, true);
     await this.setStateAsync('vis.htmlPhone', phone, true);
+    const ts = Date.now();
+    await this.writeFileAsync('vis.0', 'user/pool/tablet.html', tablet);
+    await this.writeFileAsync('vis.0', 'user/pool/phone.html', phone);
+    await this.setStateAsync('vis.urlTablet', `/vis.0/user/pool/tablet.html?t=${ts}`, true);
+    await this.setStateAsync('vis.urlPhone', `/vis.0/user/pool/phone.html?t=${ts}`, true);
     await this.ensureState('status.debug.lastVisUpdate', 'string', 'text', '', false);
     await this.setStateAsync('status.debug.lastVisUpdate', data.updated, true);
   }
