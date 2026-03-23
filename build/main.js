@@ -240,6 +240,10 @@ class Poolsteuerung extends utils.Adapter {
     const tabletWidget = this.htmlDocToFragment(tablet);
     const phoneWidget = this.htmlDocToFragment(phone);
 
+    
+    const tabletWidget = this.buildTabletWidget(data);
+    const phoneWidget = this.buildPhoneWidget(data);
+
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -252,6 +256,7 @@ class Poolsteuerung extends utils.Adapter {
 
     await this.ensureState('status.debug.lastVisUpdate', 'string', 'text', '', false);
     await this.setStateAsync('status.debug.lastVisUpdate', data.updated, true);
+
   }
 
   queueRender() {
