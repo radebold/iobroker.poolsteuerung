@@ -227,42 +227,10 @@ class Poolsteuerung extends utils.Adapter {
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
-    await this.ensureState('vis.urlTablet', 'string', 'text.url', '', false);
-    await this.ensureState('vis.urlPhone', 'string', 'text.url', '', false);
-
     await this.setStateAsync('vis.htmlTablet', tablet, true);
     await this.setStateAsync('vis.htmlPhone', phone, true);
-
-    const ts = Date.now();
-    await this.writeFileAsync('vis.0', 'user/pool/tablet.html', tablet);
-    await this.writeFileAsync('vis.0', 'user/pool/phone.html', phone);
-    await this.setStateAsync('vis.urlTablet', `/vis.0/user/pool/tablet.html?t=${ts}`, true);
-    await this.setStateAsync('vis.urlPhone', `/vis.0/user/pool/phone.html?t=${ts}`, true);
-
     await this.ensureState('status.debug.lastVisUpdate', 'string', 'text', '', false);
     await this.setStateAsync('status.debug.lastVisUpdate', data.updated, true);
-
-    await this.ensureState('status.debug.outsideTempStateId', 'string', 'text', '', false);
-    await this.ensureState('status.debug.outsideTempValue', 'string', 'text', '', false);
-    await this.ensureState('status.debug.pvPowerStateId', 'string', 'text', '', false);
-    await this.ensureState('status.debug.pvPowerValue', 'string', 'text', '', false);
-    await this.ensureState('status.debug.gridFeedInStateId', 'string', 'text', '', false);
-    await this.ensureState('status.debug.gridFeedInValue', 'string', 'text', '', false);
-    await this.ensureState('status.debug.gridSupplyStateId', 'string', 'text', '', false);
-    await this.ensureState('status.debug.gridSupplyValue', 'string', 'text', '', false);
-    await this.ensureState('status.debug.batterySocStateId', 'string', 'text', '', false);
-    await this.ensureState('status.debug.batterySocValue', 'string', 'text', '', false);
-
-    await this.setStateAsync('status.debug.outsideTempStateId', this.config.outsideTempStateId || '', true);
-    await this.setStateAsync('status.debug.outsideTempValue', String(outsideTemp), true);
-    await this.setStateAsync('status.debug.pvPowerStateId', this.config.pvPowerStateId || '', true);
-    await this.setStateAsync('status.debug.pvPowerValue', String(pv), true);
-    await this.setStateAsync('status.debug.gridFeedInStateId', this.config.gridFeedInStateId || '', true);
-    await this.setStateAsync('status.debug.gridFeedInValue', String(feedIn), true);
-    await this.setStateAsync('status.debug.gridSupplyStateId', this.config.gridSupplyStateId || '', true);
-    await this.setStateAsync('status.debug.gridSupplyValue', String(gridSupply), true);
-    await this.setStateAsync('status.debug.batterySocStateId', this.config.batterySocStateId || '', true);
-    await this.setStateAsync('status.debug.batterySocValue', String(battery), true);
   }
 
   queueRender() {
