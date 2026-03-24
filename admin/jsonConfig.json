@@ -76,7 +76,7 @@
           "type": "text",
           "label": "pH Pr\u00fcfzeiten",
           "newLine": true,
-          "help": "z.B. 11:00,15:00"
+          "help": "z. B. 11:00,15:00. Nur zu diesen Zeiten wird pH bewertet."
         }
       }
     },
@@ -125,22 +125,26 @@
         "pumpWindow1Start": {
           "type": "text",
           "label": "Zeitfenster 1 Start",
-          "newLine": true
+          "newLine": true,
+          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
         },
         "pumpWindow1End": {
           "type": "text",
           "label": "Zeitfenster 1 Ende",
-          "newLine": true
+          "newLine": true,
+          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
         },
         "pumpWindow2Start": {
           "type": "text",
           "label": "Zeitfenster 2 Start",
-          "newLine": true
+          "newLine": true,
+          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
         },
         "pumpWindow2End": {
           "type": "text",
           "label": "Zeitfenster 2 Ende",
-          "newLine": true
+          "newLine": true,
+          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
         }
       }
     },

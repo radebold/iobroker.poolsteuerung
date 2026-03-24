@@ -265,6 +265,9 @@ class Poolsteuerung extends utils.Adapter {
         <div class="ps-row"><div class="ps-k">PV Schwelle</div><div class="ps-v">${esc(data.threshold)} W</div></div>
         <div class="ps-row"><div class="ps-k">ORP Regelung</div><div class="ps-v">${esc(data.chlorDecision)}</div></div>
         <div class="ps-row"><div class="ps-k">ORP Grenzen</div><div class="ps-v">${esc(data.orpOnThreshold)} / ${esc(data.orpOffThreshold)}</div></div>
+        <div class="ps-row"><div class="ps-k">Pumpe Zeitplan</div><div class="ps-v">${esc(data.pumpDecision)}</div></div>
+        <div class="ps-row"><div class="ps-k">pH Prüfung</div><div class="ps-v">${esc(data.phDecision)}</div></div>
+        <div class="ps-row"><div class="ps-k">pH Zeiten</div><div class="ps-v">${esc(data.phTimes)}</div></div>
         <div class="ps-row"><div class="ps-k">Poolvolumen</div><div class="ps-v">${esc(data.volume)} m³</div></div>
       </div>
     </div>
@@ -296,6 +299,8 @@ class Poolsteuerung extends utils.Adapter {
     const battery = this.fmt(await this.getNumber(this.config.batterySocStateId, 0), 0, '0');
     const targetTemp = this.fmt(parseNum(this.config.heatpumpTargetTemp), 1, '24.0');
     const heatReason = await this.getText('poolsteuerung.0.status.heatpump.lastReason', '--');
+    const pumpDecision = await this.getText('poolsteuerung.0.status.debug.lastPumpDecision', '--');
+    const phDecision = await this.getText('poolsteuerung.0.status.debug.lastPhDecision', '--');
     const volume = this.fmt(this.calcVolume(), 2, '--');
 
     const pumpOn = await this.getBool(this.config.circulationPumpSocketStateId);
@@ -351,6 +356,9 @@ class Poolsteuerung extends utils.Adapter {
     const stableData = {
       ph, orp, poolTemp, outsideTemp, pv, feedIn, gridSupply, battery, targetTemp, heatReason, volume,
       phSet: this.fmt(parseNum(this.config.phSetpoint), 2, '--'),
+      phTimes: this.config.phCheckTimes || '-',
+      pumpDecision,
+      phDecision,
       orpSet: this.fmt(parseNum(this.config.orpSetpoint), 0, '--'),
       threshold: this.fmt(threshold, 0, '1000'),
       orpOnThreshold: this.fmt(orpOnThreshold, 0, '725'),
@@ -415,6 +423,7 @@ class Poolsteuerung extends utils.Adapter {
       this.renderQueued = false;
       try {
         await this.updateComputedStates();
+        await this.applyControlLogic();
         await this.renderVis();
       } catch (e) {
         this.log.warn('VIS Render Fehler: ' + e.message);
@@ -433,6 +442,7 @@ class Poolsteuerung extends utils.Adapter {
       this.config.gridSupplyStateId,
       this.config.batterySocStateId,
       this.config.phPumpSocketStateId,
+      this.config.phDoseEnableStateId,
       this.config.chlorinatorSocketStateId,
       this.config.circulationPumpSocketStateId,
       this.config.heatpumpPowerStateId,
@@ -445,24 +455,109 @@ class Poolsteuerung extends utils.Adapter {
     }
   }
 
-  
-  isPhCheckDue(now=new Date()){
-    const list=(this.config.phCheckTimes||"").split(",").map(v=>v.trim());
-    const cur=now.toTimeString().slice(0,5);
-    return list.includes(cur);
+
+  parseHHMM(value) {
+    const m = String(value || '').trim().match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    const hh = Number(m[1]), mm = Number(m[2]);
+    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+    return hh * 60 + mm;
   }
 
-async onReady() {
+  isWindowActive(startText, endText, now = new Date()) {
+    const start = this.parseHHMM(startText);
+    const end = this.parseHHMM(endText);
+    if (start === null || end === null) return false;
+    if (start === 0 && end === 0) return false;
+    if (start === end) return false;
+    const cur = now.getHours() * 60 + now.getMinutes();
+    if (start < end) return cur >= start && cur < end;
+    return cur >= start || cur < end;
+  }
+
+  isPumpScheduleActive(now = new Date()) {
+    return this.isWindowActive(this.config.pumpWindow1Start, this.config.pumpWindow1End, now) ||
+           this.isWindowActive(this.config.pumpWindow2Start, this.config.pumpWindow2End, now);
+  }
+
+  isPhCheckDue(now = new Date()) {
+    const list = String(this.config.phCheckTimes || '').split(',').map(v => v.trim()).filter(Boolean);
+    const current = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    return list.includes(current);
+  }
+
+  async applyControlLogic() {
+    const now = new Date();
+    const pumpId = this.config.circulationPumpSocketStateId;
+    const pumpTarget = this.isPumpScheduleActive(now);
+    const pumpCurrent = await this.getBool(pumpId);
+    let pumpDecision = pumpTarget ? 'Zeitfenster aktiv' : 'Kein aktives Zeitfenster';
+    if (pumpId && pumpCurrent !== pumpTarget) {
+      if (this.config.simulateMode) {
+        pumpDecision = `${pumpTarget ? 'würde EIN' : 'würde AUS'} (Simulationsmodus)`;
+      } else {
+        try {
+          await this.setForeignStateAsync(pumpId, pumpTarget, false);
+          pumpDecision = `${pumpTarget ? 'EIN' : 'AUS'} via Zeitplan`;
+        } catch (e) {
+          pumpDecision = `Schaltfehler: ${e.message || e}`;
+        }
+      }
+    }
+
+    const phValue = await this.getNumber(this.config.phStateId, 2);
+    const phSet = parseNum(this.config.phSetpoint || 7.2);
+    const phEnabled = this.config.phDoseEnableStateId ? await this.getBool(this.config.phDoseEnableStateId) : true;
+    const phPumpId = this.config.phPumpSocketStateId;
+    const phPumpCurrent = await this.getBool(phPumpId);
+    let phTarget = false;
+    let phDecision = 'keine Prüfung';
+    if (!phEnabled) {
+      phDecision = 'pH Freigabe AUS';
+    } else if (!pumpTarget) {
+      phDecision = 'Pumpe AUS';
+    } else if (!this.isPhCheckDue(now)) {
+      phDecision = `warte auf Prüfzeit (${this.config.phCheckTimes || '-'})`;
+    } else if (phValue === null || !Number.isFinite(phValue)) {
+      phDecision = 'pH ungültig';
+    } else if (phValue <= phSet) {
+      phDecision = `pH OK (${phValue} <= ${phSet})`;
+    } else {
+      phTarget = true;
+      phDecision = `Prüfzeit aktiv: pH über Soll (${phValue} > ${phSet})`;
+    }
+
+    if (phPumpId && phPumpCurrent !== phTarget) {
+      if (this.config.simulateMode) {
+        phDecision += ' | würde schalten (Simulationsmodus)';
+      } else {
+        try {
+          await this.setForeignStateAsync(phPumpId, phTarget, false);
+        } catch (e) {
+          phDecision += ` | Schaltfehler: ${e.message || e}`;
+        }
+      }
+    }
+
+    await this.ensureState('status.debug.lastPumpDecision', 'string', 'text', '', false);
+    await this.ensureState('status.debug.lastPhDecision', 'string', 'text', '', false);
+    await this.setStateAsync('status.debug.lastPumpDecision', pumpDecision, true);
+    await this.setStateAsync('status.debug.lastPhDecision', phDecision, true);
+  }
+
+  async onReady() {
     await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
     await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
     await this.setStateAsync('info.connection', true, true);
     await this.subscribeConfiguredStates();
     await this.updateComputedStates();
+    await this.applyControlLogic();
     await this.renderVis();
     const pollMin = Math.max(1, Number(this.config.pollIntervalMin) || 1);
     this.timer = setInterval(async () => {
       await this.setStateAsync('status.debug.lastCycle', new Date().toISOString(), true);
       await this.updateComputedStates();
+      await this.applyControlLogic();
       await this.renderVis();
     }, pollMin * 60000);
     this.debug(`VIS-HTML aktiv: poolsteuerung.0.vis.htmlTablet / htmlPhone, Poll=${pollMin}min`);
