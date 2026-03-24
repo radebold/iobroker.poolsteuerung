@@ -9,7 +9,7 @@ function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-class Poolsteuerung extends utils.Adapter {
+class Pool Manager extends utils.Adapter {
 
   lastTabletWidget = '';
   lastPhoneWidget = '';
@@ -129,7 +129,7 @@ class Poolsteuerung extends utils.Adapter {
 .statusName{font-size:20px;font-weight:700}.statusHint{font-size:13px;color:var(--muted);margin-top:3px}.pill{min-width:96px;text-align:center;padding:10px 12px;border-radius:999px;font-size:15px;font-weight:700;color:#fff}.on{background:var(--ok)}.off{background:var(--off)}
 </style></head><body><div class="wrap"><div class="grid">
 <div class="card">
-  <div class="title">Poolsteuerung</div>
+  <div class="title">Pool Manager</div>
   <div class="sub">Aktualisiert: ${esc(data.updated)}</div>
   <div class="tempMain">${esc(data.poolTemp)} <span class="unit">°C</span></div>
   <div class="miniGrid">
@@ -176,7 +176,7 @@ class Poolsteuerung extends utils.Adapter {
 .pill{min-width:74px;text-align:center;padding:7px 10px;border-radius:999px;font-size:12px;font-weight:700;color:#fff}.on{background:var(--ok)}.off{background:var(--off)}
 </style></head><body><div class="wrap">
 <div class="card">
-  <div class="h1">Poolsteuerung</div>
+  <div class="h1">Pool Manager</div>
   <div class="sub">Aktualisiert: ${esc(data.updated)}</div>
   <div class="temp">${esc(data.poolTemp)}°C</div>
   <div class="grid2">
@@ -289,7 +289,7 @@ class Poolsteuerung extends utils.Adapter {
   <div class="ps-grid">
     <div class="ps-card ps-hero">
       <div class="ps-header">
-        <div class="ps-title">Poolsteuerung</div>
+        <div class="ps-title">Pool Manager</div>
         <div class="ps-sub">Aktualisiert<br>${esc(data.updated)}</div>
       </div>
       <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
@@ -309,17 +309,17 @@ class Poolsteuerung extends utils.Adapter {
         <div class="ps-metric">
           <div class="ps-k">Außen</div>
           <div class="ps-v">${esc(data.outsideTemp)}°C</div>
-          <div class="ps-s">Lufttemperatur</div>
+          <div class="ps-s">Außentemperatur</div>
         </div>
         <div class="ps-metric">
           <div class="ps-k">Solltemp</div>
           <div class="ps-v">${esc(data.targetTemp)}°C</div>
-          <div class="ps-s">Heizen bis Soll</div>
+          <div class="ps-s">Zieltemperatur</div>
         </div>
       </div>
     </div>
     <div class="ps-card">
-      <div class="ps-title">Energie & Regelung</div>
+      <div class="ps-title">Energie & Steuerung</div>
       <div class="ps-list">
         <div class="ps-row"><div class="ps-k">PV-Leistung</div><div class="ps-v">${esc(data.pv)} W</div></div>
         <div class="ps-row"><div class="ps-k">Netzeinspeisung</div><div class="ps-v">${esc(data.feedIn)} W</div></div>
@@ -334,7 +334,7 @@ class Poolsteuerung extends utils.Adapter {
       </div>
     </div>
     <div class="ps-card">
-      <div class="ps-title">Aktoren & Pool</div>
+      <div class="ps-title">Aktoren & Status</div>
       <div class="ps-statuswrap">
         ${item('Umwälzpumpe','Zeitfenster / Laufzeit',data.pumpOn)}
         ${item('Chlorinator','ORP-Regelung',data.chlorOn)}
@@ -429,7 +429,7 @@ class Poolsteuerung extends utils.Adapter {
 <div class="pp-root">
   <div class="pp-card">
     <div class="pp-head">
-      <div class="pp-title">Poolsteuerung</div>
+      <div class="pp-title">Pool Manager</div>
       <div class="pp-sub">Aktualisiert<br>${esc(data.updated)}</div>
     </div>
     <div class="pp-temp">${esc(data.poolTemp)}°C</div>
@@ -449,18 +449,18 @@ class Poolsteuerung extends utils.Adapter {
       <div class="pp-box">
         <div class="pp-k">Außen</div>
         <div class="pp-v">${esc(data.outsideTemp)}°C</div>
-        <div class="pp-s">Lufttemperatur</div>
+        <div class="pp-s">Außentemperatur</div>
       </div>
       <div class="pp-box">
         <div class="pp-k">Solltemp</div>
         <div class="pp-v">${esc(data.targetTemp)}°C</div>
-        <div class="pp-s">Heizen bis Soll</div>
+        <div class="pp-s">Zieltemperatur</div>
       </div>
     </div>
   </div>
 
   <div class="pp-card">
-    <div class="pp-title" style="font-size:16px">Energie & Regelung</div>
+    <div class="pp-title" style="font-size:16px">Energie & Steuerung</div>
     <div class="pp-list" style="margin-top:8px">
       ${item('PV-Leistung', `${data.pv} W`)}
       ${item('Netzeinspeisung', `${data.feedIn} W`)}
@@ -476,7 +476,7 @@ class Poolsteuerung extends utils.Adapter {
   </div>
 
   <div class="pp-card">
-    <div class="pp-title" style="font-size:16px">Aktoren & Pool</div>
+    <div class="pp-title" style="font-size:16px">Aktoren & Status</div>
     <div class="pp-statusgrid" style="margin-top:8px">
       <div class="pp-status"><div class="pp-status-name">Umwälzpumpe</div><div class="pp-pill ${data.pumpOn ? 'on' : 'off'}">${data.pumpOn ? 'EIN' : 'AUS'}</div></div>
       <div class="pp-status"><div class="pp-status-name">Chlorinator</div><div class="pp-pill ${data.chlorOn ? 'on' : 'off'}">${data.chlorOn ? 'EIN' : 'AUS'}</div></div>
@@ -882,7 +882,7 @@ class Poolsteuerung extends utils.Adapter {
 }
 
 if (require.main !== module) {
-  module.exports = options => new Poolsteuerung(options);
+  module.exports = options => new Pool Manager(options);
 } else {
-  (() => new Poolsteuerung())();
+  (() => new Pool Manager())();
 }
