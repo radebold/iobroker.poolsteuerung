@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.3.9-beta22",
+    "version": "0.3.9-beta23",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -16,6 +16,8 @@
   "native": {
     "phSetpoint": 7.2,
     "orpSetpoint": 730,
-    "heatEnableFeedInThresholdW": 1000
+    "heatEnableFeedInThresholdW": 1000,
+    "orpOnThreshold": 725,
+    "orpOffThreshold": 750
   }
 }

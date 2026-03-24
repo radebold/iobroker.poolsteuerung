@@ -92,6 +92,18 @@
           "type": "number",
           "label": "ORP Sollwert",
           "newLine": true
+        },
+        "orpOnThreshold": {
+          "type": "number",
+          "label": "ORP Einschaltgrenze",
+          "newLine": true,
+          "help": "Wenn ORP kleiner oder gleich diesem Wert ist, darf der Chlorinator einschalten."
+        },
+        "orpOffThreshold": {
+          "type": "number",
+          "label": "ORP Ausschaltgrenze",
+          "newLine": true,
+          "help": "Wenn ORP gr\u00f6\u00dfer als dieser Wert ist, wird der Chlorinator ausgeschaltet."
         }
       }
     },

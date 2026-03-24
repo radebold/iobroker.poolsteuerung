@@ -263,6 +263,8 @@ class Poolsteuerung extends utils.Adapter {
         <div class="ps-row"><div class="ps-k">Heizfreigabe</div><div class="ps-v">${esc(data.heatReason)}</div></div>
         <div class="ps-row"><div class="ps-k">WP Entscheidung</div><div class="ps-v">${esc(data.heatDecision)}</div></div>
         <div class="ps-row"><div class="ps-k">PV Schwelle</div><div class="ps-v">${esc(data.threshold)} W</div></div>
+        <div class="ps-row"><div class="ps-k">ORP Regelung</div><div class="ps-v">${esc(data.chlorDecision)}</div></div>
+        <div class="ps-row"><div class="ps-k">ORP Grenzen</div><div class="ps-v">${esc(data.orpOnThreshold)} / ${esc(data.orpOffThreshold)}</div></div>
         <div class="ps-row"><div class="ps-k">Poolvolumen</div><div class="ps-v">${esc(data.volume)} m³</div></div>
       </div>
     </div>
@@ -300,7 +302,39 @@ class Poolsteuerung extends utils.Adapter {
     const chlorOnRaw = await this.getBool(this.config.chlorinatorSocketStateId);
     const phPumpOn = await this.getBool(this.config.phPumpSocketStateId);
     const threshold = parseNum(this.config.heatEnableFeedInThresholdW || 1000);
-    const chlorOn = pumpOn ? chlorOnRaw : false;
+
+    const orpOnThreshold = parseNum(this.config.orpOnThreshold || 725);
+    const orpOffThreshold = parseNum(this.config.orpOffThreshold || 750);
+
+    let chlorDesired = chlorOnRaw;
+    let chlorDecision = '';
+    const orpNum = parseNum(orp);
+
+    if (!pumpOn) {
+      chlorDesired = false;
+      chlorDecision = 'Pumpe AUS';
+    } else if (!Number.isFinite(orpNum)) {
+      chlorDesired = false;
+      chlorDecision = 'ORP ungültig';
+    } else if (orpNum <= orpOnThreshold) {
+      chlorDesired = true;
+      chlorDecision = `ORP niedrig (${orpNum} <= ${orpOnThreshold})`;
+    } else if (orpNum > orpOffThreshold) {
+      chlorDesired = false;
+      chlorDecision = `ORP hoch (${orpNum} > ${orpOffThreshold})`;
+    } else {
+      chlorDecision = `Hysterese (${orpOnThreshold}-${orpOffThreshold})`;
+    }
+
+    if (this.config.chlorinatorSocketStateId && chlorDesired !== chlorOnRaw) {
+      try {
+        await this.setForeignStateAsync(this.config.chlorinatorSocketStateId, chlorDesired, false);
+      } catch (e) {
+        this.log.warn('Chlorinator konnte nicht gesetzt werden: ' + e);
+      }
+    }
+
+    const chlorOn = pumpOn ? chlorDesired : false;
     let heatDecision = '';
     if (!pumpOn) {
       heatDecision = 'Umwälzpumpe AUS';
@@ -319,9 +353,12 @@ class Poolsteuerung extends utils.Adapter {
       phSet: this.fmt(parseNum(this.config.phSetpoint), 2, '--'),
       orpSet: this.fmt(parseNum(this.config.orpSetpoint), 0, '--'),
       threshold: this.fmt(threshold, 0, '1000'),
+      orpOnThreshold: this.fmt(orpOnThreshold, 0, '725'),
+      orpOffThreshold: this.fmt(orpOffThreshold, 0, '750'),
       pumpOn,
       chlorOn,
       phPumpOn,
+      chlorDecision,
       heatpumpOn,
       heatDecision,
       pvRounded: Math.round(parseNum(pv) / 100) * 100,
@@ -367,7 +404,7 @@ class Poolsteuerung extends utils.Adapter {
     await this.ensureState('status.debug.lastVisUpdate', 'string', 'text', '', false);
     await this.setStateAsync('status.debug.lastVisUpdate', data.updated, true);
     await this.ensureState('status.debug.lastDecision', 'string', 'text', '', false);
-    await this.setStateAsync('status.debug.lastDecision', `WP: ${data.heatpumpOn ? 'EIN' : 'AUS'} | ${data.heatDecision}`, true);
+    await this.setStateAsync('status.debug.lastDecision', `WP: ${data.heatpumpOn ? 'EIN' : 'AUS'} | ${data.heatDecision} || Chlor: ${data.chlorOn ? 'EIN' : 'AUS'} | ${data.chlorDecision}`, true);
 
   }
 
