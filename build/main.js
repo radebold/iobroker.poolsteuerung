@@ -254,6 +254,8 @@ class Poolsteuerung extends utils.Adapter {
         <div class="ps-row"><div class="ps-k">Netzbezug</div><div class="ps-v">${esc(data.gridSupply)} W</div></div>
         <div class="ps-row"><div class="ps-k">Batterie SoC</div><div class="ps-v">${esc(data.battery)} %</div></div>
         <div class="ps-row"><div class="ps-k">Heizfreigabe</div><div class="ps-v">${esc(data.heatReason)}</div></div>
+        <div class="ps-row"><div class="ps-k">WP Entscheidung</div><div class="ps-v">${esc(data.heatDecision)}</div></div>
+        <div class="ps-row"><div class="ps-k">PV Schwelle</div><div class="ps-v">${esc(data.threshold)} W</div></div>
         <div class="ps-row"><div class="ps-k">Poolvolumen</div><div class="ps-v">${esc(data.volume)} m³</div></div>
       </div>
     </div>
@@ -261,7 +263,7 @@ class Poolsteuerung extends utils.Adapter {
       <div class="ps-title">Aktoren</div>
       <div class="ps-statuswrap">
         ${item('Umwälzpumpe','Grundlauf / Zeitfenster',data.pumpOn)}
-        ${item('Chlorinator','ORP-Regelung',data.chlorOn)}
+        ${item('Chlorinator','ORP-Regelung',data.pumpOn ? data.chlorOn : false)}
         ${item('pH-Dosierpumpe','Automatik / manuell',data.phPumpOn)}
         ${item('Wärmepumpe','Solar / Batterie',data.heatpumpOn)}
       </div>
@@ -287,15 +289,33 @@ class Poolsteuerung extends utils.Adapter {
     const heatReason = await this.getText('poolsteuerung.0.status.heatpump.lastReason', '--');
     const volume = this.fmt(this.calcVolume(), 2, '--');
 
+    const pumpOn = await this.getBool(this.config.circulationPumpSocketStateId);
+    const chlorOnRaw = await this.getBool(this.config.chlorinatorSocketStateId);
+    const phPumpOn = await this.getBool(this.config.phPumpSocketStateId);
+    const threshold = parseNum(this.config.heatEnableFeedInThresholdW || 1000);
+    const chlorOn = pumpOn ? chlorOnRaw : false;
+    let heatDecision = '';
+    if (!pumpOn) {
+      heatDecision = 'Umwälzpumpe AUS';
+    } else if (parseNum(feedIn) < threshold) {
+      heatDecision = `PV zu gering (${feedIn}W < ${threshold}W)`;
+    } else if (parseNum(poolTemp) >= parseNum(targetTemp)) {
+      heatDecision = 'Solltemperatur erreicht';
+    } else {
+      heatDecision = `PV OK (${feedIn}W > ${threshold}W)`;
+    }
+
     const data = {
       updated: new Date().toLocaleString('de-DE'),
       ph, orp, poolTemp, outsideTemp, pv, feedIn, gridSupply, battery, targetTemp, heatReason, volume,
       phSet: this.fmt(parseNum(this.config.phSetpoint), 2, '--'),
       orpSet: this.fmt(parseNum(this.config.orpSetpoint), 0, '--'),
-      pumpOn: await this.getBool(this.config.circulationPumpSocketStateId),
-      chlorOn: await this.getBool(this.config.chlorinatorSocketStateId),
-      phPumpOn: await this.getBool(this.config.phPumpSocketStateId),
+      threshold: this.fmt(threshold, 0, '1000'),
+      pumpOn,
+      chlorOn,
+      phPumpOn,
       heatpumpOn: await this.getBool(this.config.heatpumpPowerStateId),
+      heatDecision,
     };
 
     const tablet = this.buildTabletHtml(data);
@@ -313,6 +333,9 @@ class Poolsteuerung extends utils.Adapter {
     await this.setStateAsync('vis.widgetPhone', phoneWidget, true);
     await this.ensureState('status.debug.lastVisUpdate', 'string', 'text', '', false);
     await this.setStateAsync('status.debug.lastVisUpdate', data.updated, true);
+    await this.ensureState('status.debug.lastDecision', 'string', 'text', '', false);
+    await this.setStateAsync('status.debug.lastDecision', `WP: ${data.heatpumpOn ? 'EIN' : 'AUS'} | ${data.heatDecision}`, true);
+
   }
 
   queueRender() {

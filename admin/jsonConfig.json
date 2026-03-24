@@ -165,6 +165,12 @@
           "type": "text",
           "label": "State-ID Batterie SoC",
           "newLine": true
+        },
+        "heatEnableFeedInThresholdW": {
+          "type": "number",
+          "label": "PV-\u00dcberschuss Schwellwert (W)",
+          "newLine": true,
+          "help": "Wenn die Netzeinspeisung gr\u00f6\u00dfer als dieser Wert ist, darf die W\u00e4rmepumpe laufen."
         }
       }
     },
