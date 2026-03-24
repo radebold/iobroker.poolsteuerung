@@ -325,8 +325,8 @@ class Pool Manager extends utils.Adapter {
         <div class="ps-row"><div class="ps-k">Netzeinspeisung</div><div class="ps-v">${esc(data.feedIn)} W</div></div>
         <div class="ps-row"><div class="ps-k">Netzbezug</div><div class="ps-v">${esc(data.gridSupply)} W</div></div>
         <div class="ps-row"><div class="ps-k">Batterie SoC</div><div class="ps-v">${esc(data.battery)} %</div></div>
-        <div class="ps-row"><div class="ps-k">WP Entscheidung</div><div class="ps-v">${esc(data.heatDecision)}</div></div>
-        <div class="ps-row"><div class="ps-k">ORP Regelung</div><div class="ps-v">${esc(data.chlorDecision)}</div></div>
+        <div class="ps-row"><div class="ps-k">WP Freigabe</div><div class="ps-v">${esc(data.heatDecision)}</div></div>
+        <div class="ps-row"><div class="ps-k">Chlor Freigabe</div><div class="ps-v">${esc(data.chlorDecision)}</div></div>
         <div class="ps-row"><div class="ps-k">Pumpe Zeitplan</div><div class="ps-v">${esc(data.pumpDecision)}</div></div>
         <div class="ps-row"><div class="ps-k">pH Prüfung</div><div class="ps-v">${esc(data.phDecision)}</div></div>
         <div class="ps-row"><div class="ps-k">pH Zeiten</div><div class="ps-v">${esc(data.phTimes)}</div></div>
@@ -336,12 +336,13 @@ class Pool Manager extends utils.Adapter {
     <div class="ps-card">
       <div class="ps-title">Aktoren & Status</div>
       <div class="ps-statuswrap">
-        ${item('Umwälzpumpe','Zeitfenster / Laufzeit',data.pumpOn)}
+        ${item('Umwälzpumpe','IST-Zustand',data.pumpOn)}
         ${item('Chlorinator','ORP-Regelung',data.chlorOn)}
         ${item('pH-Dosierpumpe','Prüfzeiten / Dosierung',data.phPumpOn)}
         ${item('Wärmepumpe','PV-Freigabe',data.heatpumpOn)}
       </div>
       <div class="ps-list" style="margin-top:10px">
+        <div class="ps-row"><div class="ps-k">Pumpe Zeitplan</div><div class="ps-v">${data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV'}</div></div>
         <div class="ps-row"><div class="ps-k">PV Schwelle</div><div class="ps-v">${esc(data.threshold)} W</div></div>
         <div class="ps-row"><div class="ps-k">ORP Grenzen</div><div class="ps-v">${esc(data.orpOnThreshold)} / ${esc(data.orpOffThreshold)}</div></div>
         <div class="ps-row"><div class="ps-k">pH Tag</div><div class="ps-v">${esc(data.phDailyCount)}</div></div>
@@ -466,8 +467,8 @@ class Pool Manager extends utils.Adapter {
       ${item('Netzeinspeisung', `${data.feedIn} W`)}
       ${item('Netzbezug', `${data.gridSupply} W`)}
       ${item('Batterie SoC', `${data.battery} %`)}
-      ${item('WP Entscheidung', data.heatDecision)}
-      ${item('ORP Regelung', data.chlorDecision)}
+      ${item('WP Freigabe', data.heatDecision)}
+      ${item('Chlor Freigabe', data.chlorDecision)}
       ${item('Pumpe Zeitplan', data.pumpDecision)}
       ${item('pH Prüfung', data.phDecision)}
       ${item('pH Zeiten', data.phTimes)}
@@ -515,6 +516,7 @@ class Pool Manager extends utils.Adapter {
     const volume = this.fmt(this.calcVolume(), 2, '--');
 
     const pumpOn = await this.getBool(this.config.circulationPumpSocketStateId);
+    const pumpScheduleActive = this.isPumpScheduleActive ? this.isPumpScheduleActive(new Date()) : false;
     const chlorOnRaw = await this.getBool(this.config.chlorinatorSocketStateId);
     const phPumpOn = await this.getBool(this.config.phPumpSocketStateId);
     const threshold = parseNum(this.config.heatEnableFeedInThresholdW || 1000);
@@ -579,6 +581,7 @@ class Pool Manager extends utils.Adapter {
       orpOnThreshold: this.fmt(orpOnThreshold, 0, '725'),
       orpOffThreshold: this.fmt(orpOffThreshold, 0, '750'),
       pumpOn,
+      pumpScheduleActive,
       chlorOn,
       phPumpOn,
       chlorDecision,
