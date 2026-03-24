@@ -312,14 +312,9 @@ class Poolsteuerung extends utils.Adapter {
       heatDecision = `PV OK (${feedIn}W > ${threshold}W)`;
     }
 
-    const now = Date.now();
-if (now - this.lastSlowUpdate < 300000) {
-  // skip heavy refresh
-} else {
-  this.lastSlowUpdate = now;
-}
-const data = {
-      updated: new Date().toLocaleString('de-DE'),
+    const heatpumpOn = await this.getBool(this.config.heatpumpPowerStateId);
+
+    const stableData = {
       ph, orp, poolTemp, outsideTemp, pv, feedIn, gridSupply, battery, targetTemp, heatReason, volume,
       phSet: this.fmt(parseNum(this.config.phSetpoint), 2, '--'),
       orpSet: this.fmt(parseNum(this.config.orpSetpoint), 0, '--'),
@@ -327,8 +322,27 @@ const data = {
       pumpOn,
       chlorOn,
       phPumpOn,
-      heatpumpOn: await this.getBool(this.config.heatpumpPowerStateId),
+      heatpumpOn,
       heatDecision,
+      pvRounded: Math.round(parseNum(pv) / 100) * 100,
+      feedInRounded: Math.round(parseNum(feedIn) / 100) * 100,
+      gridSupplyRounded: Math.round(parseNum(gridSupply) / 100) * 100,
+      batteryRounded: Math.round(parseNum(battery))
+    };
+
+    const now = Date.now();
+    const signature = JSON.stringify(stableData);
+
+    if (signature === this.lastRenderSignature && now - this.lastRenderAt < 60000) {
+      return;
+    }
+
+    this.lastRenderSignature = signature;
+    this.lastRenderAt = now;
+
+    const data = {
+      updated: new Date().toLocaleString('de-DE'),
+      ...stableData,
     };
 
     const tablet = this.buildTabletHtml(data);
