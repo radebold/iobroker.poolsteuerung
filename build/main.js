@@ -197,7 +197,7 @@ class Poolsteuerung extends utils.Adapter {
   async updateComputedStates() {
     const volume = this.calcVolume();
     await this.ensureState('info.poolVolume', 'number', 'value.volume', 0, false);
-    await this.setStateAsync('info.poolVolume', volume, heatReason, true);
+    await this.setStateAsync('info.poolVolume', volume, true);
   }
 
 
@@ -287,37 +287,9 @@ class Poolsteuerung extends utils.Adapter {
     const heatReason = await this.getText('poolsteuerung.0.status.heatpump.lastReason', '--');
     const volume = this.fmt(this.calcVolume(), 2, '--');
 
-    const feedInVal = parseNum(await this.getStateAsync(this.config.feedInStateId));
-const threshold = this.config.heatEnableFeedInThresholdW || 1000;
-
-let heatAllowed = false;
-let heatReason = '';
-
-if (!pumpOn) {
-    heatAllowed = false;
-    heatReason = 'Umwälzpumpe AUS';
-} else if (feedInVal < threshold) {
-    heatAllowed = false;
-    heatReason = `PV zu gering (${feedInVal}W < ${threshold}W)`;
-} else if (poolTemp >= targetTemp) {
-    heatAllowed = false;
-    heatReason = 'Solltemperatur erreicht';
-} else {
-    heatAllowed = true;
-    heatReason = `PV OK (${feedInVal}W)`;
-}
-
-await this.setStateAsync(this.config.heatpumpPowerStateId, heatAllowed, false);
-
-if (!pumpOn) {
-    await this.setStateAsync(this.config.chlorinatorSocketStateId, false, false);
-}
-
-await this.setStateAsync('status.debug.lastDecision', `WP: ${heatAllowed ? 'EIN':'AUS'} | ${heatReason}`, true);
-
-const data = {
+    const data = {
       updated: new Date().toLocaleString('de-DE'),
-      ph, orp, poolTemp, outsideTemp, pv, feedIn, gridSupply, battery, targetTemp, heatReason, volume, heatReason,
+      ph, orp, poolTemp, outsideTemp, pv, feedIn, gridSupply, battery, targetTemp, heatReason, volume,
       phSet: this.fmt(parseNum(this.config.phSetpoint), 2, '--'),
       orpSet: this.fmt(parseNum(this.config.orpSetpoint), 0, '--'),
       pumpOn: await this.getBool(this.config.circulationPumpSocketStateId),
