@@ -9,7 +9,7 @@ function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-class Pool Manager extends utils.Adapter {
+class Poolsteuerung extends utils.Adapter {
 
   lastTabletWidget = '';
   lastPhoneWidget = '';
@@ -219,8 +219,6 @@ class Pool Manager extends utils.Adapter {
 
     const phClass = badgeClass(data.ph, 7.0, 7.4);
     const orpClass = badgeClass(data.orp, Number(data.orpOnThreshold || 725), Number(data.orpOffThreshold || 750));
-    const tempClass = badgeClass(data.poolTemp, Number(data.targetTemp || 28) - 1.0, Number(data.targetTemp || 28) + 5.0);
-    const tempClass = badgeClass(data.poolTemp, Number(data.targetTemp || 28) - 1.0, Number(data.targetTemp || 28) + 5.0);
 
     const item = (name, hint, on) => `
       <div class="ps-status">
@@ -260,7 +258,7 @@ class Pool Manager extends utils.Adapter {
   border-radius:16px;padding:10px;min-height:76px;
 }
 .ps-k{font-size:12px;color:#475569;margin-bottom:6px;font-weight:700}
-.ps-v{font-size:22px;font-weight:800;line-height:1.1;color:#0f172a}.ps-v-good{color:#15803d}
+.ps-v{font-size:22px;font-weight:800;line-height:1.1;color:#0f172a}
 .ps-s{font-size:11px;color:#64748b;margin-top:6px}
 .ps-chip{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:800;margin-top:6px}
 .ps-chip.good{background:#dcfce7;color:#166534}
@@ -295,17 +293,16 @@ class Pool Manager extends utils.Adapter {
         <div class="ps-sub">Aktualisiert<br>${esc(data.updated)}</div>
       </div>
       <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
-      <div class="ps-chip ${tempClass}">${tempClass === 'good' ? 'Temperatur OK' : tempClass === 'warn' ? 'Unter Soll' : 'Über Soll'}</div>
       <div class="ps-metrics">
         <div class="ps-metric">
           <div class="ps-k">pH</div>
-          <div class="ps-v ${phClass === 'good' ? 'ps-v-good' : ''}">${esc(data.ph)}</div>
+          <div class="ps-v">${esc(data.ph)}</div>
           <div class="ps-s">Soll ${esc(data.phSet)}</div>
           <div class="ps-chip ${phClass}">${phClass === 'good' ? 'OK' : phClass === 'warn' ? 'Niedrig' : 'Hoch'}</div>
         </div>
         <div class="ps-metric">
           <div class="ps-k">ORP</div>
-          <div class="ps-v ${orpClass === 'good' ? 'ps-v-good' : ''}">${esc(data.orp)}</div>
+          <div class="ps-v">${esc(data.orp)}</div>
           <div class="ps-s">Soll ${esc(data.orpSet)}</div>
           <div class="ps-chip ${orpClass}">${orpClass === 'good' ? 'OK' : orpClass === 'warn' ? 'Niedrig' : 'Hoch'}</div>
         </div>
@@ -403,7 +400,7 @@ class Pool Manager extends utils.Adapter {
   border-radius:14px;padding:10px;min-height:84px;
 }
 .pp-k{font-size:11px;color:#475569;font-weight:700;margin-bottom:6px}
-.pp-v{font-size:22px;font-weight:800;color:#0f172a;line-height:1.1}.pp-v-good{color:#15803d}
+.pp-v{font-size:22px;font-weight:800;color:#0f172a;line-height:1.1}
 .pp-s{font-size:10px;color:#64748b;margin-top:6px}
 .pp-chip{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;font-size:10px;font-weight:800;margin-top:6px}
 .pp-chip.good{background:#dcfce7;color:#166534}
@@ -436,18 +433,17 @@ class Pool Manager extends utils.Adapter {
       <div class="pp-title">Pool Manager</div>
       <div class="pp-sub">Aktualisiert<br>${esc(data.updated)}</div>
     </div>
-    <div class="pp-temp ${tempClass === 'good' ? 'pp-v-good' : ''}">${esc(data.poolTemp)}°C</div>
-    <div class="pp-chip ${tempClass}">${tempClass === 'good' ? 'Temperatur OK' : tempClass === 'warn' ? 'Unter Soll' : 'Über Soll'}</div>
+    <div class="pp-temp">${esc(data.poolTemp)}°C</div>
     <div class="pp-grid">
       <div class="pp-box">
         <div class="pp-k">pH</div>
-        <div class="pp-v ${phClass === 'good' ? 'pp-v-good' : ''}">${esc(data.ph)}</div>
+        <div class="pp-v">${esc(data.ph)}</div>
         <div class="pp-s">Soll ${esc(data.phSet)}</div>
         <div class="pp-chip ${phClass}">${phClass === 'good' ? 'OK' : phClass === 'warn' ? 'Niedrig' : 'Hoch'}</div>
       </div>
       <div class="pp-box">
         <div class="pp-k">ORP</div>
-        <div class="pp-v ${orpClass === 'good' ? 'pp-v-good' : ''}">${esc(data.orp)}</div>
+        <div class="pp-v">${esc(data.orp)}</div>
         <div class="pp-s">Soll ${esc(data.orpSet)}</div>
         <div class="pp-chip ${orpClass}">${orpClass === 'good' ? 'OK' : orpClass === 'warn' ? 'Niedrig' : 'Hoch'}</div>
       </div>
@@ -634,7 +630,7 @@ class Pool Manager extends utils.Adapter {
     await this.ensureState('status.debug.lastVisUpdate', 'string', 'text', '', false);
     await this.setStateAsync('status.debug.lastVisUpdate', data.updated, true);
     await this.ensureState('status.debug.lastDecision', 'string', 'text', '', false);
-    await this.setStateAsync('status.debug.lastDecision', `${data.heatDecision} || ${data.chlorDecision}`, true);
+    await this.setStateAsync('status.debug.lastDecision', `WP: ${data.heatpumpOn ? 'EIN' : 'AUS'} | ${data.heatDecision} || Chlor: ${data.chlorOn ? 'EIN' : 'AUS'} | ${data.chlorDecision}`, true);
 
   }
 
@@ -889,7 +885,7 @@ class Pool Manager extends utils.Adapter {
 }
 
 if (require.main !== module) {
-  module.exports = options => new Pool Manager(options);
+  module.exports = options => new Poolsteuerung(options);
 } else {
-  (() => new Pool Manager())();
+  (() => new Poolsteuerung())();
 }
