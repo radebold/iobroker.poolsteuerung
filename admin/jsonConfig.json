@@ -71,6 +71,60 @@
           "type": "number",
           "label": "pH Sollwert",
           "newLine": true
+        },
+        "phCheckTimes": {
+          "type": "text",
+          "label": "pH Pr\u00fcfzeiten",
+          "newLine": true,
+          "help": "z. B. 11:00,15:00. Nur zu diesen Zeiten wird pH bewertet."
+        },
+        "phDoseTolerance": {
+          "type": "number",
+          "label": "pH Toleranz \u00fcber Soll",
+          "newLine": true,
+          "help": "Erst wenn pH gr\u00f6\u00dfer als Soll + Toleranz ist, wird dosiert."
+        },
+        "phDoseDurationSec": {
+          "type": "number",
+          "label": "Dosierdauer je Zyklus (Sekunden)",
+          "newLine": true,
+          "help": "Laufzeit der Dosierpumpe pro aktivem Pr\u00fcfzeitpunkt."
+        },
+        "phDoseLockMinutes": {
+          "type": "number",
+          "label": "Sperrzeit nach Dosierung (Minuten)",
+          "newLine": true,
+          "help": "Nach einer Dosierung wird bis zum Ablauf dieser Zeit nicht erneut dosiert."
+        },
+        "phDoseMaxPerDay": {
+          "type": "number",
+          "label": "Max. Dosierungen pro Tag",
+          "newLine": true,
+          "help": "Sicherheitsgrenze pro Kalendertag."
+        },
+        "phDoseSecondsPer01Per10m3": {
+          "type": "number",
+          "label": "Sekunden pro 0,1 pH je 10 m\u00b3",
+          "newLine": true,
+          "help": "Grundwert f\u00fcr die Laufzeitberechnung. Beispiel: 30 bedeutet 30s je 0,1 pH Abweichung bei 10 m\u00b3."
+        },
+        "phDoseMaxDurationSec": {
+          "type": "number",
+          "label": "Max. Dosierdauer je Zyklus (Sekunden)",
+          "newLine": true,
+          "help": "Obergrenze f\u00fcr die berechnete Dosierdauer."
+        },
+        "phDoseMlPer01Per10m3": {
+          "type": "number",
+          "label": "ml pro 0,1 pH je 10 m\u00b3",
+          "newLine": true,
+          "help": "Alternative, realit\u00e4tsn\u00e4here Berechnung auf ml-Basis."
+        },
+        "phPumpFlowMlPerMin": {
+          "type": "number",
+          "label": "F\u00f6rdermenge Dosierpumpe (ml/min)",
+          "newLine": true,
+          "help": "Wird genutzt, um aus ml eine Laufzeit in Sekunden zu berechnen."
         }
       }
     },
@@ -115,6 +169,30 @@
           "type": "text",
           "label": "Umw\u00e4lzpumpe",
           "newLine": true
+        },
+        "pumpWindow1Start": {
+          "type": "text",
+          "label": "Zeitfenster 1 Start",
+          "newLine": true,
+          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
+        },
+        "pumpWindow1End": {
+          "type": "text",
+          "label": "Zeitfenster 1 Ende",
+          "newLine": true,
+          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
+        },
+        "pumpWindow2Start": {
+          "type": "text",
+          "label": "Zeitfenster 2 Start",
+          "newLine": true,
+          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
+        },
+        "pumpWindow2End": {
+          "type": "text",
+          "label": "Zeitfenster 2 Ende",
+          "newLine": true,
+          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
         }
       }
     },
