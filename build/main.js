@@ -9,7 +9,7 @@ function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-class Pool Manager extends utils.Adapter {
+class Poolsteuerung extends utils.Adapter {
 
   lastTabletWidget = '';
   lastPhoneWidget = '';
@@ -886,7 +886,7 @@ class Pool Manager extends utils.Adapter {
 }
 
 if (require.main !== module) {
-  module.exports = options => new Pool Manager(options);
+  module.exports = options => new Poolsteuerung(options);
 } else {
-  (() => new Pool Manager())();
+  (() => new Poolsteuerung())();
 }
