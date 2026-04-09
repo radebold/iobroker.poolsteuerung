@@ -9,7 +9,7 @@ function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-class Poolsteuerung extends utils.Adapter {
+class Pool Manager extends utils.Adapter {
 
   lastTabletWidget = '';
   lastPhoneWidget = '';
@@ -68,37 +68,6 @@ class Poolsteuerung extends utils.Adapter {
       return !!(s && s.val);
     } catch {
       return false;
-    }
-  }
-
-
-  async setSwitchStateCompat(id, on) {
-    if (!id) return;
-    try {
-      const obj = await this.getForeignObjectAsync(id);
-      const common = obj && obj.common ? obj.common : {};
-      let value = on;
-
-      if (common.type === 'number') {
-        value = on ? 1 : 0;
-      } else if (common.type === 'string') {
-        const states = common.states || {};
-        const normalized = Object.entries(states).map(([k,v]) => [String(k), String(v).toLowerCase()]);
-        const onEntry = normalized.find(([k,v]) => k === '1' || v === 'on' || v === 'ein' || v === 'true');
-        const offEntry = normalized.find(([k,v]) => k === '0' || v === 'off' || v === 'aus' || v === 'false');
-        if (onEntry && offEntry) {
-          value = on ? onEntry[0] : offEntry[0];
-        } else {
-          value = on ? '1' : '0';
-        }
-      } else {
-        value = !!on;
-      }
-
-      await this.setForeignStateAsync(id, value, false);
-    } catch (e) {
-      this.log.warn(`Schaltfehler für ${id}: ${e.message || e}`);
-      throw e;
     }
   }
 
@@ -386,7 +355,7 @@ class Poolsteuerung extends utils.Adapter {
 </div>`;
   }
 
-  buildPhoneWidget(data) {
+  buildPhoneWidgetbuildPhoneWidget(data) {
     const badgeClass = (value, low, high) => {
       const n = parseNum(value);
       if (!Number.isFinite(n)) return 'neutral';
@@ -527,7 +496,7 @@ class Poolsteuerung extends utils.Adapter {
 </div>`;
   }
 
-  async renderVis() {
+  async renderVisasync renderVis() {
     const ph = this.fmt(await this.getNumber(this.config.phStateId, 2), 2);
     const orp = this.fmt(await this.getNumber(this.config.orpStateId, 0), 0);
     const poolTemp = this.fmt(await this.getNumber(this.config.waterTempStateId, 1), 1);
@@ -577,8 +546,7 @@ class Poolsteuerung extends utils.Adapter {
 
     if (this.config.chlorinatorSocketStateId && chlorDesired !== chlorOnRaw) {
       try {
-        await this.setSwitchStateCompat(this.config.chlorinatorSocketStateId, chlorDesired);
-        this.debug(`Chlorinator Schaltbefehl: ${chlorDesired ? 'EIN' : 'AUS'}`);
+        await this.setForeignStateAsync(this.config.chlorinatorSocketStateId, chlorDesired, false);
       } catch (e) {
         this.log.warn('Chlorinator konnte nicht gesetzt werden: ' + e);
       }
@@ -662,7 +630,6 @@ class Poolsteuerung extends utils.Adapter {
     await this.ensureState('status.debug.lastVisUpdate', 'string', 'text', '', false);
     await this.setStateAsync('status.debug.lastVisUpdate', data.updated, true);
     await this.ensureState('status.debug.lastDecision', 'string', 'text', '', false);
-    await this.setStateAsync('status.debug.lastPumpDecision', `Zeitplan ${data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV'} | Pumpe ${data.pumpOn ? 'EIN' : 'AUS'}`, true);
     await this.setStateAsync('status.debug.lastDecision', `WP: ${data.heatpumpOn ? 'EIN' : 'AUS'} | ${data.heatDecision} || Chlor: ${data.chlorOn ? 'EIN' : 'AUS'} | ${data.chlorDecision}`, true);
 
   }
@@ -793,10 +760,10 @@ class Poolsteuerung extends utils.Adapter {
     if (!pumpId || seconds <= 0) return false;
     if (this.config.simulateMode) return true;
     try {
-      await this.setSwitchStateCompat(pumpId, true);
+      await this.setForeignStateAsync(pumpId, true, false);
       setTimeout(async () => {
         try {
-          await this.setSwitchStateCompat(pumpId, false);
+          await this.setForeignStateAsync(pumpId, false, false);
         } catch (e) {
           this.log.warn('Dosierpumpe konnte nicht ausgeschaltet werden: ' + e.message);
         }
@@ -814,18 +781,27 @@ class Poolsteuerung extends utils.Adapter {
     const pumpTarget = this.isPumpScheduleActive(now);
     const pumpCurrent = await this.getBool(pumpId);
     let pumpDecision = pumpTarget ? 'Zeitfenster aktiv' : 'Kein aktives Zeitfenster';
-    if (pumpId && pumpCurrent !== pumpTarget) {
-      if (this.config.simulateMode) {
-        pumpDecision = `${pumpTarget ? 'würde EIN' : 'würde AUS'} (Simulationsmodus)`;
-      } else {
-        try {
-          await this.setSwitchStateCompat(pumpId, pumpTarget);
-          pumpDecision = `${pumpTarget ? 'EIN' : 'AUS'} via Zeitplan`;
-          this.debug(`Pumpenentscheidung: ${pumpDecision}`);
-        } catch (e) {
-          pumpDecision = `Schaltfehler: ${e.message || e}`;
-        this.debug(`Pumpenentscheidung: ${pumpDecision}`);
+
+    if (pumpTarget) {
+      if (pumpId && pumpCurrent !== true) {
+        if (this.config.simulateMode) {
+          pumpDecision = 'würde EIN (Simulationsmodus)';
+        } else {
+          try {
+            await this.setForeignStateAsync(pumpId, true, false);
+            pumpDecision = 'EIN via Zeitplan';
+          } catch (e) {
+            pumpDecision = `Schaltfehler: ${e.message || e}`;
+          }
         }
+      } else if (pumpCurrent) {
+        pumpDecision = 'EIN (Zeitfenster aktiv)';
+      }
+    } else {
+      if (pumpCurrent) {
+        pumpDecision = 'Manueller Override aktiv';
+      } else {
+        pumpDecision = 'AUS (kein Zeitfenster)';
       }
     }
 
@@ -865,7 +841,6 @@ class Poolsteuerung extends utils.Adapter {
     } else if (phPumpCurrent) {
       phDecision = 'Dosierpumpe läuft bereits';
     } else {
-      this.debug(`pH-Dosierung gestartet: ${calcDoseSec}s`);
       const ok = await this.runDosePumpOnce(calcDoseSec);
       if (ok) {
         await this.setStateAsync('status.phDose.lastDoseTs', nowMs, true);
@@ -880,9 +855,7 @@ class Poolsteuerung extends utils.Adapter {
     await this.ensureState('status.debug.lastPumpDecision', 'string', 'text', '', false);
     await this.ensureState('status.debug.lastPhDecision', 'string', 'text', '', false);
     await this.setStateAsync('status.debug.lastPumpDecision', pumpDecision, true);
-    this.debug(`Pumpenentscheidung: ${pumpDecision}`);
     await this.setStateAsync('status.debug.lastPhDecision', phDecision, true);
-    this.debug(`pH-Entscheidung: ${phDecision}`);
   }
 
   async onReady() {
@@ -923,7 +896,7 @@ class Poolsteuerung extends utils.Adapter {
 }
 
 if (require.main !== module) {
-  module.exports = options => new Poolsteuerung(options);
+  module.exports = options => new Pool Manager(options);
 } else {
-  (() => new Poolsteuerung())();
+  (() => new Pool Manager())();
 }

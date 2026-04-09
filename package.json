@@ -1,5 +1,5 @@
 {
   "name": "iobroker.poolsteuerung",
-  "version": "0.3.9-beta35-hotfix5",
+  "version": "0.3.9-beta35-hotfix7",
   "main": "build/main.js"
 }
