@@ -516,7 +516,7 @@ class Poolsteuerung extends utils.Adapter {
     const volume = this.fmt(this.calcVolume(), 2, '--');
 
     const pumpOn = await this.getBool(this.config.circulationPumpSocketStateId);
-    const pumpScheduleActive = this.isPumpScheduleActive ? this.isPumpScheduleActive(new Date()) : false;
+    const pumpScheduleActive = typeof this.isPumpScheduleActive === 'function' ? this.isPumpScheduleActive(new Date()) : false;
     const chlorOnRaw = await this.getBool(this.config.chlorinatorSocketStateId);
     const phPumpOn = await this.getBool(this.config.phPumpSocketStateId);
     const threshold = parseNum(this.config.heatEnableFeedInThresholdW || 1000);
@@ -647,10 +647,12 @@ class Poolsteuerung extends utils.Adapter {
       this.renderQueued = false;
       try {
         await this.updateComputedStates();
-        await this.applyControlLogic();
+        if (typeof this.applyControlLogic === 'function') {
+          await this.applyControlLogic();
+        }
         await this.renderVis();
       } catch (e) {
-        this.log.warn('VIS Render Fehler: ' + e.message);
+        this.log.warn('VIS Render Fehler: ' + (e && e.stack ? e.stack : e));
       }
     }, 400);
   }
@@ -872,21 +874,36 @@ class Poolsteuerung extends utils.Adapter {
   }
 
   async onReady() {
-    await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
-    await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
-    await this.setStateAsync('info.connection', true, true);
-    await this.subscribeConfiguredStates();
-    await this.updateComputedStates();
-    await this.applyControlLogic();
-    await this.renderVis();
-    const pollMin = Math.max(1, Number(this.config.pollIntervalMin) || 1);
-    this.timer = setInterval(async () => {
-      await this.setStateAsync('status.debug.lastCycle', new Date().toISOString(), true);
+    try {
+      await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
+      await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
+      await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
+      await this.setStateAsync('info.connection', true, true);
+      await this.subscribeConfiguredStates();
       await this.updateComputedStates();
-      await this.applyControlLogic();
+      if (typeof this.applyControlLogic === 'function') {
+        await this.applyControlLogic();
+      }
       await this.renderVis();
-    }, pollMin * 60000);
-    this.debug(`VIS-HTML aktiv: poolsteuerung.0.vis.htmlTablet / htmlPhone, Poll=${pollMin}min`);
+      const pollMin = Math.max(1, Number(this.config.pollIntervalMin) || 1);
+      this.timer = setInterval(async () => {
+        try {
+          await this.setStateAsync('status.debug.lastCycle', new Date().toISOString(), true);
+          await this.updateComputedStates();
+          if (typeof this.applyControlLogic === 'function') {
+            await this.applyControlLogic();
+          }
+          await this.renderVis();
+        } catch (e) {
+          this.log.error(`Poll-Fehler: ${e && e.stack ? e.stack : e}`);
+          await this.setStateAsync('status.debug.lastStartupError', String(e && e.message ? e.message : e), true);
+        }
+      }, pollMin * 60000);
+      this.debug(`VIS-HTML aktiv: poolsteuerung.0.vis.htmlTablet / htmlPhone, Poll=${pollMin}min`);
+    } catch (e) {
+      this.log.error(`Startfehler: ${e && e.stack ? e.stack : e}`);
+      try { await this.setStateAsync('status.debug.lastStartupError', String(e && e.message ? e.message : e), true); } catch {}
+    }
   }
 
   async onStateChange(id, state) {
