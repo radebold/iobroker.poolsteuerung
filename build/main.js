@@ -355,7 +355,7 @@ class Poolsteuerung extends utils.Adapter {
 </div>`;
   }
 
-  buildPhoneWidgetbuildPhoneWidget(data) {
+  buildPhoneWidget(data) {
     const badgeClass = (value, low, high) => {
       const n = parseNum(value);
       if (!Number.isFinite(n)) return 'neutral';
@@ -496,7 +496,7 @@ class Poolsteuerung extends utils.Adapter {
 </div>`;
   }
 
-  async renderVisasync renderVis() {
+  async renderVis() {
     const ph = this.fmt(await this.getNumber(this.config.phStateId, 2), 2);
     const orp = this.fmt(await this.getNumber(this.config.orpStateId, 0), 0);
     const poolTemp = this.fmt(await this.getNumber(this.config.waterTempStateId, 1), 1);
