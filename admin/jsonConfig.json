@@ -51,6 +51,11 @@
           "label": "Umwälzpumpe aktiv",
           "newLine": true
         },
+        "enableChlorControl": {
+          "type": "checkbox",
+          "label": "Chlorsteuerung aktiv",
+          "newLine": true
+        },
         "enablePhControl": {
           "type": "checkbox",
           "label": "PH Steuerung aktiv",
@@ -59,11 +64,6 @@
         "enableHeatpumpControl": {
           "type": "checkbox",
           "label": "Wärmepumpensteuerung aktiv",
-          "newLine": true
-        },
-        "enableChlorControl": {
-          "type": "checkbox",
-          "label": "Chlorsteuerung aktiv",
           "newLine": true
         }
       }

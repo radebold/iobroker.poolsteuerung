@@ -17,10 +17,7 @@ class Poolsteuerung extends utils.Adapter {
   lastRenderSignature = '';
   lastRenderAt = 0;
   lastPumpScheduleActiveMemory = null;
-  lastPumpActualState = null;
   suppressOwnPumpLogUntil = 0;
-  suppressOwnPumpStateUntil = 0;
-  pumpManualOverride = '';
 
   constructor(options = {}) {
     super({ ...options, name: 'poolsteuerung' });
@@ -817,9 +814,6 @@ class Poolsteuerung extends utils.Adapter {
     const now = new Date();
     const pumpId = this.config.circulationPumpSocketStateId;
     const circulationEnabled = this.config.enableCirculationControl !== false;
-    const phEnabledMaster = this.config.enablePhControl !== false;
-    const heatEnabledMaster = this.config.enableHeatpumpControl !== false;
-
     const pumpTarget = circulationEnabled ? this.isPumpScheduleActive(now) : false;
     const pumpCurrent = await this.getBool(pumpId);
 
@@ -829,7 +823,6 @@ class Poolsteuerung extends utils.Adapter {
 
     const lastScheduleActive = this.lastPumpScheduleActiveMemory === null ? pumpTarget : this.lastPumpScheduleActiveMemory;
     const scheduleEdge = pumpTarget !== lastScheduleActive;
-
     let pumpDecision = !circulationEnabled ? 'Steuerung deaktiviert' : (pumpTarget ? 'Zeitfenster aktiv' : 'Kein aktives Zeitfenster');
 
     if (!circulationEnabled) {
@@ -842,7 +835,6 @@ class Poolsteuerung extends utils.Adapter {
         try {
           await this.setSwitchStateCompat(pumpId, pumpTarget);
           this.suppressOwnPumpStateUntil = Date.now() + 8000;
-          this.lastPumpActualState = pumpTarget;
           pumpDecision = `${pumpTarget ? 'EIN' : 'AUS'} via Zeitfensterwechsel`;
         } catch (e) {
           pumpDecision = `Schaltfehler: ${e.message || e}`;
@@ -863,14 +855,12 @@ class Poolsteuerung extends utils.Adapter {
     }
 
     this.lastPumpScheduleActiveMemory = pumpTarget;
-    this.lastPumpActualState = pumpCurrent;
     await this.setStateAsync('status.debug.lastPumpScheduleActive', pumpTarget, true);
 
     const phValue = await this.getNumber(this.config.phStateId, 2);
     const phSet = parseNum(this.config.phSetpoint || 7.2);
     const phTolerance = parseNum(this.config.phDoseTolerance || 0.05);
-    const phEnabledState = this.config.phDoseEnableStateId ? await this.getBool(this.config.phDoseEnableStateId) : true;
-    const phEnabled = phEnabledMaster && phEnabledState;
+    const phEnabled = this.config.phDoseEnableStateId ? await this.getBool(this.config.phDoseEnableStateId) : true;
     const phPumpId = this.config.phPumpSocketStateId;
     const phPumpCurrent = await this.getBool(phPumpId);
     const fallbackDoseDurationSec = Math.max(1, parseNum(this.config.phDoseDurationSec || 30));
@@ -957,7 +947,6 @@ class Poolsteuerung extends utils.Adapter {
     if (id === this.config.circulationPumpSocketStateId) {
       const currentVal = !!state.val;
       if (Date.now() < (this.suppressOwnPumpStateUntil || 0)) {
-        this.lastPumpActualState = currentVal;
         return;
       }
       const scheduleActive = typeof this.isPumpScheduleActive === 'function' ? this.isPumpScheduleActive(new Date()) : false;
@@ -968,7 +957,6 @@ class Poolsteuerung extends utils.Adapter {
       } else {
         this.pumpManualOverride = '';
       }
-      this.lastPumpActualState = currentVal;
     }
 
     if (this.monitoredIds.includes(id)) {
