@@ -51,11 +51,6 @@
           "label": "Umwälzpumpe aktiv",
           "newLine": true
         },
-        "enableChlorControl": {
-          "type": "checkbox",
-          "label": "Chlorsteuerung aktiv",
-          "newLine": true
-        },
         "enablePhControl": {
           "type": "checkbox",
           "label": "PH Steuerung aktiv",
@@ -64,6 +59,11 @@
         "enableHeatpumpControl": {
           "type": "checkbox",
           "label": "Wärmepumpensteuerung aktiv",
+          "newLine": true
+        },
+        "enableChlorControl": {
+          "type": "checkbox",
+          "label": "Chlorsteuerung aktiv",
           "newLine": true
         }
       }
@@ -133,6 +133,12 @@
           "label": "ORP Ausschaltgrenze",
           "newLine": true,
           "help": "Wenn ORP größer als dieser Wert ist, wird der Chlorinator ausgeschaltet."
+        },
+        "chlorOnDelaySec": {
+          "type": "number",
+          "label": "Einschaltverzögerung (Sekunden)",
+          "newLine": true,
+          "help": "Verzögerung für automatisches Einschalten des Chlorinators."
         }
       }
     },
