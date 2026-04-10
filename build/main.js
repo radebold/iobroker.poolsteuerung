@@ -18,6 +18,11 @@ class Poolsteuerung extends utils.Adapter {
   lastRenderAt = 0;
   lastPumpScheduleActiveMemory = null;
   suppressOwnPumpLogUntil = 0;
+  suppressOwnPumpStateUntil = 0;
+  pumpManualOverride = '';
+  lastPumpCommandAt = 0;
+  desiredPumpState = null;
+  lastChlorDemandSince = 0;
 
   constructor(options = {}) {
     super({ ...options, name: 'poolsteuerung' });
@@ -920,15 +925,25 @@ class Poolsteuerung extends utils.Adapter {
       }
     }
 
+    await this.ensureState('status.debug.pumpOverrideMemory', 'string', 'text', '', false);
     await this.setStateAsync('status.debug.lastPumpDecision', pumpDecision, true);
     await this.setStateAsync('status.debug.lastPhDecision', phDecision, true);
+    await this.setStateAsync('status.debug.pumpOverrideMemory', `${this.pumpManualOverride || '-'} | desired=${this.desiredPumpState === null ? '-' : (this.desiredPumpState ? 'on' : 'off')}`, true);
   }
 
   async onReady() {
     try {
+      this.pumpManualOverride = '';
+      this.desiredPumpState = null;
+      this.lastPumpCommandAt = 0;
+      this.suppressOwnPumpStateUntil = 0;
+      this.lastChlorDemandSince = 0;
+      this.lastPumpScheduleActiveMemory = null;
+
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
+      await this.ensureState('status.debug.lastPumpScheduleActive', 'boolean', 'indicator', false, false);
       await this.setStateAsync('info.connection', true, true);
       await this.subscribeConfiguredStates();
       await this.updateComputedStates();
