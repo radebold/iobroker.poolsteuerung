@@ -819,6 +819,7 @@ class Poolsteuerung extends utils.Adapter {
     const pumpCurrent = await this.getBool(pumpId);
 
     await this.ensureState('status.debug.lastPumpScheduleActive', 'boolean', 'indicator', false, false);
+    await this.ensureState('status.debug.lastPumpLoggedDecision', 'string', 'text', '', false);
     const lastScheduleState = await this.getStateAsync('status.debug.lastPumpScheduleActive');
     const lastScheduleActive = !!(lastScheduleState && lastScheduleState.val);
     const scheduleEdge = pumpTarget !== lastScheduleActive;
@@ -901,7 +902,13 @@ class Poolsteuerung extends utils.Adapter {
     await this.ensureState('status.debug.lastPumpDecision', 'string', 'text', '', false);
     await this.ensureState('status.debug.lastPhDecision', 'string', 'text', '', false);
     await this.setStateAsync('status.debug.lastPumpDecision', pumpDecision, true);
-    this.debug(`Pumpenentscheidung: ${pumpDecision} | zeitfenster=${pumpTarget ? 'aktiv' : 'inaktiv'} | ist=${pumpCurrent ? 'ein' : 'aus'} | edge=${scheduleEdge ? 'ja' : 'nein'}`);
+    const lastPumpLoggedDecisionState = await this.getStateAsync('status.debug.lastPumpLoggedDecision');
+    const lastPumpLoggedDecision = lastPumpLoggedDecisionState && lastPumpLoggedDecisionState.val ? String(lastPumpLoggedDecisionState.val) : '';
+    const shouldLogPump = scheduleEdge || pumpDecision !== lastPumpLoggedDecision || pumpDecision.startsWith('Schaltfehler');
+    if (shouldLogPump) {
+      this.debug(`Pumpenentscheidung: ${pumpDecision} | zeitfenster=${pumpTarget ? 'aktiv' : 'inaktiv'} | ist=${pumpCurrent ? 'ein' : 'aus'} | edge=${scheduleEdge ? 'ja' : 'nein'}`);
+      await this.setStateAsync('status.debug.lastPumpLoggedDecision', pumpDecision, true);
+    }
     await this.setStateAsync('status.debug.lastPhDecision', phDecision, true);
   }
 
