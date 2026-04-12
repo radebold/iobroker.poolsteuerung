@@ -105,6 +105,25 @@ class Poolsteuerung extends utils.Adapter {
     await this.setForeignStateAsync(id, value, false);
   }
 
+
+  async forceSwitchOffCompat(id) {
+    if (!id) return;
+    try {
+      await this.setSwitchStateCompat(id, false);
+    } catch (e) {
+      this.log.warn('Force OFF primary failed: ' + (e.message || e));
+    }
+    try {
+      await this.setForeignStateAsync(id, false, false);
+    } catch {}
+    try {
+      await this.setForeignStateAsync(id, 0, false);
+    } catch {}
+    try {
+      await this.setForeignStateAsync(id, '0', false);
+    } catch {}
+  }
+
   async getText(id, fallback = '--') {
     if (!id) return fallback;
     try {
@@ -824,7 +843,7 @@ class Poolsteuerung extends utils.Adapter {
           const stopState = await this.getStateAsync('status.phDose.stopAtTs');
           const activeStopAt = Number(stopState && stopState.val) || 0;
           if (activeStopAt && Date.now() >= activeStopAt) {
-            await this.setSwitchStateCompat(pumpId, false);
+            await this.forceSwitchOffCompat(pumpId);
             await this.setStateAsync('status.phDose.stopAtTs', 0, true);
           }
         } catch (e) {
