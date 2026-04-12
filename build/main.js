@@ -18,8 +18,6 @@ class Poolsteuerung extends utils.Adapter {
   lastRenderAt = 0;
   lastPumpScheduleActiveMemory = null;
   suppressOwnPumpLogUntil = 0;
-  periodicControlTimer = null;
-  lastStartupPlanLog = '';
 
   constructor(options = {}) {
     super({ ...options, name: 'poolsteuerung' });
@@ -78,21 +76,10 @@ class Poolsteuerung extends utils.Adapter {
 
   async setSwitchStateCompat(id, on) {
     if (!id) return;
-
-    let mode = '';
-    if (id === this.config.circulationPumpSocketStateId) mode = this.config.circulationPumpWriteMode || '';
-    if (id === this.config.chlorinatorSocketStateId) mode = this.config.chlorinatorWriteMode || '';
-    if (id === this.config.phPumpSocketStateId) mode = this.config.phPumpWriteMode || '';
-
     const obj = await this.getForeignObjectAsync(id);
     const common = obj && obj.common ? obj.common : {};
-    let value;
-
-    if (mode === 'num01') {
-      value = on ? 1 : 0;
-    } else if (mode === 'bool') {
-      value = !!on;
-    } else if (common.type === 'number') {
+    let value = on;
+    if (common.type === 'number') {
       value = on ? 1 : 0;
     } else if (common.type === 'string') {
       const states = common.states || {};
@@ -103,10 +90,28 @@ class Poolsteuerung extends utils.Adapter {
     } else {
       value = !!on;
     }
-
     await this.setForeignStateAsync(id, value, false);
   }
 
+
+  async forceSwitchOnCompat(id) {
+    if (!id) return false;
+    const attempts = [
+      async () => this.setSwitchStateCompat(id, true),
+      async () => this.setForeignStateAsync(id, true, false),
+      async () => this.setForeignStateAsync(id, 1, false),
+      async () => this.setForeignStateAsync(id, '1', false),
+    ];
+    for (const attempt of attempts) {
+      try { await attempt(); } catch {}
+      try {
+        await new Promise(resolve => setTimeout(resolve, 350));
+        const current = await this.getBool(id);
+        if (current) return true;
+      } catch {}
+    }
+    return false;
+  }
 
   async forceSwitchOffCompat(id) {
     if (!id) return false;
@@ -116,7 +121,6 @@ class Poolsteuerung extends utils.Adapter {
       async () => this.setForeignStateAsync(id, 0, false),
       async () => this.setForeignStateAsync(id, '0', false),
     ];
-
     for (const attempt of attempts) {
       try { await attempt(); } catch {}
       try {
@@ -713,17 +717,6 @@ class Poolsteuerung extends utils.Adapter {
           await this.applyControlLogic();
         }
         await this.renderVis();
-      this.logUpcomingActions();
-      if (this.periodicControlTimer) clearInterval(this.periodicControlTimer);
-      this.periodicControlTimer = setInterval(async () => {
-        try {
-          await this.updateComputedStates();
-          if (typeof this.applyControlLogic === 'function') await this.applyControlLogic();
-          await this.renderVis();
-        } catch (e) {
-          this.log.warn('Periodische Steuerung fehlgeschlagen: ' + (e.message || e));
-        }
-      }, 15000);
       } catch (e) {
         this.log.warn('VIS Render Fehler: ' + (e && e.stack ? e.stack : e));
       }
@@ -836,16 +829,19 @@ class Poolsteuerung extends utils.Adapter {
     return Math.min(sec, maxSec);
   }
 
-  async runDosePumpOnce(seconds) {
+  async runDosePumpOnce(seconds, context = {}) {
     const pumpId = this.config.phPumpSocketStateId;
     const circulationId = this.config.circulationPumpSocketStateId;
     const sec = Math.max(1, Number(seconds) || 1);
     if (!pumpId || sec <= 0) return false;
 
     await this.ensureState('status.phDose.stopAtTs', 'number', 'value.time', 0, false);
+    await this.ensureState('status.debug.lastPhStartInfo', 'string', 'text', '', false);
+
     const circulationOn = circulationId ? await this.getBool(circulationId) : false;
     if (!circulationOn) {
       await this.setStateAsync('status.phDose.stopAtTs', 0, true);
+      if (this.config.debugMode) this.log.info('[PH] Dosierung nicht gestartet: Umwälzpumpe AUS');
       return false;
     }
 
@@ -853,39 +849,45 @@ class Poolsteuerung extends utils.Adapter {
 
     if (this.config.simulateMode) {
       await this.setStateAsync('status.phDose.stopAtTs', stopAtTs, true);
+      const msg = `[PH] würde dosieren | Prüfzeit ${context.checkTime || '-'} | pH=${context.phValue ?? '-'} | Laufzeit=${sec}s`;
+      await this.setStateAsync('status.debug.lastPhStartInfo', msg, true);
+      if (this.config.debugMode) this.log.info(msg);
       return true;
     }
 
-    try {
-      await this.setSwitchStateCompat(pumpId, true);
-      await this.setStateAsync('status.phDose.stopAtTs', stopAtTs, true);
-
-      const stopLater = async () => {
-        try {
-          const circOnNow = circulationId ? await this.getBool(circulationId) : false;
-          const stopState = await this.getStateAsync('status.phDose.stopAtTs');
-          const activeStopAt = Number(stopState && stopState.val) || 0;
-          if (!circOnNow || (activeStopAt && Date.now() >= activeStopAt)) {
-            const offOk = await this.forceSwitchOffCompat(pumpId);
-            if (!offOk) {
-              this.log.warn('Dosierpumpe ließ sich nicht sicher ausschalten');
-            }
-            await this.setStateAsync('status.phDose.stopAtTs', 0, true);
-          }
-        } catch (e) {
-          this.log.warn('Dosierpumpe konnte nicht ausgeschaltet werden: ' + (e.message || e));
-        }
-      };
-
-      setTimeout(stopLater, sec * 1000);
-      setTimeout(stopLater, sec * 1000 + 1500);
-      setTimeout(stopLater, sec * 1000 + 4000);
-
-      return true;
-    } catch (e) {
-      this.log.warn('Dosierpumpe konnte nicht eingeschaltet werden: ' + (e.message || e));
+    const onOk = await this.forceSwitchOnCompat(pumpId);
+    if (!onOk) {
+      this.log.warn('[PH] Dosierpumpe ließ sich nicht sicher einschalten');
       return false;
     }
+
+    await this.setStateAsync('status.phDose.stopAtTs', stopAtTs, true);
+    const msg = `[PH] Dosierpumpe EIN | Prüfzeit ${context.checkTime || '-'} | pH=${context.phValue ?? '-'} | Laufzeit=${sec}s | Stop um ${new Date(stopAtTs).toLocaleTimeString('de-DE')}`;
+    await this.setStateAsync('status.debug.lastPhStartInfo', msg, true);
+    if (this.config.debugMode) this.log.info(msg);
+
+    const stopLater = async (reason) => {
+      try {
+        const circOnNow = circulationId ? await this.getBool(circulationId) : false;
+        const stopState = await this.getStateAsync('status.phDose.stopAtTs');
+        const activeStopAt = Number(stopState && stopState.val) || 0;
+        if (!circOnNow || (activeStopAt && Date.now() >= activeStopAt)) {
+          const offOk = await this.forceSwitchOffCompat(pumpId);
+          await this.setStateAsync('status.phDose.stopAtTs', 0, true);
+          if (this.config.debugMode) {
+            this.log.info(`[PH] Dosierpumpe ${offOk ? 'AUS' : 'AUS fehlgeschlagen'} | Grund ${!circOnNow ? 'Umwälzpumpe AUS' : reason}`);
+          }
+        }
+      } catch (e) {
+        this.log.warn('[PH] Dosierpumpe konnte nicht ausgeschaltet werden: ' + (e.message || e));
+      }
+    };
+
+    setTimeout(() => stopLater('Sollzeit erreicht'), sec * 1000);
+    setTimeout(() => stopLater('Nachkontrolle 1'), sec * 1000 + 1500);
+    setTimeout(() => stopLater('Nachkontrolle 2'), sec * 1000 + 4000);
+
+    return true;
   }
 
   async applyControlLogic() {
@@ -940,45 +942,40 @@ class Poolsteuerung extends utils.Adapter {
     const phPumpId = this.config.phPumpSocketStateId;
     const phPumpCurrent = await this.getBool(phPumpId);
     await this.ensureState('status.phDose.stopAtTs', 'number', 'value.time', 0, false);
+    await this.ensureState('status.debug.lastPhStartInfo', 'string', 'text', '', false);
     const stopAtState = await this.getStateAsync('status.phDose.stopAtTs');
     const stopAtTs = Number(stopAtState && stopAtState.val) || 0;
 
-    if (!this.config.simulateMode && phPumpCurrent && stopAtTs && Date.now() >= stopAtTs) {
-      try {
-        await this.setSwitchStateCompat(phPumpId, false);
-        await this.setStateAsync('status.phDose.stopAtTs', 0, true);
-      } catch (e) {
-        this.log.warn('PH-Dosierpumpe Stop fehlgeschlagen: ' + (e.message || e));
+    if (!this.config.simulateMode && phPumpCurrent && (!pumpCurrent || (stopAtTs && Date.now() >= stopAtTs))) {
+      const offOk = await this.forceSwitchOffCompat(phPumpId);
+      await this.setStateAsync('status.phDose.stopAtTs', 0, true);
+      if (this.config.debugMode) {
+        this.log.info(`[PH] Dosierpumpe ${offOk ? 'AUS' : 'AUS fehlgeschlagen'} | Grund ${!pumpCurrent ? 'Umwälzpumpe AUS' : 'Sollzeit erreicht'}`);
       }
     }
+
     const fallbackDoseDurationSec = Math.max(1, parseNum(this.config.phDoseDurationSec || 30));
     const doseLockMinutes = Math.max(0, parseNum(this.config.phDoseLockMinutes || 60));
     const doseMaxPerDay = Math.max(1, parseNum(this.config.phDoseMaxPerDay || 4));
     await this.ensureState('status.phDose.lastDoseTs', 'number', 'value.time', 0, false);
     await this.ensureState('status.phDose.lastDoseDurationSec', 'number', 'value.interval', 0, false);
+    await this.ensureState('status.phDose.currentPhValue', 'string', 'text', '--', false);
+    await this.ensureState('status.phDose.calculatedDoseSec', 'number', 'value.interval', 0, false);
     const lastDoseState = await this.getStateAsync('status.phDose.lastDoseTs');
     const lastDoseTs = Number(lastDoseState && lastDoseState.val) || 0;
     const nowMs = now.getTime();
     const lockRemainingMs = Math.max(0, (lastDoseTs + doseLockMinutes * 60000) - nowMs);
     const dailyCount = await this.getTodayDoseCount(now);
-    const phDoseMode = this.config.phDoseMode || 'calculated_simple';
-    let calcDoseSec = fallbackDoseDurationSec;
-    if (phDoseMode === 'fixed') {
-      calcDoseSec = fallbackDoseDurationSec;
-    } else if (phDoseMode === 'calculated_simple') {
-      const savedMl = this.config.phDoseMlPer01Per10m3;
-      this.config.phDoseMlPer01Per10m3 = 0;
-      calcDoseSec = this.calcPhDoseDurationSec(phValue, phSet, phTolerance) || fallbackDoseDurationSec;
-      this.config.phDoseMlPer01Per10m3 = savedMl;
-    } else {
-      calcDoseSec = this.calcPhDoseDurationSec(phValue, phSet, phTolerance) || fallbackDoseDurationSec;
-    }
+    const calcDoseSec = this.calcPhDoseDurationSec(phValue, phSet, phTolerance) || fallbackDoseDurationSec;
+    await this.setStateAsync('status.phDose.currentPhValue', phValue === null || !Number.isFinite(phValue) ? '--' : String(phValue), true);
+    await this.setStateAsync('status.phDose.calculatedDoseSec', Number(calcDoseSec) || 0, true);
+    const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
     let phDecision = 'keine Prüfung';
     if (!phEnabled) {
       phDecision = 'pH Freigabe AUS';
-    } else if (!pumpTarget) {
-      phDecision = 'Pumpe AUS';
+    } else if (!pumpCurrent) {
+      phDecision = phPumpCurrent ? 'PH-Dosierung gestoppt (Umwälzpumpe AUS)' : 'Pumpe AUS';
     } else if (!this.isPhCheckDue(now)) {
       phDecision = `warte auf Prüfzeit (${this.config.phCheckTimes || '-'})`;
     } else if (phValue === null || !Number.isFinite(phValue)) {
@@ -990,14 +987,14 @@ class Poolsteuerung extends utils.Adapter {
     } else if (phValue <= (phSet + phTolerance)) {
       phDecision = `pH OK (${phValue} <= ${this.fmt(phSet + phTolerance, 2, '--')})`;
     } else if (phPumpCurrent) {
-      phDecision = 'Dosierpumpe läuft bereits';
+      phDecision = stopAtTs ? `Dosierpumpe läuft bis ${new Date(stopAtTs).toLocaleTimeString('de-DE')}` : 'Dosierpumpe läuft bereits';
     } else {
-      const ok = await this.runDosePumpOnce(calcDoseSec);
+      const ok = await this.runDosePumpOnce(calcDoseSec, { checkTime: currentHHMM, phValue });
       if (ok) {
         await this.setStateAsync('status.phDose.lastDoseTs', nowMs, true);
         await this.setStateAsync('status.phDose.lastDoseDurationSec', calcDoseSec, true);
         const newCount = await this.incrementTodayDoseCount(now);
-        phDecision = `${this.config.simulateMode ? 'würde dosieren' : 'dosiert'} ${calcDoseSec}s (${phDoseMode === 'fixed' ? 'fest' : (phDoseMode === 'calculated_simple' ? 'berechnet einfach' : 'berechnet ml')}) | pH ${phValue} > ${phSet}+${phTolerance} | Tag ${newCount}/${doseMaxPerDay}`;
+        phDecision = `${this.config.simulateMode ? 'würde dosieren' : 'dosiert'} ${calcDoseSec}s | pH ${phValue} > ${phSet}+${phTolerance} | Tag ${newCount}/${doseMaxPerDay}`;
       } else {
         phDecision = 'Dosierung fehlgeschlagen';
       }
@@ -1017,82 +1014,6 @@ class Poolsteuerung extends utils.Adapter {
     await this.setStateAsync('status.debug.lastPhDecision', phDecision, true);
   }
 
-
-  parseMinutes(value) {
-    const m = String(value || '').trim().match(/^(\d{1,2}):(\d{2})$/);
-    if (!m) return null;
-    const hh = Number(m[1]);
-    const mm = Number(m[2]);
-    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
-    return hh * 60 + mm;
-  }
-
-  formatMinutesToHHMM(mins) {
-    const total = ((mins % 1440) + 1440) % 1440;
-    const hh = String(Math.floor(total / 60)).padStart(2, '0');
-    const mm = String(total % 60).padStart(2, '0');
-    return `${hh}:${mm}`;
-  }
-
-  collectConfiguredTimes() {
-    const times = [];
-    const addWindow = (start, end, labelOn, labelOff) => {
-      const s = this.parseMinutes(start);
-      const e = this.parseMinutes(end);
-      if (s === null || e === null) return;
-      if (s === 0 && e === 0) return;
-      times.push({ mins: s, text: `${labelOn} um ${this.formatMinutesToHHMM(s)}` });
-      times.push({ mins: e, text: `${labelOff} um ${this.formatMinutesToHHMM(e)}` });
-    };
-    addWindow(this.config.pumpWindow1Start, this.config.pumpWindow1End, 'Einschalten der Umwälzpumpe', 'Ausschalten der Umwälzpumpe');
-    addWindow(this.config.pumpWindow2Start, this.config.pumpWindow2End, 'Einschalten der Umwälzpumpe', 'Ausschalten der Umwälzpumpe');
-
-    const phTimes = String(this.config.phCheckTimes || '')
-      .split(',')
-      .map(s => s.trim())
-      .filter(Boolean);
-    for (const t of phTimes) {
-      const mins = this.parseMinutes(t);
-      if (mins !== null) times.push({ mins, text: `Nächste PH-Messung um ${this.formatMinutesToHHMM(mins)}` });
-    }
-
-    const chlorDelay = Number(this.config.chlorOnDelaySec || 0);
-    if (chlorDelay > 0) {
-      times.push({ mins: null, text: `Start der Chlorsteuerung mit Verzögerung von ${chlorDelay} Sekunden` });
-    }
-    return times;
-  }
-
-  logUpcomingActions() {
-    try {
-      const now = new Date();
-      const nowMins = now.getHours() * 60 + now.getMinutes();
-      const times = this.collectConfiguredTimes();
-      const dated = times
-        .filter(t => t.mins !== null)
-        .map(t => {
-          const delta = t.mins >= nowMins ? t.mins - nowMins : 1440 - nowMins + t.mins;
-          return { ...t, delta };
-        })
-        .sort((a, b) => a.delta - b.delta);
-
-      const parts = [];
-      if (dated.length > 0) parts.push(dated[0].text);
-      const chlor = times.find(t => t.mins === null);
-      if (chlor) parts.push(chlor.text);
-      const nextPh = dated.find(t => t.text.startsWith('Nächste PH-Messung'));
-      if (nextPh && !parts.includes(nextPh.text)) parts.push(nextPh.text);
-
-      const msg = parts.join(' | ');
-      if (msg && msg !== this.lastStartupPlanLog) {
-        this.log.info(`[PLAN] ${msg}`);
-        this.lastStartupPlanLog = msg;
-      }
-    } catch (e) {
-      this.log.debug('Plan-Log konnte nicht erstellt werden: ' + (e.message || e));
-    }
-  }
-
   async onReady() {
     try {
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
@@ -1105,17 +1026,6 @@ class Poolsteuerung extends utils.Adapter {
         await this.applyControlLogic();
       }
       await this.renderVis();
-      this.logUpcomingActions();
-      if (this.periodicControlTimer) clearInterval(this.periodicControlTimer);
-      this.periodicControlTimer = setInterval(async () => {
-        try {
-          await this.updateComputedStates();
-          if (typeof this.applyControlLogic === 'function') await this.applyControlLogic();
-          await this.renderVis();
-        } catch (e) {
-          this.log.warn('Periodische Steuerung fehlgeschlagen: ' + (e.message || e));
-        }
-      }, 15000);
       const pollMin = Math.max(1, Number(this.config.pollIntervalMin) || 1);
       this.timer = setInterval(async () => {
         try {
@@ -1125,17 +1035,6 @@ class Poolsteuerung extends utils.Adapter {
             await this.applyControlLogic();
           }
           await this.renderVis();
-      this.logUpcomingActions();
-      if (this.periodicControlTimer) clearInterval(this.periodicControlTimer);
-      this.periodicControlTimer = setInterval(async () => {
-        try {
-          await this.updateComputedStates();
-          if (typeof this.applyControlLogic === 'function') await this.applyControlLogic();
-          await this.renderVis();
-        } catch (e) {
-          this.log.warn('Periodische Steuerung fehlgeschlagen: ' + (e.message || e));
-        }
-      }, 15000);
         } catch (e) {
           this.log.error(`Poll-Fehler: ${e && e.stack ? e.stack : e}`);
           await this.setStateAsync('status.debug.lastStartupError', String(e && e.message ? e.message : e), true);
@@ -1151,6 +1050,7 @@ class Poolsteuerung extends utils.Adapter {
   async onStateChange(id, state) {
     if (!state) return;
     if (this.monitoredIds.includes(id)) {
+      this.debug(`State geändert: ${id}`);
       this.queueRender();
     }
   }

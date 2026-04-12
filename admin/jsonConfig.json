@@ -72,90 +72,34 @@
       "type": "panel",
       "label": "UMWÄLZ-STEUERUNG",
       "items": {
-        "circStatesHeader": {
-          "type": "header",
-          "text": "Pumpendatenpunkte",
-          "size": 2
-        },
         "circulationPumpSocketStateId": {
-          "type": "objectId",
-          "label": "Objekt-ID Pumpensteckdose",
-          "objectTypes": [
-            "state"
-          ],
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "circulationPumpWriteMode": {
-          "type": "select",
-          "label": "Schreibformat Umwälzpumpe",
-          "newLine": false,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "options": [
-            {
-              "label": "false / true",
-              "value": "bool"
-            },
-            {
-              "label": "0 / 1",
-              "value": "num01"
-            }
-          ],
-          "help": "Legt fest, wie der Adapter den Aktor schaltet."
-        },
-        "circScheduleHeader": {
-          "type": "header",
-          "text": "Zeitfenster",
-          "size": 2
+          "type": "text",
+          "label": "Umwälzpumpe",
+          "newLine": true
         },
         "pumpWindow1Start": {
           "type": "text",
           "label": "Zeitfenster 1 Start",
           "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
         },
         "pumpWindow1End": {
           "type": "text",
           "label": "Zeitfenster 1 Ende",
-          "newLine": false,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "newLine": true,
+          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
         },
         "pumpWindow2Start": {
           "type": "text",
           "label": "Zeitfenster 2 Start",
           "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
         },
         "pumpWindow2End": {
           "type": "text",
           "label": "Zeitfenster 2 Ende",
-          "newLine": false,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "circInfoHeader": {
-          "type": "header",
-          "text": "Hinweise",
-          "size": 2
-        },
-        "circInfoText": {
-          "type": "staticText",
-          "text": "00:00 bis 00:00 = inaktiv. Die Pumpe wird nur bei echtem Zeitfensterwechsel automatisch geschaltet.",
           "newLine": true,
-          "sm": 12,
-          "md": 12,
-          "lg": 12
+          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
         }
       }
     },
@@ -163,95 +107,32 @@
       "type": "panel",
       "label": "CHLOR-STEUERUNG",
       "items": {
-        "chlorStatesHeader": {
-          "type": "header",
-          "text": "Sensordaten und Aktor",
-          "size": 2
-        },
         "orpStateId": {
-          "type": "objectId",
-          "label": "State-ID ORP / Redox",
-          "objectTypes": [
-            "state"
-          ],
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "type": "text",
+          "label": "State-ID ORP",
+          "newLine": true
         },
         "chlorinatorSocketStateId": {
-          "type": "objectId",
+          "type": "text",
           "label": "Chlorinator",
-          "objectTypes": [
-            "state"
-          ],
-          "newLine": false,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "newLine": true
         },
-        "chlorinatorWriteMode": {
-          "type": "select",
-          "label": "Schreibformat Chlorinator",
-          "newLine": true,
-          "options": [
-            {
-              "label": "false / true",
-              "value": "bool"
-            },
-            {
-              "label": "0 / 1",
-              "value": "num01"
-            }
-          ],
-          "help": "Legt fest, wie der Adapter den Aktor schaltet.",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "chlorRulesHeader": {
-          "type": "header",
-          "text": "Regelung",
-          "size": 2
+        "orpSetpoint": {
+          "type": "number",
+          "label": "ORP Sollwert",
+          "newLine": true
         },
         "orpOnThreshold": {
           "type": "number",
           "label": "ORP Einschaltgrenze",
           "newLine": true,
-          "help": "Wenn ORP kleiner oder gleich diesem Wert ist, darf der Chlorinator einschalten.",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "help": "Wenn ORP kleiner oder gleich diesem Wert ist, darf der Chlorinator einschalten."
         },
         "orpOffThreshold": {
           "type": "number",
           "label": "ORP Ausschaltgrenze",
-          "newLine": false,
-          "help": "Wenn ORP größer als dieser Wert ist, wird der Chlorinator ausgeschaltet.",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "chlorOnDelaySec": {
-          "type": "text",
-          "label": "Einschaltverzögerung (Sekunden)",
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "newLine": true
-        },
-        "chlorInfoHeader": {
-          "type": "header",
-          "text": "Hinweise",
-          "size": 2
-        },
-        "chlorInfoText": {
-          "type": "staticText",
-          "text": "Der Chlorinator läuft nur mit aktiver Umwälzpumpe. Zwischen Ein- und Ausschaltgrenze bleibt die Hysterese stabil.",
           "newLine": true,
-          "sm": 12,
-          "md": 12,
-          "lg": 12
+          "help": "Wenn ORP größer als dieser Wert ist, wird der Chlorinator ausgeschaltet."
         }
       }
     },
@@ -259,199 +140,79 @@
       "type": "panel",
       "label": "PH-STEUERUNG",
       "items": {
-        "phSensorsHeader": {
-          "type": "header",
-          "text": "Sensordaten und Freigaben",
-          "size": 2
-        },
         "phStateId": {
-          "type": "objectId",
+          "type": "text",
           "label": "State-ID pH",
-          "objectTypes": [
-            "state"
-          ],
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "newLine": true
         },
         "phDoseEnableStateId": {
-          "type": "objectId",
+          "type": "text",
           "label": "State-ID pH Freigabe",
-          "objectTypes": [
-            "state"
-          ],
-          "newLine": false,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "newLine": true
         },
         "phPumpSocketStateId": {
-          "type": "objectId",
+          "type": "text",
           "label": "Dosierpumpe",
-          "objectTypes": [
-            "state"
-          ],
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "phPumpWriteMode": {
-          "type": "select",
-          "label": "Schreibformat PH-Dosierpumpe",
-          "newLine": false,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "options": [
-            {
-              "label": "false / true",
-              "value": "bool"
-            },
-            {
-              "label": "0 / 1",
-              "value": "num01"
-            }
-          ]
-        },
-        "phControlHeader": {
-          "type": "header",
-          "text": "Regelung",
-          "size": 2
+          "newLine": true
         },
         "phSetpoint": {
-          "type": "text",
+          "type": "number",
           "label": "pH Sollwert",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "newLine": true
         },
         "phCheckTimes": {
           "type": "text",
           "label": "pH Prüfzeiten",
-          "newLine": false,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
+          "newLine": true,
           "help": "z. B. 11:00,15:00. Nur zu diesen Zeiten wird pH bewertet."
         },
         "phDoseTolerance": {
-          "type": "text",
+          "type": "number",
           "label": "pH Toleranz über Soll",
           "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "help": "Dezimalwerte erlaubt, z. B. 0.05 oder 0,05."
-        },
-        "phDoseMode": {
-          "type": "select",
-          "label": "Modus PH-Dosierung",
-          "newLine": false,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "options": [
-            {
-              "label": "fest",
-              "value": "fixed"
-            },
-            {
-              "label": "berechnet (einfach)",
-              "value": "calculated_simple"
-            },
-            {
-              "label": "berechnet (ml-basiert)",
-              "value": "calculated_ml"
-            }
-          ],
-          "help": "fest = feste Laufzeit. berechnet (einfach) = Sekundenfaktor. berechnet (ml-basiert) = ml-Bedarf + Fördermenge."
-        },
-        "phFixedHeader": {
-          "type": "header",
-          "text": "Feste Dosierung",
-          "size": 2,
-          "hidden": "data.phDoseMode !== 'fixed'"
+          "help": "Erst wenn pH größer als Soll + Toleranz ist, wird dosiert."
         },
         "phDoseDurationSec": {
-          "type": "text",
-          "label": "Feste Dosierdauer je Prüfzeitpunkt (Sekunden)",
+          "type": "number",
+          "label": "Dosierdauer je Zyklus (Sekunden)",
           "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "help": "Wird im Modus 'fest' exakt so verwendet.",
-          "hidden": "data.phDoseMode !== 'fixed'"
-        },
-        "phCalcHeader": {
-          "type": "header",
-          "text": "Berechnete Dosierung",
-          "size": 2,
-          "hidden": "data.phDoseMode === 'fixed'"
-        },
-        "phDoseSecondsPer01Per10m3": {
-          "type": "text",
-          "label": "Sekunden pro 0,1 pH je 10 m³",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "help": "Für Modus 'berechnet (einfach)'.",
-          "hidden": "data.phDoseMode !== 'calculated_simple'"
-        },
-        "phDoseMlPer01Per10m3": {
-          "type": "text",
-          "label": "ml pro 0,1 pH je 10 m³",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "help": "Für Modus 'berechnet (ml-basiert)'.",
-          "hidden": "data.phDoseMode !== 'calculated_ml'"
-        },
-        "phPumpFlowMlPerMin": {
-          "type": "text",
-          "label": "Fördermenge Dosierpumpe (ml/min)",
-          "newLine": false,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "help": "Für Modus 'berechnet (ml-basiert)'.",
-          "hidden": "data.phDoseMode !== 'calculated_ml'"
-        },
-        "phDoseMaxDurationSec": {
-          "type": "text",
-          "label": "Max. Dosierdauer je Zyklus (Sekunden)",
-          "newLine": false,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "help": "Maximale Dosierzeit pro Prüfzeitpunkt. Standard: 180 Sekunden.",
-          "hidden": "data.phDoseMode === 'fixed'"
-        },
-        "phSafetyHeader": {
-          "type": "header",
-          "text": "Sicherheit",
-          "size": 2
+          "help": "Laufzeit der Dosierpumpe pro aktivem Prüfzeitpunkt."
         },
         "phDoseLockMinutes": {
-          "type": "text",
+          "type": "number",
           "label": "Sperrzeit nach Dosierung (Minuten)",
           "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "help": "Nach einer Dosierung wird erst wieder beim nächsten Prüfzeitpunkt neu bewertet."
+          "help": "Nach einer Dosierung wird bis zum Ablauf dieser Zeit nicht erneut dosiert."
         },
         "phDoseMaxPerDay": {
-          "type": "text",
+          "type": "number",
           "label": "Max. Dosierungen pro Tag",
-          "newLine": false,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "newLine": true,
+          "help": "Sicherheitsgrenze pro Kalendertag."
+        },
+        "phDoseSecondsPer01Per10m3": {
+          "type": "number",
+          "label": "Sekunden pro 0,1 pH je 10 m³",
+          "newLine": true,
+          "help": "Grundwert für die Laufzeitberechnung. Beispiel: 30 bedeutet 30s je 0,1 pH Abweichung bei 10 m³."
+        },
+        "phDoseMaxDurationSec": {
+          "type": "number",
+          "label": "Max. Dosierdauer je Zyklus (Sekunden)",
+          "newLine": true,
+          "help": "Obergrenze für die berechnete Dosierdauer."
+        },
+        "phDoseMlPer01Per10m3": {
+          "type": "number",
+          "label": "ml pro 0,1 pH je 10 m³",
+          "newLine": true,
+          "help": "Alternative, realitätsnähere Berechnung auf ml-Basis."
+        },
+        "phPumpFlowMlPerMin": {
+          "type": "number",
+          "label": "Fördermenge Dosierpumpe (ml/min)",
+          "newLine": true,
+          "help": "Wird genutzt, um aus ml eine Laufzeit in Sekunden zu berechnen."
         }
       }
     },
