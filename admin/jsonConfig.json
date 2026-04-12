@@ -231,10 +231,10 @@
           "help": "z. B. 11:00,15:00. Nur zu diesen Zeiten wird pH bewertet."
         },
         "phDoseTolerance": {
-          "type": "number",
-          "label": "pH Toleranz über Soll",
+          "type": "text",
+          "label": "PH Toleranz über Soll",
           "newLine": true,
-          "help": "Erst wenn pH größer als Soll + Toleranz ist, wird dosiert."
+          "help": "Dezimalwerte erlaubt, z. B. 0.05 oder 0,05."
         },
         "phDoseDurationSec": {
           "type": "number",
