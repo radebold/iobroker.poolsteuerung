@@ -18,6 +18,8 @@ class Poolsteuerung extends utils.Adapter {
   lastRenderAt = 0;
   lastPumpScheduleActiveMemory = null;
   suppressOwnPumpLogUntil = 0;
+  periodicControlTimer = null;
+  lastStartupPlanLog = '';
 
   constructor(options = {}) {
     super({ ...options, name: 'poolsteuerung' });
@@ -699,6 +701,17 @@ class Poolsteuerung extends utils.Adapter {
           await this.applyControlLogic();
         }
         await this.renderVis();
+      this.logUpcomingActions();
+      if (this.periodicControlTimer) clearInterval(this.periodicControlTimer);
+      this.periodicControlTimer = setInterval(async () => {
+        try {
+          await this.updateComputedStates();
+          if (typeof this.applyControlLogic === 'function') await this.applyControlLogic();
+          await this.renderVis();
+        } catch (e) {
+          this.log.warn('Periodische Steuerung fehlgeschlagen: ' + (e.message || e));
+        }
+      }, 15000);
       } catch (e) {
         this.log.warn('VIS Render Fehler: ' + (e && e.stack ? e.stack : e));
       }
@@ -983,6 +996,82 @@ class Poolsteuerung extends utils.Adapter {
     await this.setStateAsync('status.debug.lastPhDecision', phDecision, true);
   }
 
+
+  parseMinutes(value) {
+    const m = String(value || '').trim().match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    const hh = Number(m[1]);
+    const mm = Number(m[2]);
+    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+    return hh * 60 + mm;
+  }
+
+  formatMinutesToHHMM(mins) {
+    const total = ((mins % 1440) + 1440) % 1440;
+    const hh = String(Math.floor(total / 60)).padStart(2, '0');
+    const mm = String(total % 60).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+
+  collectConfiguredTimes() {
+    const times = [];
+    const addWindow = (start, end, labelOn, labelOff) => {
+      const s = this.parseMinutes(start);
+      const e = this.parseMinutes(end);
+      if (s === null || e === null) return;
+      if (s === 0 && e === 0) return;
+      times.push({ mins: s, text: `${labelOn} um ${this.formatMinutesToHHMM(s)}` });
+      times.push({ mins: e, text: `${labelOff} um ${this.formatMinutesToHHMM(e)}` });
+    };
+    addWindow(this.config.pumpWindow1Start, this.config.pumpWindow1End, 'Einschalten der Umwälzpumpe', 'Ausschalten der Umwälzpumpe');
+    addWindow(this.config.pumpWindow2Start, this.config.pumpWindow2End, 'Einschalten der Umwälzpumpe', 'Ausschalten der Umwälzpumpe');
+
+    const phTimes = String(this.config.phCheckTimes || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+    for (const t of phTimes) {
+      const mins = this.parseMinutes(t);
+      if (mins !== null) times.push({ mins, text: `Nächste PH-Messung um ${this.formatMinutesToHHMM(mins)}` });
+    }
+
+    const chlorDelay = Number(this.config.chlorOnDelaySec || 0);
+    if (chlorDelay > 0) {
+      times.push({ mins: null, text: `Start der Chlorsteuerung mit Verzögerung von ${chlorDelay} Sekunden` });
+    }
+    return times;
+  }
+
+  logUpcomingActions() {
+    try {
+      const now = new Date();
+      const nowMins = now.getHours() * 60 + now.getMinutes();
+      const times = this.collectConfiguredTimes();
+      const dated = times
+        .filter(t => t.mins !== null)
+        .map(t => {
+          const delta = t.mins >= nowMins ? t.mins - nowMins : 1440 - nowMins + t.mins;
+          return { ...t, delta };
+        })
+        .sort((a, b) => a.delta - b.delta);
+
+      const parts = [];
+      if (dated.length > 0) parts.push(dated[0].text);
+      const chlor = times.find(t => t.mins === null);
+      if (chlor) parts.push(chlor.text);
+      const nextPh = dated.find(t => t.text.startsWith('Nächste PH-Messung'));
+      if (nextPh && !parts.includes(nextPh.text)) parts.push(nextPh.text);
+
+      const msg = parts.join(' | ');
+      if (msg && msg !== this.lastStartupPlanLog) {
+        this.log.info(`[PLAN] ${msg}`);
+        this.lastStartupPlanLog = msg;
+      }
+    } catch (e) {
+      this.log.debug('Plan-Log konnte nicht erstellt werden: ' + (e.message || e));
+    }
+  }
+
   async onReady() {
     try {
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
@@ -995,6 +1084,17 @@ class Poolsteuerung extends utils.Adapter {
         await this.applyControlLogic();
       }
       await this.renderVis();
+      this.logUpcomingActions();
+      if (this.periodicControlTimer) clearInterval(this.periodicControlTimer);
+      this.periodicControlTimer = setInterval(async () => {
+        try {
+          await this.updateComputedStates();
+          if (typeof this.applyControlLogic === 'function') await this.applyControlLogic();
+          await this.renderVis();
+        } catch (e) {
+          this.log.warn('Periodische Steuerung fehlgeschlagen: ' + (e.message || e));
+        }
+      }, 15000);
       const pollMin = Math.max(1, Number(this.config.pollIntervalMin) || 1);
       this.timer = setInterval(async () => {
         try {
@@ -1004,6 +1104,17 @@ class Poolsteuerung extends utils.Adapter {
             await this.applyControlLogic();
           }
           await this.renderVis();
+      this.logUpcomingActions();
+      if (this.periodicControlTimer) clearInterval(this.periodicControlTimer);
+      this.periodicControlTimer = setInterval(async () => {
+        try {
+          await this.updateComputedStates();
+          if (typeof this.applyControlLogic === 'function') await this.applyControlLogic();
+          await this.renderVis();
+        } catch (e) {
+          this.log.warn('Periodische Steuerung fehlgeschlagen: ' + (e.message || e));
+        }
+      }, 15000);
         } catch (e) {
           this.log.error(`Poll-Fehler: ${e && e.stack ? e.stack : e}`);
           await this.setStateAsync('status.debug.lastStartupError', String(e && e.message ? e.message : e), true);
@@ -1019,7 +1130,6 @@ class Poolsteuerung extends utils.Adapter {
   async onStateChange(id, state) {
     if (!state) return;
     if (this.monitoredIds.includes(id)) {
-      this.debug(`State geändert: ${id}`);
       this.queueRender();
     }
   }
