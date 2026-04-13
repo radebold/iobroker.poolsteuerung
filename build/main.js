@@ -854,8 +854,7 @@ class Poolsteuerung extends utils.Adapter {
 
     const circulationOn = circulationId ? await this.getBool(circulationId) : false;
     if (!circulationOn) {
-      await this.ensureState('status.phDose.stopAtTs', 'number', 'value.time', 0, false);
-      await this.setStateAsync('status.phDose.stopAtTs', 0, true);
+      await this.setPhStopAtTs(0, 'Start abgebrochen: Umwälzpumpe AUS');
       if (this.config.debugMode) this.log.info('[PH] Dosierung nicht gestartet: Umwälzpumpe AUS');
       return false;
     }
@@ -863,7 +862,7 @@ class Poolsteuerung extends utils.Adapter {
     const stopAtTs = Date.now() + sec * 1000;
 
     if (this.config.simulateMode) {
-      await this.setStateAsync('status.phDose.stopAtTs', stopAtTs, true);
+      await this.setPhStopAtTs(stopAtTs, 'Start Simulationsmodus');
       await this.setStateAsync('status.phDose.lastDoseTs', Date.now(), true);
       await this.setStateAsync('status.phDose.lastDoseDurationSec', sec, true);
       const msg = `[PH] würde dosieren | Prüfzeit ${context.checkTime || '-'} | pH=${context.phValue ?? '-'} | Laufzeit=${sec}s | Stop um ${new Date(stopAtTs).toLocaleTimeString('de-DE')}`;
@@ -878,13 +877,10 @@ class Poolsteuerung extends utils.Adapter {
       return false;
     }
 
-    await this.setStateAsync('status.phDose.stopAtTs', stopAtTs, true);
+    await this.setPhStopAtTs(stopAtTs, 'PH-Start erfolgreich');
     await this.setStateAsync('status.phDose.lastDoseTs', Date.now(), true);
     await this.setStateAsync('status.phDose.lastDoseDurationSec', sec, true);
 
-    if (this.config.debugMode) {
-      this.log.info(`[PH] stopAtTs gesetzt: ${stopAtTs}`);
-    }
 
     const msg = `[PH] Dosierpumpe EIN | Prüfzeit ${context.checkTime || '-'} | pH=${context.phValue ?? '-'} | Laufzeit=${sec}s | Stop um ${new Date(stopAtTs).toLocaleTimeString('de-DE')}`;
     await this.setStateAsync('status.debug.lastPhStartInfo', msg, true);
@@ -993,7 +989,7 @@ class Poolsteuerung extends utils.Adapter {
       phDecision = `pH OK (${phValue} <= ${this.fmt(phSet + phTolerance, 2, '--')})`;
     } else if (phPumpCurrent) {
       if (!stopAtTs && this.config.debugMode) {
-        this.log.warn('[PH] Dosierpumpe läuft, aber stopAtTs ist 0');
+        this.log.warn('[PH] Dosierpumpe läuft, aber stopAtTs ist 0 | unerwarteter Resetpfad aktiv');
       }
       phDecision = stopAtTs ? `Dosierpumpe läuft bis ${new Date(stopAtTs).toLocaleTimeString('de-DE')}` : 'Dosierpumpe läuft bereits';
     } else {
@@ -1021,11 +1017,17 @@ class Poolsteuerung extends utils.Adapter {
   }
 
 
-  async resetPhDoseState() {
+
+  async setPhStopAtTs(value, reason = '') {
     await this.ensureState('status.phDose.stopAtTs', 'number', 'value.time', 0, false);
-    await this.ensureState('status.phDose.lastDoseTs', 'number', 'value.time', 0, false);
-    await this.ensureState('status.phDose.lastDoseDurationSec', 'number', 'value.interval', 0, false);
-    await this.setStateAsync('status.phDose.stopAtTs', 0, true);
+    await this.setStateAsync('status.phDose.stopAtTs', value, true);
+    if (this.config.debugMode) {
+      this.log.info(`[PH] stopAtTs ${value ? 'gesetzt' : 'auf 0 gesetzt'}${reason ? ' | ' + reason : ''}${value ? ' | ' + value : ''}`);
+    }
+  }
+
+  async resetPhDoseState(reason = '') {
+    await this.setPhStopAtTs(0, reason || 'resetPhDoseState');
   }
 
   async enforcePhStopIfDue() {
@@ -1045,8 +1047,7 @@ class Poolsteuerung extends utils.Adapter {
       if (phPumpCurrent && (!pumpCurrent || Date.now() >= stopAtTs)) {
         const offOk = await this.forceSwitchOffCompat(phPumpId);
         if (offOk) {
-          await this.ensureState('status.phDose.stopAtTs', 'number', 'value.time', 0, false);
-          await this.setStateAsync('status.phDose.stopAtTs', 0, true);
+          await this.setPhStopAtTs(0, !pumpCurrent ? 'PH-AUS bestätigt wegen Umwälzpumpe AUS' : 'PH-AUS bestätigt wegen Sollzeit');
           if (this.config.debugMode) {
             this.log.info(`[PH] Dosierpumpe AUS | Grund ${!pumpCurrent ? 'Umwälzpumpe AUS' : 'Sollzeit erreicht'}`);
           }
