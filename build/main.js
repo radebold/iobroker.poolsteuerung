@@ -863,8 +863,7 @@ class Poolsteuerung extends utils.Adapter {
 
     if (this.config.simulateMode) {
       await this.setPhStopAtTs(stopAtTs, 'Start Simulationsmodus');
-      await this.setStateAsync('status.phDose.lastDoseTs', Date.now(), true);
-      await this.setStateAsync('status.phDose.lastDoseDurationSec', sec, true);
+      await this.setPhDoseHistory(Date.now(), sec);
       const msg = `[PH] würde dosieren | Prüfzeit ${context.checkTime || '-'} | pH=${context.phValue ?? '-'} | Laufzeit=${sec}s | Stop um ${new Date(stopAtTs).toLocaleTimeString('de-DE')}`;
       await this.setStateAsync('status.debug.lastPhStartInfo', msg, true);
       if (this.config.debugMode) this.log.info(msg);
@@ -878,8 +877,7 @@ class Poolsteuerung extends utils.Adapter {
     }
 
     await this.setPhStopAtTs(stopAtTs, 'PH-Start erfolgreich');
-    await this.setStateAsync('status.phDose.lastDoseTs', Date.now(), true);
-    await this.setStateAsync('status.phDose.lastDoseDurationSec', sec, true);
+    await this.setPhDoseHistory(Date.now(), sec);
 
 
     const msg = `[PH] Dosierpumpe EIN | Prüfzeit ${context.checkTime || '-'} | pH=${context.phValue ?? '-'} | Laufzeit=${sec}s | Stop um ${new Date(stopAtTs).toLocaleTimeString('de-DE')}`;
@@ -948,8 +946,7 @@ class Poolsteuerung extends utils.Adapter {
     const phPumpCurrent = await this.getBool(phPumpId);
     await this.ensureState('status.phDose.stopAtTs', 'number', 'value.time', 0, false);
     await this.ensureState('status.debug.lastPhStartInfo', 'string', 'text', '', false);
-    const stopAtState = await this.getStateAsync('status.phDose.stopAtTs');
-    const stopAtTs = Number(stopAtState && stopAtState.val) || 0;
+    const stopAtTs = await this.getEffectivePhStopAtTs(phPumpCurrent);
 
     if (!this.config.simulateMode && phPumpCurrent && (!pumpCurrent || (stopAtTs && Date.now() >= stopAtTs))) {
       await this.enforcePhStopIfDue();
@@ -1019,11 +1016,38 @@ class Poolsteuerung extends utils.Adapter {
 
 
   async setPhStopAtTs(value, reason = '') {
+    const num = Number(value) || 0;
+    this.phDoseStopAtTsMemory = num;
     await this.ensureState('status.phDose.stopAtTs', 'number', 'value.time', 0, false);
-    await this.setStateAsync('status.phDose.stopAtTs', value, true);
+    await this.setStateAsync('status.phDose.stopAtTs', num, true);
     if (this.config.debugMode) {
-      this.log.info(`[PH] stopAtTs ${value ? 'gesetzt' : 'auf 0 gesetzt'}${reason ? ' | ' + reason : ''}${value ? ' | ' + value : ''}`);
+      this.log.info(`[PH] stopAtTs ${num ? 'gesetzt' : 'auf 0 gesetzt'}${reason ? ' | ' + reason : ''}${num ? ' | ' + num : ''}`);
     }
+  }
+
+  async setPhDoseHistory(ts, durationSec) {
+    const tsNum = Number(ts) || 0;
+    const durNum = Number(durationSec) || 0;
+    this.phLastDoseTsMemory = tsNum;
+    this.phLastDoseDurationSecMemory = durNum;
+    await this.ensureState('status.phDose.lastDoseTs', 'number', 'value.time', 0, false);
+    await this.ensureState('status.phDose.lastDoseDurationSec', 'number', 'value.interval', 0, false);
+    await this.setStateAsync('status.phDose.lastDoseTs', tsNum, true);
+    await this.setStateAsync('status.phDose.lastDoseDurationSec', durNum, true);
+  }
+
+  async getEffectivePhStopAtTs(phPumpCurrent = false) {
+    await this.ensureState('status.phDose.stopAtTs', 'number', 'value.time', 0, false);
+    const s = await this.getStateAsync('status.phDose.stopAtTs');
+    let stateTs = Number(s && s.val) || 0;
+    const memTs = Number(this.phDoseStopAtTsMemory) || 0;
+    const effective = Math.max(stateTs, memTs);
+    if (phPumpCurrent && !stateTs && memTs) {
+      await this.setStateAsync('status.phDose.stopAtTs', memTs, true);
+      if (this.config.debugMode) this.log.warn(`[PH] stopAtTs aus Speicher wiederhergestellt | ${memTs}`);
+      stateTs = memTs;
+    }
+    return effective;
   }
 
   async resetPhDoseState(reason = '') {
@@ -1034,12 +1058,9 @@ class Poolsteuerung extends utils.Adapter {
     try {
       const phPumpId = this.config.phPumpSocketStateId;
       if (!phPumpId) return;
-      await this.ensureState('status.phDose.stopAtTs', 'number', 'value.time', 0, false);
-      const stopAtState = await this.getStateAsync('status.phDose.stopAtTs');
-      const stopAtTs = Number(stopAtState && stopAtState.val) || 0;
+      const stopAtTs = await this.getEffectivePhStopAtTs(phPumpCurrent);
       if (!stopAtTs) return;
 
-      const phPumpCurrent = await this.getBool(phPumpId);
       const pumpCurrent = this.config.circulationPumpSocketStateId
         ? await this.getBool(this.config.circulationPumpSocketStateId)
         : false;
@@ -1048,6 +1069,7 @@ class Poolsteuerung extends utils.Adapter {
         const offOk = await this.forceSwitchOffCompat(phPumpId);
         if (offOk) {
           await this.setPhStopAtTs(0, !pumpCurrent ? 'PH-AUS bestätigt wegen Umwälzpumpe AUS' : 'PH-AUS bestätigt wegen Sollzeit');
+          this.phDoseStopAtTsMemory = 0;
           if (this.config.debugMode) {
             this.log.info(`[PH] Dosierpumpe AUS | Grund ${!pumpCurrent ? 'Umwälzpumpe AUS' : 'Sollzeit erreicht'}`);
           }
