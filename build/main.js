@@ -860,6 +860,7 @@ class Poolsteuerung extends utils.Adapter {
     }
 
     const stopAtTs = Date.now() + sec * 1000;
+    this.phDoseStopAtTsMemory = stopAtTs;
 
     if (this.config.simulateMode) {
       await this.setPhStopAtTs(stopAtTs, 'Start Simulationsmodus');
@@ -1017,13 +1018,18 @@ class Poolsteuerung extends utils.Adapter {
 
   async setPhStopAtTs(value, reason = '') {
     const num = Number(value) || 0;
-    this.phDoseStopAtTsMemory = num;
     await this.ensureState('status.phDose.stopAtTs', 'number', 'value.time', 0, false);
-    await this.setStateAsync('status.phDose.stopAtTs', num, true);
-    if (this.config.debugMode) {
-      this.log.info(`[PH] stopAtTs ${num ? 'gesetzt' : 'auf 0 gesetzt'}${reason ? ' | ' + reason : ''}${num ? ' | ' + num : ''}`);
+    const currentState = await this.getStateAsync('status.phDose.stopAtTs');
+    const currentNum = Number(currentState && currentState.val) || 0;
+    this.phDoseStopAtTsMemory = num;
+    if (currentNum !== num) {
+      await this.setStateAsync('status.phDose.stopAtTs', num, true);
+      if (this.config.debugMode) {
+        this.log.info(`[PH] stopAtTs ${num ? 'gesetzt' : 'auf 0 gesetzt'}${reason ? ' | ' + reason : ''}${num ? ' | ' + num : ''}`);
+      }
     }
   }
+
 
   async setPhDoseHistory(ts, durationSec) {
     const tsNum = Number(ts) || 0;
@@ -1058,6 +1064,8 @@ class Poolsteuerung extends utils.Adapter {
     try {
       const phPumpId = this.config.phPumpSocketStateId;
       if (!phPumpId) return;
+
+      const phPumpCurrent = await this.getBool(phPumpId);
       const stopAtTs = await this.getEffectivePhStopAtTs(phPumpCurrent);
       if (!stopAtTs) return;
 
@@ -1081,6 +1089,7 @@ class Poolsteuerung extends utils.Adapter {
       this.log.warn('[PH] Stop-Überwachung fehlgeschlagen: ' + (e.message || e));
     }
   }
+
 
   async onReady() {
     try {
