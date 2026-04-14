@@ -40,8 +40,19 @@ class Poolsteuerung extends utils.Adapter {
       native: {}
     });
     if (!write && def !== undefined) {
-      await this.setStateAsync(id, def, true);
+      const cur = await this.getStateAsync(id);
+      if (!cur || cur.val === null || cur.val === undefined) {
+        await this.setStateAsync(id, def, true);
+      }
     }
+  }
+
+  async setOwnStateIfChanged(id, value, ack = true) {
+    const cur = await this.getStateAsync(id);
+    const curVal = cur ? cur.val : undefined;
+    if (curVal === value) return false;
+    await this.setStateAsync(id, value, ack);
+    return true;
   }
 
   calcVolume() {
@@ -967,8 +978,8 @@ class Poolsteuerung extends utils.Adapter {
     const lockRemainingMs = Math.max(0, (lastDoseTs + doseLockMinutes * 60000) - nowMs);
     const dailyCount = await this.getTodayDoseCount(now);
     const calcDoseSec = this.calcPhDoseDurationSec(phValue, phSet, phTolerance) || fallbackDoseDurationSec;
-    await this.setStateAsync('status.phDose.currentPhValue', phValue === null || !Number.isFinite(phValue) ? '--' : String(phValue), true);
-    await this.setStateAsync('status.phDose.calculatedDoseSec', Number(calcDoseSec) || 0, true);
+    await this.setOwnStateIfChanged('status.phDose.currentPhValue', phValue === null || !Number.isFinite(phValue) ? '--' : String(phValue), true);
+    await this.setOwnStateIfChanged('status.phDose.calculatedDoseSec', Number(calcDoseSec) || 0, true);
     const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
     let phDecision = 'keine Prüfung';
@@ -1027,7 +1038,11 @@ class Poolsteuerung extends utils.Adapter {
       this.lastWrittenPhStopAtTs = currentNum;
     }
 
-    this.phDoseStopAtTsMemory = num;
+    if (num === 0) {
+      this.phDoseStopAtTsMemory = 0;
+    } else {
+      this.phDoseStopAtTsMemory = num;
+    }
 
     if (num === 0 && currentNum === 0 && this.lastWrittenPhStopAtTs === 0) {
       return;
@@ -1037,13 +1052,10 @@ class Poolsteuerung extends utils.Adapter {
       return;
     }
 
-    if (currentNum !== num) {
-      await this.setStateAsync('status.phDose.stopAtTs', num, true);
-    }
-
+    const changed = await this.setOwnStateIfChanged('status.phDose.stopAtTs', num, true);
     this.lastWrittenPhStopAtTs = num;
 
-    if (this.config.debugMode) {
+    if (changed && this.config.debugMode) {
       this.log.info(`[PH] stopAtTs ${num ? 'gesetzt' : 'auf 0 gesetzt'}${reason ? ' | ' + reason : ''}${num ? ' | ' + num : ''}`);
     }
   }
@@ -1057,8 +1069,8 @@ class Poolsteuerung extends utils.Adapter {
     this.phLastDoseDurationSecMemory = durNum;
     await this.ensureState('status.phDose.lastDoseTs', 'number', 'value.time', 0, false);
     await this.ensureState('status.phDose.lastDoseDurationSec', 'number', 'value.interval', 0, false);
-    await this.setStateAsync('status.phDose.lastDoseTs', tsNum, true);
-    await this.setStateAsync('status.phDose.lastDoseDurationSec', durNum, true);
+    await this.setOwnStateIfChanged('status.phDose.lastDoseTs', tsNum, true);
+    await this.setOwnStateIfChanged('status.phDose.lastDoseDurationSec', durNum, true);
   }
 
   async getEffectivePhStopAtTs(phPumpCurrent = false) {
@@ -1098,7 +1110,7 @@ class Poolsteuerung extends utils.Adapter {
         if (offOk) {
           await this.setPhStopAtTs(0, !pumpCurrent ? 'PH-AUS bestätigt wegen Umwälzpumpe AUS' : 'PH-AUS bestätigt wegen Sollzeit');
           this.phDoseStopAtTsMemory = 0;
-  lastWrittenPhStopAtTs = null;
+          this.lastWrittenPhStopAtTs = null;
           this.log.info(`[PH] Dosierpumpe AUS | Grund ${!pumpCurrent ? 'Umwälzpumpe AUS' : 'Sollzeit erreicht'}`);
         } else if (this.config.debugMode) {
           this.log.warn(`[PH] Dosierpumpe AUS fehlgeschlagen | Grund ${!pumpCurrent ? 'Umwälzpumpe AUS' : 'Sollzeit erreicht'}`);
