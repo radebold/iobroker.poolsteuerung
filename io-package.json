@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.3.11-hotfix3",
+    "version": "0.3.11-hotfix4",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -41,5 +41,5 @@
     "phPumpWriteMode": "bool",
     "phDoseMode": "fixed"
   },
-  "version": "0.3.11-hotfix3"
+  "version": "0.3.11-hotfix4"
 }

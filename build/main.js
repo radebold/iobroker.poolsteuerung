@@ -1388,7 +1388,6 @@ class Poolsteuerung extends utils.Adapter {
   async onStateChange(id, state) {
     if (!state) return;
     if (this.monitoredIds.includes(id)) {
-      this.debug(`State geändert: ${id}`);
       this.queueRender();
     }
   }
