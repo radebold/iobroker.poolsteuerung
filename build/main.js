@@ -1320,11 +1320,23 @@ class Poolsteuerung extends utils.Adapter {
           && (!pumpCurrent || Date.now() >= stopAtTs)) {
         const offOk = await this.forceSwitchOffCompat(phPumpId);
         if (offOk) {
+          const stopReason = !pumpCurrent ? 'Umwälzpumpe AUS' : 'Sollzeit erreicht';
+          const stopNowTs = Date.now();
+          await this.ensureState('status.phDose.lastDoseTs', 'number', 'value.time', 0, false);
+          const lastDoseState = await this.getStateAsync('status.phDose.lastDoseTs');
+          const plannedStartTs = Number(lastDoseState && lastDoseState.val) || 0;
+          if (plannedStartTs > 0) {
+            const actualDurationSec = Math.max(1, Math.round((stopNowTs - plannedStartTs) / 1000));
+            await this.setPhDoseHistory(plannedStartTs, actualDurationSec);
+            if (!pumpCurrent) {
+              this.log.info(`[PH] Dosierung vorzeitig beendet nach ${actualDurationSec}s | Grund ${stopReason}`);
+            }
+          }
           await this.setPhStopAtTs(0, !pumpCurrent ? 'PH-AUS bestätigt wegen Umwälzpumpe AUS' : 'PH-AUS bestätigt wegen Sollzeit');
           this.phDoseStopAtTsMemory = 0;
     this.phRecheckTargetTs = 0;
           this.lastWrittenPhStopAtTs = null;
-          this.log.info(`[PH] Dosierpumpe AUS | Grund ${!pumpCurrent ? 'Umwälzpumpe AUS' : 'Sollzeit erreicht'}`);
+          this.log.info(`[PH] Dosierpumpe AUS | Grund ${stopReason}`);
         } else if (this.config.debugMode) {
           this.log.warn(`[PH] Dosierpumpe AUS fehlgeschlagen | Grund ${!pumpCurrent ? 'Umwälzpumpe AUS' : 'Sollzeit erreicht'}`);
         }
