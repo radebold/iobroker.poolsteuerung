@@ -93,6 +93,18 @@
           ],
           "help": "Legt fest, wie der Adapter den Aktor schaltet."
         },
+        "circulationPumpHeartbeatStateId": {
+          "type": "text",
+          "label": "Heartbeat-State-ID",
+          "newLine": true,
+          "help": "Optionaler State zur Erreichbarkeitsprüfung, z. B. ein regelmäßig aktualisierter Temperatur- oder Status-State."
+        },
+        "circulationPumpHeartbeatMaxAgeMin": {
+          "type": "number",
+          "label": "Max. Alter Heartbeat (Minuten)",
+          "newLine": true,
+          "help": "Wenn der Heartbeat älter ist als dieser Wert, wird das Gerät als veraltet markiert. 0 = keine Prüfung."
+        },
         "pumpWindow1Start": {
           "type": "text",
           "label": "Zeitfenster 1 Start",
@@ -155,6 +167,18 @@
           "newLine": true,
           "min": 0,
           "help": "Der Chlorinator darf erst nach dieser Verzögerung nach dem Einschalten der Umwälzpumpe aktiv werden. 0 = ohne Verzögerung."
+        },
+        "chlorinatorHeartbeatStateId": {
+          "type": "text",
+          "label": "Heartbeat-State-ID",
+          "newLine": true,
+          "help": "Optionaler State zur Erreichbarkeitsprüfung des Chlorinators."
+        },
+        "chlorinatorHeartbeatMaxAgeMin": {
+          "type": "number",
+          "label": "Max. Alter Heartbeat (Minuten)",
+          "newLine": true,
+          "help": "Wenn der Heartbeat älter ist als dieser Wert, wird der Chlorinator als veraltet markiert. 0 = keine Prüfung."
         },
         "orpSetpoint": {
           "type": "number",
@@ -234,6 +258,18 @@
               "value": "num01"
             }
           ]
+        },
+        "phPumpHeartbeatStateId": {
+          "type": "text",
+          "label": "Heartbeat-State-ID",
+          "newLine": true,
+          "help": "Optionaler State zur Erreichbarkeitsprüfung der pH-Dosierpumpe."
+        },
+        "phPumpHeartbeatMaxAgeMin": {
+          "type": "number",
+          "label": "Max. Alter Heartbeat (Minuten)",
+          "newLine": true,
+          "help": "Wenn der Heartbeat älter ist als dieser Wert, wird die pH-Dosierpumpe als veraltet markiert. 0 = keine Prüfung."
         },
         "phControlHeader": {
           "type": "header",
@@ -393,6 +429,18 @@
           "type": "text",
           "label": "Wärmepumpe Power",
           "newLine": true
+        },
+        "heatpumpHeartbeatStateId": {
+          "type": "text",
+          "label": "Heartbeat-State-ID",
+          "newLine": true,
+          "help": "Optionaler State zur Erreichbarkeitsprüfung der Wärmepumpe."
+        },
+        "heatpumpHeartbeatMaxAgeMin": {
+          "type": "number",
+          "label": "Max. Alter Heartbeat (Minuten)",
+          "newLine": true,
+          "help": "Wenn der Heartbeat älter ist als dieser Wert, wird die Wärmepumpe als veraltet markiert. 0 = keine Prüfung."
         },
         "heatpumpModeStateId": {
           "type": "text",

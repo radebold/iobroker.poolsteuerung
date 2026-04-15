@@ -139,6 +139,7 @@ class Poolsteuerung extends utils.Adapter {
     } else {
       this.log.info(`pH-Steuerung: keine Prüfzeiten konfiguriert | pH aktuell: ${Number.isFinite(phValue) ? phValue.toFixed(2) : '--'}`);
     }
+    await this.runHeartbeatChecks();
     this.log.info('================================================');
   }
 
@@ -202,6 +203,73 @@ class Poolsteuerung extends utils.Adapter {
     return Math.max(0, Math.floor((nowTs - this.circulationPumpStartedAt) / 1000));
   }
 
+
+
+  async evaluateHeartbeat(label, stateId, maxAgeMin) {
+    const result = {
+      ok: true,
+      severity: 'ok',
+      text: `${label}: keine Heartbeat-Prüfung`,
+      ageMin: null,
+      stateId: stateId || ''
+    };
+    const maxAge = Math.max(0, Number(maxAgeMin) || 0);
+    if (!stateId || maxAge <= 0) return result;
+
+    try {
+      const obj = await this.getForeignObjectAsync(stateId);
+      if (!obj || !obj.common) {
+        return { ok: false, severity: 'error', text: `${label}: Heartbeat-State nicht gefunden`, ageMin: null, stateId };
+      }
+      const st = await this.getForeignStateAsync(stateId);
+      if (!st) {
+        return { ok: false, severity: 'error', text: `${label}: Heartbeat-State nicht lesbar`, ageMin: null, stateId };
+      }
+      const refTs = Number(st.ts || st.lc || 0);
+      if (!refTs) {
+        return { ok: false, severity: 'warn', text: `${label}: Heartbeat ohne Zeitstempel`, ageMin: null, stateId };
+      }
+      const ageMin = Math.floor((Date.now() - refTs) / 60000);
+      if (ageMin > maxAge) {
+        return {
+          ok: false,
+          severity: 'warn',
+          text: `${label}: WARNUNG | letzte Meldung vor ${ageMin} min`,
+          ageMin,
+          stateId
+        };
+      }
+      return {
+        ok: true,
+        severity: 'ok',
+        text: `${label}: OK | letzte Meldung vor ${ageMin} min`,
+        ageMin,
+        stateId
+      };
+    } catch (e) {
+      return { ok: false, severity: 'error', text: `${label}: Prüffehler | ${e.message || e}`, ageMin: null, stateId };
+    }
+  }
+
+  async runHeartbeatChecks() {
+    const checks = [
+      ['Umwälzpumpe', this.config.circulationPumpHeartbeatStateId, this.config.circulationPumpHeartbeatMaxAgeMin, 'status.checks.circulationPump'],
+      ['Chlorinator', this.config.chlorinatorHeartbeatStateId, this.config.chlorinatorHeartbeatMaxAgeMin, 'status.checks.chlorinator'],
+      ['pH-Dosierpumpe', this.config.phPumpHeartbeatStateId, this.config.phPumpHeartbeatMaxAgeMin, 'status.checks.phPump'],
+      ['Wärmepumpe', this.config.heatpumpHeartbeatStateId, this.config.heatpumpHeartbeatMaxAgeMin, 'status.checks.heatpump']
+    ];
+
+    for (const [label, stateId, maxAgeMin, targetId] of checks) {
+      await this.ensureState(targetId, 'string', 'text', '', false);
+      const result = await this.evaluateHeartbeat(label, stateId, maxAgeMin);
+      await this.setStateIfChanged(targetId, result.text, true);
+      if (stateId && (Number(maxAgeMin) || 0) > 0) {
+        if (result.severity === 'error') this.log.warn(`[CHECK] ${result.text}`);
+        else if (result.severity === 'warn') this.log.warn(`[CHECK] ${result.text}`);
+        else this.log.info(`[CHECK] ${result.text}`);
+      }
+    }
+  }
 
   async setSwitchStateCompat(id, on) {
     if (!id) return;
@@ -1317,6 +1385,7 @@ class Poolsteuerung extends utils.Adapter {
         try {
           await this.setStateAsync('status.debug.lastCycle', new Date().toISOString(), true);
           await this.updateComputedStates();
+          await this.runHeartbeatChecks();
           if (typeof this.applyControlLogic === 'function') {
             await this.applyControlLogic();
           }

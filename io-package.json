@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.3.13",
+    "version": "0.3.13-hotfix1",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -40,6 +40,14 @@
     "chlorinatorWriteMode": "bool",
     "phPumpWriteMode": "bool",
     "phDoseMode": "fixed",
-    "chlorPumpStartDelaySec": 0
+    "chlorPumpStartDelaySec": 0,
+    "circulationPumpHeartbeatStateId": "",
+    "circulationPumpHeartbeatMaxAgeMin": 0,
+    "chlorinatorHeartbeatStateId": "",
+    "chlorinatorHeartbeatMaxAgeMin": 0,
+    "phPumpHeartbeatStateId": "",
+    "phPumpHeartbeatMaxAgeMin": 0,
+    "heatpumpHeartbeatStateId": "",
+    "heatpumpHeartbeatMaxAgeMin": 0
   }
 }
