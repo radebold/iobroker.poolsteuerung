@@ -94,9 +94,15 @@
           "help": "Legt fest, wie der Adapter den Aktor schaltet."
         },
         "circulationPumpHeartbeatStateId": {
-          "type": "text",
+          "type": "objectId",
           "label": "Heartbeat-State-ID",
+          "objectTypes": [
+            "state"
+          ],
           "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
           "help": "Optionaler State zur Erreichbarkeitsprüfung, z. B. ein regelmäßig aktualisierter Temperatur- oder Status-State."
         },
         "circulationPumpHeartbeatMaxAgeMin": {
@@ -169,9 +175,15 @@
           "help": "Der Chlorinator darf erst nach dieser Verzögerung nach dem Einschalten der Umwälzpumpe aktiv werden. 0 = ohne Verzögerung."
         },
         "chlorinatorHeartbeatStateId": {
-          "type": "text",
+          "type": "objectId",
           "label": "Heartbeat-State-ID",
+          "objectTypes": [
+            "state"
+          ],
           "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
           "help": "Optionaler State zur Erreichbarkeitsprüfung des Chlorinators."
         },
         "chlorinatorHeartbeatMaxAgeMin": {
@@ -260,9 +272,15 @@
           ]
         },
         "phPumpHeartbeatStateId": {
-          "type": "text",
+          "type": "objectId",
           "label": "Heartbeat-State-ID",
+          "objectTypes": [
+            "state"
+          ],
           "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
           "help": "Optionaler State zur Erreichbarkeitsprüfung der pH-Dosierpumpe."
         },
         "phPumpHeartbeatMaxAgeMin": {
@@ -431,9 +449,15 @@
           "newLine": true
         },
         "heatpumpHeartbeatStateId": {
-          "type": "text",
+          "type": "objectId",
           "label": "Heartbeat-State-ID",
+          "objectTypes": [
+            "state"
+          ],
           "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
           "help": "Optionaler State zur Erreichbarkeitsprüfung der Wärmepumpe."
         },
         "heatpumpHeartbeatMaxAgeMin": {
@@ -491,21 +515,100 @@
         }
       }
     },
-    "vis": {
+    "alerts": {
       "type": "panel",
-      "label": "VIS / HTML",
+      "label": "ALERTS",
       "items": {
-        "tabletInfo": {
-          "type": "text",
-          "label": "Tablet HTML-Objekt: poolsteuerung.0.vis.htmlTablet",
+        "enableAlerts": {
+          "type": "checkbox",
+          "label": "Alerts aktiv",
           "newLine": true,
-          "disabled": true
+          "help": "Benachrichtigungen werden nur gesendet, wenn zusätzlich unter ALLGEMEIN der Adapter aktiv ist."
         },
-        "phoneInfo": {
-          "type": "text",
-          "label": "iPhone HTML-Objekt: poolsteuerung.0.vis.htmlPhone",
+        "alertRepeatLockMin": {
+          "type": "number",
+          "label": "Wiederholsperre je Meldung (Minuten)",
           "newLine": true,
-          "disabled": true
+          "help": "Verhindert identische Benachrichtigungen in zu kurzen Abständen."
+        },
+        "alertWhatsappEnabled": {
+          "type": "checkbox",
+          "label": "WhatsApp aktiv",
+          "newLine": true
+        },
+        "alertWhatsappInstance": {
+          "type": "text",
+          "label": "WhatsApp Instanz",
+          "newLine": true,
+          "help": "Zum Beispiel open-wa.0"
+        },
+        "alertWhatsappTo": {
+          "type": "text",
+          "label": "WhatsApp Empfänger",
+          "newLine": true,
+          "help": "Empfänger oder Ziel-ID für den konfigurierten Adapter."
+        },
+        "alertTelegramEnabled": {
+          "type": "checkbox",
+          "label": "Telegram aktiv",
+          "newLine": true
+        },
+        "alertTelegramInstance": {
+          "type": "text",
+          "label": "Telegram Instanz",
+          "newLine": true,
+          "help": "Zum Beispiel telegram.0"
+        },
+        "alertTelegramTo": {
+          "type": "text",
+          "label": "Telegram Empfänger / Chat-ID",
+          "newLine": true
+        },
+        "alertEmailEnabled": {
+          "type": "checkbox",
+          "label": "E-Mail aktiv",
+          "newLine": true
+        },
+        "alertEmailInstance": {
+          "type": "text",
+          "label": "E-Mail Instanz",
+          "newLine": true,
+          "help": "Zum Beispiel email.0"
+        },
+        "alertEmailTo": {
+          "type": "text",
+          "label": "E-Mail Empfänger",
+          "newLine": true
+        },
+        "alertOnPhDoseStarted": {
+          "type": "checkbox",
+          "label": "Bei pH-Dosierung gestartet",
+          "newLine": true
+        },
+        "alertOnPhDoseStopped": {
+          "type": "checkbox",
+          "label": "Bei pH-Dosierung beendet",
+          "newLine": true
+        },
+        "alertOnPhDoseAborted": {
+          "type": "checkbox",
+          "label": "Bei pH-Dosierung abgebrochen",
+          "newLine": true
+        },
+        "alertOnPhDailyLimit": {
+          "type": "checkbox",
+          "label": "Bei Tageslimit pH-Dosierung",
+          "newLine": true
+        },
+        "alertOnSensorError": {
+          "type": "checkbox",
+          "label": "Bei Sensorfehler / ungültigen Werten",
+          "newLine": true
+        },
+        "alertOnPollError": {
+          "type": "checkbox",
+          "label": "Bei Adapter- oder Poll-Fehlern",
+          "newLine": true
         }
       }
     }

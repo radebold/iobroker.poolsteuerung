@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.3.13-hotfix1",
+    "version": "0.3.13-hotfix3",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -48,6 +48,23 @@
     "phPumpHeartbeatStateId": "",
     "phPumpHeartbeatMaxAgeMin": 0,
     "heatpumpHeartbeatStateId": "",
-    "heatpumpHeartbeatMaxAgeMin": 0
+    "heatpumpHeartbeatMaxAgeMin": 0,
+    "enableAlerts": false,
+    "alertRepeatLockMin": 30,
+    "alertWhatsappEnabled": false,
+    "alertWhatsappInstance": "open-wa.0",
+    "alertWhatsappTo": "",
+    "alertTelegramEnabled": false,
+    "alertTelegramInstance": "telegram.0",
+    "alertTelegramTo": "",
+    "alertEmailEnabled": false,
+    "alertEmailInstance": "email.0",
+    "alertEmailTo": "",
+    "alertOnPhDoseStarted": false,
+    "alertOnPhDoseStopped": false,
+    "alertOnPhDoseAborted": true,
+    "alertOnPhDailyLimit": true,
+    "alertOnSensorError": true,
+    "alertOnPollError": true
   }
 }
