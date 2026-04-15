@@ -30,6 +30,7 @@ class Poolsteuerung extends utils.Adapter {
     this.phLastDoseDurationSecMemory = 0;
     this.lastWrittenPhStopAtTs = null;
     this.monitoredIds = [];
+    this.alertCooldowns = {};
     this.renderQueued = false;
     this.on('ready', this.onReady.bind(this));
     this.on('stateChange', this.onStateChange.bind(this));
@@ -38,6 +39,87 @@ class Poolsteuerung extends utils.Adapter {
 
   debug(msg) {
     if (this.config.debugMode) this.log.info('[DEBUG] ' + msg);
+  }
+
+
+  isAlertsGloballyEnabled() {
+    return this.config.adapterEnabled === true && this.config.alertsEnabled === true;
+  }
+
+  getAlertCooldownMs() {
+    return Math.max(0, parseNum(this.config.alertCooldownMinutes || 0)) * 60000;
+  }
+
+  async ensureAlertStates() {
+    await this.ensureState('status.alerts.lastMessage', 'string', 'text', '', false);
+    await this.ensureState('status.alerts.lastSeverity', 'string', 'text', '', false);
+    await this.ensureState('status.alerts.lastKey', 'string', 'text', '', false);
+    await this.ensureState('status.alerts.lastSentTs', 'number', 'value.time', 0, false);
+  }
+
+  async sendTelegramAlert(message) {
+    const instance = String(this.config.alertTelegramInstance || '').trim();
+    if (!this.config.alertTelegramEnabled || !instance) return false;
+    const chatId = String(this.config.alertTelegramChatId || '').trim();
+    const payload = { text: message };
+    if (chatId) {
+      payload.user = chatId;
+      payload.chatId = chatId;
+    }
+    this.sendTo(instance, 'send', payload);
+    return true;
+  }
+
+  async sendEmailAlert(message) {
+    const instance = String(this.config.alertEmailInstance || '').trim();
+    const to = String(this.config.alertEmailTo || '').trim();
+    if (!this.config.alertEmailEnabled || !instance || !to) return false;
+    const prefix = String(this.config.alertEmailSubjectPrefix || 'Poolsteuerung').trim() || 'Poolsteuerung';
+    this.sendTo(instance, 'send', { to, subject: `${prefix}: Benachrichtigung`, text: message });
+    return true;
+  }
+
+  async sendWhatsAppAlert(message) {
+    const instance = String(this.config.alertWhatsAppInstance || '').trim();
+    const target = String(this.config.alertWhatsAppTarget || '').trim();
+    if (!this.config.alertWhatsAppEnabled || !instance || !target) return false;
+    const provider = String(this.config.alertWhatsAppProvider || 'openwa').trim();
+    const payload = provider === 'whatsapp-cmb'
+      ? { text: message, phone: target }
+      : { text: message, phone: target };
+    this.sendTo(instance, 'send', payload);
+    return true;
+  }
+
+  async sendAlert(key, severity, message) {
+    try {
+      if (!this.isAlertsGloballyEnabled()) return false;
+      const k = String(key || '').trim();
+      if (!k || !message) return false;
+      const now = Date.now();
+      const cooldown = this.getAlertCooldownMs();
+      const last = Number(this.alertCooldowns[k]) || 0;
+      if (cooldown > 0 && last && now - last < cooldown) return false;
+      await this.ensureAlertStates();
+      const prefix = severity ? `[${String(severity).toUpperCase()}] ` : '';
+      const fullMessage = `${prefix}${message}`;
+      let sent = false;
+      if (await this.sendWhatsAppAlert(fullMessage)) sent = true;
+      if (await this.sendTelegramAlert(fullMessage)) sent = true;
+      if (await this.sendEmailAlert(fullMessage)) sent = true;
+      if (sent) {
+        this.alertCooldowns[k] = now;
+        await this.setOwnStateIfChanged('status.alerts.lastMessage', fullMessage, true);
+        await this.setOwnStateIfChanged('status.alerts.lastSeverity', String(severity || ''), true);
+        await this.setOwnStateIfChanged('status.alerts.lastKey', k, true);
+        await this.setOwnStateIfChanged('status.alerts.lastSentTs', now, true);
+        this.log.info(`[ALERT] ${fullMessage}`);
+      }
+      return sent;
+    } catch (e) {
+      this.log.warn('[ALERT] Versand fehlgeschlagen: ' + (e && e.message ? e.message : e));
+      return false;
+    }
   }
 
   async ensureState(id, type, role, def, write = false) {
@@ -636,6 +718,7 @@ class Poolsteuerung extends utils.Adapter {
     } else if (!Number.isFinite(orpNum)) {
       chlorDesired = false;
       chlorDecision = 'ORP ungültig';
+      if (this.config.alertEventSensorError) await this.sendAlert('sensor_orp_invalid', 'warn', 'ORP-Wert ungültig oder fehlt. Chlor-Steuerung wurde nicht freigegeben.');
     } else if (orpNum <= orpOnThreshold) {
       chlorDesired = true;
       chlorDecision = `ORP niedrig (${orpNum} <= ${orpOnThreshold})`;
@@ -1074,6 +1157,7 @@ class Poolsteuerung extends utils.Adapter {
     const msg = `[PH] Dosierpumpe EIN | ${context.reason || ('Prüfzeit ' + (context.checkTime || '-'))} | pH=${context.phValue ?? '-'} | Laufzeit=${sec}s | Stop um ${new Date(stopAtTs).toLocaleTimeString('de-DE')}`;
     await this.setStateAsync('status.debug.lastPhStartInfo', msg, true);
     if (this.config.debugMode) this.log.info(msg);
+    if (this.config.alertEventPhDoseStart) await this.sendAlert('ph_dose_start', 'info', `pH-Dosierung gestartet: ${sec}s | pH=${context.phValue ?? '-'} | ${context.reason || ('Prüfzeit ' + (context.checkTime || '-'))}`);
 
     const stopLater = async () => { await this.enforcePhStopIfDue(); };
     setTimeout(stopLater, sec * 1000);
@@ -1189,9 +1273,11 @@ class Poolsteuerung extends utils.Adapter {
       phDecision = (phPumpCurrent || phDoseActive) ? 'PH-Dosierung gestoppt (Umwälzpumpe AUS)' : 'Pumpe AUS';
     } else if (phValue === null || !Number.isFinite(phValue)) {
       phDecision = 'pH ungültig';
+      if (this.config.alertEventSensorError) await this.sendAlert('sensor_ph_invalid', 'warn', 'pH-Wert ungültig oder fehlt. pH-Dosierung wurde übersprungen.');
     } else if (dailyCount >= doseMaxPerDay) {
       this.clearPhRecheckTimer();
       phDecision = `Tageslimit erreicht (${dailyCount}/${doseMaxPerDay})`;
+      if (this.config.alertEventPhDailyLimit) await this.sendAlert('ph_daily_limit', 'warn', `Tageslimit pH-Dosierungen erreicht (${dailyCount}/${doseMaxPerDay}).`);
     } else if (withinDoseLock) {
       const whenText = new Date(nextFollowUpTs).toLocaleTimeString('de-DE');
       phDecision = `Sperrzeit aktiv (${Math.ceil(lockRemainingMs / 60000)} min) | Folgeprüfung um ${whenText}`;
@@ -1330,6 +1416,7 @@ class Poolsteuerung extends utils.Adapter {
             await this.setPhDoseHistory(plannedStartTs, actualDurationSec);
             if (!pumpCurrent) {
               this.log.info(`[PH] Dosierung vorzeitig beendet nach ${actualDurationSec}s | Grund ${stopReason}`);
+              if (this.config.alertEventPhDoseAbort) await this.sendAlert('ph_dose_abort', 'warn', `pH-Dosierung vorzeitig beendet nach ${actualDurationSec}s | Grund ${stopReason}`);
             }
           }
           await this.setPhStopAtTs(0, !pumpCurrent ? 'PH-AUS bestätigt wegen Umwälzpumpe AUS' : 'PH-AUS bestätigt wegen Sollzeit');
@@ -1337,6 +1424,7 @@ class Poolsteuerung extends utils.Adapter {
     this.phRecheckTargetTs = 0;
           this.lastWrittenPhStopAtTs = null;
           this.log.info(`[PH] Dosierpumpe AUS | Grund ${stopReason}`);
+          if (pumpCurrent && this.config.alertEventPhDoseStop && stopReason === 'Sollzeit erreicht') await this.sendAlert('ph_dose_stop', 'info', 'pH-Dosierung planmäßig beendet.');
         } else if (this.config.debugMode) {
           this.log.warn(`[PH] Dosierpumpe AUS fehlgeschlagen | Grund ${!pumpCurrent ? 'Umwälzpumpe AUS' : 'Sollzeit erreicht'}`);
         }
@@ -1353,6 +1441,7 @@ class Poolsteuerung extends utils.Adapter {
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
+      await this.ensureAlertStates();
       await this.setStateAsync('info.connection', true, true);
       await this.subscribeConfiguredStates();
       await this.updateComputedStates();
@@ -1388,12 +1477,14 @@ class Poolsteuerung extends utils.Adapter {
         } catch (e) {
           this.log.error(`Poll-Fehler: ${e && e.stack ? e.stack : e}`);
           await this.setStateAsync('status.debug.lastStartupError', String(e && e.message ? e.message : e), true);
+          if (this.config.alertEventAdapterError) await this.sendAlert('adapter_poll_error', 'error', `Poll-Fehler: ${String(e && e.message ? e.message : e)}`);
         }
       }, pollMin * 60000);
       this.debug(`VIS-HTML aktiv: poolsteuerung.0.vis.htmlTablet / htmlPhone, Poll=${pollMin}min`);
     } catch (e) {
       this.log.error(`Startfehler: ${e && e.stack ? e.stack : e}`);
       try { await this.setStateAsync('status.debug.lastStartupError', String(e && e.message ? e.message : e), true); } catch {}
+      if (this.config.alertEventAdapterError) await this.sendAlert('adapter_start_error', 'error', `Startfehler: ${String(e && e.message ? e.message : e)}`);
     }
   }
 

@@ -70,7 +70,7 @@
     },
     "circulation": {
       "type": "panel",
-      "label": "UMWÄLZ-STEUERUNG",
+      "label": "UMWÄLZPUMPE",
       "items": {
         "circulationPumpSocketStateId": {
           "type": "text",
@@ -121,7 +121,7 @@
     },
     "chlor": {
       "type": "panel",
-      "label": "CHLOR-STEUERUNG",
+      "label": "CHLOR",
       "items": {
         "orpStateId": {
           "type": "text",
@@ -170,7 +170,7 @@
     },
     "ph": {
       "type": "panel",
-      "label": "PH-STEUERUNG",
+      "label": "PH",
       "items": {
         "phSensorsHeader": {
           "type": "header",
@@ -370,7 +370,7 @@
     },
     "heat": {
       "type": "panel",
-      "label": "WÄRMEPUMPEN-STEUERUNG",
+      "label": "WÄRMEPUMPE",
       "items": {
         "waterTempStateId": {
           "type": "text",
@@ -436,21 +436,136 @@
         }
       }
     },
-    "vis": {
+    "alerts": {
       "type": "panel",
-      "label": "VIS / HTML",
+      "label": "ALERTS",
       "items": {
-        "tabletInfo": {
-          "type": "text",
-          "label": "Tablet HTML-Objekt: poolsteuerung.0.vis.htmlTablet",
+        "alertsEnabled": {
+          "type": "checkbox",
+          "label": "Alerts aktiv",
           "newLine": true,
-          "disabled": true
+          "help": "Benachrichtigungen werden nur gesendet, wenn hier und unter ALLGEMEIN > Adapter aktiv eingeschaltet ist."
         },
-        "phoneInfo": {
-          "type": "text",
-          "label": "iPhone HTML-Objekt: poolsteuerung.0.vis.htmlPhone",
+        "alertCooldownMinutes": {
+          "type": "number",
+          "label": "Wiederholsperre je Meldung (Minuten)",
           "newLine": true,
-          "disabled": true
+          "help": "Verhindert gleiche Meldungen in kurzem Abstand."
+        },
+        "alertsHeaderEvents": {
+          "type": "header",
+          "text": "Ereignisse",
+          "size": 2
+        },
+        "alertEventPhDoseStart": {
+          "type": "checkbox",
+          "label": "pH-Dosierung gestartet",
+          "newLine": true
+        },
+        "alertEventPhDoseStop": {
+          "type": "checkbox",
+          "label": "pH-Dosierung beendet",
+          "newLine": true
+        },
+        "alertEventPhDoseAbort": {
+          "type": "checkbox",
+          "label": "pH-Dosierung abgebrochen",
+          "newLine": true
+        },
+        "alertEventPhDailyLimit": {
+          "type": "checkbox",
+          "label": "Tageslimit pH-Dosierungen erreicht",
+          "newLine": true
+        },
+        "alertEventSensorError": {
+          "type": "checkbox",
+          "label": "Sensorwert ungültig / fehlt",
+          "newLine": true
+        },
+        "alertEventAdapterError": {
+          "type": "checkbox",
+          "label": "Adapterfehler / Startfehler",
+          "newLine": true
+        },
+        "alertsHeaderWhatsApp": {
+          "type": "header",
+          "text": "WhatsApp",
+          "size": 2
+        },
+        "alertWhatsAppEnabled": {
+          "type": "checkbox",
+          "label": "WhatsApp aktiv",
+          "newLine": true
+        },
+        "alertWhatsAppProvider": {
+          "type": "select",
+          "label": "WhatsApp Adaptertyp",
+          "newLine": true,
+          "options": [
+            {
+              "label": "open-wa",
+              "value": "openwa"
+            },
+            {
+              "label": "whatsapp-cmb",
+              "value": "whatsapp-cmb"
+            }
+          ]
+        },
+        "alertWhatsAppInstance": {
+          "type": "text",
+          "label": "WhatsApp Instanz (z. B. openwa.0)",
+          "newLine": true
+        },
+        "alertWhatsAppTarget": {
+          "type": "text",
+          "label": "WhatsApp Empfänger / Nummer",
+          "newLine": true
+        },
+        "alertsHeaderTelegram": {
+          "type": "header",
+          "text": "Telegram",
+          "size": 2
+        },
+        "alertTelegramEnabled": {
+          "type": "checkbox",
+          "label": "Telegram aktiv",
+          "newLine": true
+        },
+        "alertTelegramInstance": {
+          "type": "text",
+          "label": "Telegram Instanz (z. B. telegram.0)",
+          "newLine": true
+        },
+        "alertTelegramChatId": {
+          "type": "text",
+          "label": "Telegram Chat-ID / Empfänger",
+          "newLine": true
+        },
+        "alertsHeaderEmail": {
+          "type": "header",
+          "text": "E-Mail",
+          "size": 2
+        },
+        "alertEmailEnabled": {
+          "type": "checkbox",
+          "label": "E-Mail aktiv",
+          "newLine": true
+        },
+        "alertEmailInstance": {
+          "type": "text",
+          "label": "E-Mail Instanz (z. B. email.0)",
+          "newLine": true
+        },
+        "alertEmailTo": {
+          "type": "text",
+          "label": "E-Mail Empfänger",
+          "newLine": true
+        },
+        "alertEmailSubjectPrefix": {
+          "type": "text",
+          "label": "Betreff-Präfix",
+          "newLine": true
         }
       }
     }
