@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.3.12",
+    "version": "0.3.13",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -40,25 +40,6 @@
     "chlorinatorWriteMode": "bool",
     "phPumpWriteMode": "bool",
     "phDoseMode": "fixed",
-    "alertsEnabled": false,
-    "alertCooldownMinutes": 60,
-    "alertEventPhDoseStart": false,
-    "alertEventPhDoseStop": false,
-    "alertEventPhDoseAbort": true,
-    "alertEventPhDailyLimit": true,
-    "alertEventSensorError": true,
-    "alertEventAdapterError": true,
-    "alertWhatsAppEnabled": false,
-    "alertWhatsAppProvider": "openwa",
-    "alertWhatsAppInstance": "",
-    "alertWhatsAppTarget": "",
-    "alertTelegramEnabled": false,
-    "alertTelegramInstance": "",
-    "alertTelegramChatId": "",
-    "alertEmailEnabled": false,
-    "alertEmailInstance": "",
-    "alertEmailTo": "",
-    "alertEmailSubjectPrefix": "Poolsteuerung"
-  },
-  "version": "0.3.12"
+    "chlorPumpStartDelaySec": 0
+  }
 }

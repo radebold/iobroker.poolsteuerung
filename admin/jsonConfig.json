@@ -149,6 +149,13 @@
           ],
           "help": "Legt fest, wie der Adapter den Aktor schaltet."
         },
+        "chlorPumpStartDelaySec": {
+          "type": "number",
+          "label": "Verzögerung nach Pumpenstart (Sekunden)",
+          "newLine": true,
+          "min": 0,
+          "help": "Der Chlorinator darf erst nach dieser Verzögerung nach dem Einschalten der Umwälzpumpe aktiv werden. 0 = ohne Verzögerung."
+        },
         "orpSetpoint": {
           "type": "number",
           "label": "ORP Sollwert",
@@ -436,136 +443,21 @@
         }
       }
     },
-    "alerts": {
+    "vis": {
       "type": "panel",
-      "label": "ALERTS",
+      "label": "VIS / HTML",
       "items": {
-        "alertsEnabled": {
-          "type": "checkbox",
-          "label": "Alerts aktiv",
+        "tabletInfo": {
+          "type": "text",
+          "label": "Tablet HTML-Objekt: poolsteuerung.0.vis.htmlTablet",
           "newLine": true,
-          "help": "Benachrichtigungen werden nur gesendet, wenn hier und unter ALLGEMEIN > Adapter aktiv eingeschaltet ist."
+          "disabled": true
         },
-        "alertCooldownMinutes": {
-          "type": "number",
-          "label": "Wiederholsperre je Meldung (Minuten)",
+        "phoneInfo": {
+          "type": "text",
+          "label": "iPhone HTML-Objekt: poolsteuerung.0.vis.htmlPhone",
           "newLine": true,
-          "help": "Verhindert gleiche Meldungen in kurzem Abstand."
-        },
-        "alertsHeaderEvents": {
-          "type": "header",
-          "text": "Ereignisse",
-          "size": 2
-        },
-        "alertEventPhDoseStart": {
-          "type": "checkbox",
-          "label": "pH-Dosierung gestartet",
-          "newLine": true
-        },
-        "alertEventPhDoseStop": {
-          "type": "checkbox",
-          "label": "pH-Dosierung beendet",
-          "newLine": true
-        },
-        "alertEventPhDoseAbort": {
-          "type": "checkbox",
-          "label": "pH-Dosierung abgebrochen",
-          "newLine": true
-        },
-        "alertEventPhDailyLimit": {
-          "type": "checkbox",
-          "label": "Tageslimit pH-Dosierungen erreicht",
-          "newLine": true
-        },
-        "alertEventSensorError": {
-          "type": "checkbox",
-          "label": "Sensorwert ungültig / fehlt",
-          "newLine": true
-        },
-        "alertEventAdapterError": {
-          "type": "checkbox",
-          "label": "Adapterfehler / Startfehler",
-          "newLine": true
-        },
-        "alertsHeaderWhatsApp": {
-          "type": "header",
-          "text": "WhatsApp",
-          "size": 2
-        },
-        "alertWhatsAppEnabled": {
-          "type": "checkbox",
-          "label": "WhatsApp aktiv",
-          "newLine": true
-        },
-        "alertWhatsAppProvider": {
-          "type": "select",
-          "label": "WhatsApp Adaptertyp",
-          "newLine": true,
-          "options": [
-            {
-              "label": "open-wa",
-              "value": "openwa"
-            },
-            {
-              "label": "whatsapp-cmb",
-              "value": "whatsapp-cmb"
-            }
-          ]
-        },
-        "alertWhatsAppInstance": {
-          "type": "text",
-          "label": "WhatsApp Instanz (z. B. openwa.0)",
-          "newLine": true
-        },
-        "alertWhatsAppTarget": {
-          "type": "text",
-          "label": "WhatsApp Empfänger / Nummer",
-          "newLine": true
-        },
-        "alertsHeaderTelegram": {
-          "type": "header",
-          "text": "Telegram",
-          "size": 2
-        },
-        "alertTelegramEnabled": {
-          "type": "checkbox",
-          "label": "Telegram aktiv",
-          "newLine": true
-        },
-        "alertTelegramInstance": {
-          "type": "text",
-          "label": "Telegram Instanz (z. B. telegram.0)",
-          "newLine": true
-        },
-        "alertTelegramChatId": {
-          "type": "text",
-          "label": "Telegram Chat-ID / Empfänger",
-          "newLine": true
-        },
-        "alertsHeaderEmail": {
-          "type": "header",
-          "text": "E-Mail",
-          "size": 2
-        },
-        "alertEmailEnabled": {
-          "type": "checkbox",
-          "label": "E-Mail aktiv",
-          "newLine": true
-        },
-        "alertEmailInstance": {
-          "type": "text",
-          "label": "E-Mail Instanz (z. B. email.0)",
-          "newLine": true
-        },
-        "alertEmailTo": {
-          "type": "text",
-          "label": "E-Mail Empfänger",
-          "newLine": true
-        },
-        "alertEmailSubjectPrefix": {
-          "type": "text",
-          "label": "Betreff-Präfix",
-          "newLine": true
+          "disabled": true
         }
       }
     }

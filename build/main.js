@@ -18,108 +18,25 @@ class Poolsteuerung extends utils.Adapter {
   lastRenderAt = 0;
   lastPumpScheduleActiveMemory = null;
   suppressOwnPumpLogUntil = 0;
+  lastCirculationPumpOn = false;
+  circulationPumpStartedAt = 0;
 
   constructor(options = {}) {
     super({ ...options, name: 'poolsteuerung' });
     this.timer = null;
-    this.phStopWatcher = null;
-    this.phRecheckTimer = null;
+    this.monitoredIds = [];
+    this.renderQueued = false;
+    this.lastWrittenPhStopAtTs = null;
     this.phDoseStopAtTsMemory = 0;
-    this.phRecheckTargetTs = 0;
     this.phLastDoseTsMemory = 0;
     this.phLastDoseDurationSecMemory = 0;
-    this.lastWrittenPhStopAtTs = null;
-    this.monitoredIds = [];
-    this.alertCooldowns = {};
-    this.renderQueued = false;
     this.on('ready', this.onReady.bind(this));
     this.on('stateChange', this.onStateChange.bind(this));
     this.on('unload', this.onUnload.bind(this));
   }
 
   debug(msg) {
-    if (this.config.debugMode) this.log.info('[DEBUG] ' + msg);
-  }
-
-
-  isAlertsGloballyEnabled() {
-    return this.config.adapterEnabled === true && this.config.alertsEnabled === true;
-  }
-
-  getAlertCooldownMs() {
-    return Math.max(0, parseNum(this.config.alertCooldownMinutes || 0)) * 60000;
-  }
-
-  async ensureAlertStates() {
-    await this.ensureState('status.alerts.lastMessage', 'string', 'text', '', false);
-    await this.ensureState('status.alerts.lastSeverity', 'string', 'text', '', false);
-    await this.ensureState('status.alerts.lastKey', 'string', 'text', '', false);
-    await this.ensureState('status.alerts.lastSentTs', 'number', 'value.time', 0, false);
-  }
-
-  async sendTelegramAlert(message) {
-    const instance = String(this.config.alertTelegramInstance || '').trim();
-    if (!this.config.alertTelegramEnabled || !instance) return false;
-    const chatId = String(this.config.alertTelegramChatId || '').trim();
-    const payload = { text: message };
-    if (chatId) {
-      payload.user = chatId;
-      payload.chatId = chatId;
-    }
-    this.sendTo(instance, 'send', payload);
-    return true;
-  }
-
-  async sendEmailAlert(message) {
-    const instance = String(this.config.alertEmailInstance || '').trim();
-    const to = String(this.config.alertEmailTo || '').trim();
-    if (!this.config.alertEmailEnabled || !instance || !to) return false;
-    const prefix = String(this.config.alertEmailSubjectPrefix || 'Poolsteuerung').trim() || 'Poolsteuerung';
-    this.sendTo(instance, 'send', { to, subject: `${prefix}: Benachrichtigung`, text: message });
-    return true;
-  }
-
-  async sendWhatsAppAlert(message) {
-    const instance = String(this.config.alertWhatsAppInstance || '').trim();
-    const target = String(this.config.alertWhatsAppTarget || '').trim();
-    if (!this.config.alertWhatsAppEnabled || !instance || !target) return false;
-    const provider = String(this.config.alertWhatsAppProvider || 'openwa').trim();
-    const payload = provider === 'whatsapp-cmb'
-      ? { text: message, phone: target }
-      : { text: message, phone: target };
-    this.sendTo(instance, 'send', payload);
-    return true;
-  }
-
-  async sendAlert(key, severity, message) {
-    try {
-      if (!this.isAlertsGloballyEnabled()) return false;
-      const k = String(key || '').trim();
-      if (!k || !message) return false;
-      const now = Date.now();
-      const cooldown = this.getAlertCooldownMs();
-      const last = Number(this.alertCooldowns[k]) || 0;
-      if (cooldown > 0 && last && now - last < cooldown) return false;
-      await this.ensureAlertStates();
-      const prefix = severity ? `[${String(severity).toUpperCase()}] ` : '';
-      const fullMessage = `${prefix}${message}`;
-      let sent = false;
-      if (await this.sendWhatsAppAlert(fullMessage)) sent = true;
-      if (await this.sendTelegramAlert(fullMessage)) sent = true;
-      if (await this.sendEmailAlert(fullMessage)) sent = true;
-      if (sent) {
-        this.alertCooldowns[k] = now;
-        await this.setOwnStateIfChanged('status.alerts.lastMessage', fullMessage, true);
-        await this.setOwnStateIfChanged('status.alerts.lastSeverity', String(severity || ''), true);
-        await this.setOwnStateIfChanged('status.alerts.lastKey', k, true);
-        await this.setOwnStateIfChanged('status.alerts.lastSentTs', now, true);
-        this.log.info(`[ALERT] ${fullMessage}`);
-      }
-      return sent;
-    } catch (e) {
-      this.log.warn('[ALERT] Versand fehlgeschlagen: ' + (e && e.message ? e.message : e));
-      return false;
-    }
+    if (this.config.debugMode) this.log.debug('[DEBUG] ' + msg);
   }
 
   async ensureState(id, type, role, def, write = false) {
@@ -130,18 +47,99 @@ class Poolsteuerung extends utils.Adapter {
     });
     if (!write && def !== undefined) {
       const cur = await this.getStateAsync(id);
-      if (!cur || cur.val === null || cur.val === undefined) {
+      if (!cur || cur.val === null || cur.val === undefined || cur.val === '') {
         await this.setStateAsync(id, def, true);
       }
     }
   }
 
-  async setOwnStateIfChanged(id, value, ack = true) {
+  async setStateIfChanged(id, value, ack = true) {
     const cur = await this.getStateAsync(id);
     const curVal = cur ? cur.val : undefined;
     if (curVal === value) return false;
     await this.setStateAsync(id, value, ack);
     return true;
+  }
+
+  formatDateTimeShort(ts) {
+    const d = ts instanceof Date ? ts : new Date(ts);
+    const today = new Date();
+    const sameDay = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+    const prefix = sameDay ? 'heute' : 'morgen';
+    return `${prefix} um ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
+
+  nextOccurrenceForHHMM(hhmm, now = new Date()) {
+    const mins = this.parseHHMM(hhmm);
+    if (mins === null) return null;
+    const d = new Date(now);
+    d.setSeconds(0, 0);
+    d.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
+    if (d <= now) d.setDate(d.getDate() + 1);
+    return d;
+  }
+
+  getPumpWindows() {
+    return [
+      { start: this.config.pumpWindow1Start, end: this.config.pumpWindow1End },
+      { start: this.config.pumpWindow2Start, end: this.config.pumpWindow2End }
+    ].filter(w => this.parseHHMM(w.start) !== null && this.parseHHMM(w.end) !== null && this.parseHHMM(w.start) !== this.parseHHMM(w.end) && !(this.parseHHMM(w.start) === 0 && this.parseHHMM(w.end) === 0));
+  }
+
+  getNextPumpAction(now = new Date()) {
+    const windows = this.getPumpWindows();
+    if (!windows.length) return null;
+    const candidates = [];
+    for (const w of windows) {
+      const start = this.nextOccurrenceForHHMM(w.start, now);
+      const end = this.nextOccurrenceForHHMM(w.end, now);
+      if (start) candidates.push({ when: start, action: 'EIN', reason: `Zeitfenster ${w.start}-${w.end}` });
+      if (end) candidates.push({ when: end, action: 'AUS', reason: `Zeitfenster ${w.start}-${w.end}` });
+    }
+    candidates.sort((a, b) => a.when - b.when);
+    return candidates[0] || null;
+  }
+
+  getNextPhCheck(now = new Date()) {
+    const list = String(this.config.phCheckTimes || '').split(',').map(v => v.trim()).filter(Boolean).map(v => this.nextOccurrenceForHHMM(v, now)).filter(Boolean);
+    list.sort((a, b) => a - b);
+    return list[0] || null;
+  }
+
+  getNextChlorCheck(now = new Date()) {
+    const pollMin = Math.max(1, Number(this.config.pollIntervalMin) || 1);
+    return new Date(now.getTime() + pollMin * 60000);
+  }
+
+  async logStartupSummary() {
+    const now = new Date();
+    const pumpCurrent = this.config.circulationPumpSocketStateId ? await this.getBool(this.config.circulationPumpSocketStateId) : false;
+    const pumpNext = this.getNextPumpAction(now);
+    const phNext = this.getNextPhCheck(now);
+    const chlorNext = this.getNextChlorCheck(now);
+    const phValue = await this.getNumber(this.config.phStateId, 2);
+    const orpValue = await this.getNumber(this.config.orpStateId, 0);
+    this.log.info('===== PoolSteuerung Start-Zusammenfassung =====');
+    if (this.config.enableCirculationControl === false) {
+      this.log.info(`Umwälzpumpe: Steuerung deaktiviert | Status jetzt: ${pumpCurrent ? 'EIN' : 'AUS'}`);
+    } else if (pumpNext) {
+      this.log.info(`Umwälzpumpe: Status jetzt ${pumpCurrent ? 'EIN' : 'AUS'} | Nächste Aktion: ${pumpNext.action} ${this.formatDateTimeShort(pumpNext.when)} | ${pumpNext.reason}`);
+    } else {
+      this.log.info(`Umwälzpumpe: Status jetzt ${pumpCurrent ? 'EIN' : 'AUS'} | Keine nächste Aktion konfiguriert`);
+    }
+    if (this.config.enableChlorControl === false) {
+      this.log.info('Chlor-Steuerung: deaktiviert');
+    } else {
+      this.log.info(`Chlor-Steuerung: nächste Prüfung ${this.formatDateTimeShort(chlorNext)} | ORP aktuell: ${Number.isFinite(orpValue) ? orpValue : '--'} | Grenzen: EIN <= ${parseNum(this.config.orpOnThreshold || 725)} / AUS > ${parseNum(this.config.orpOffThreshold || 750)} | Verzögerung nach Pumpenstart: ${Math.max(0, parseNum(this.config.chlorPumpStartDelaySec || 0))}s`);
+    }
+    if (this.config.enablePhControl === false) {
+      this.log.info('pH-Steuerung: deaktiviert');
+    } else if (phNext) {
+      this.log.info(`pH-Steuerung: nächste Prüfung ${this.formatDateTimeShort(phNext)} | pH aktuell: ${Number.isFinite(phValue) ? phValue.toFixed(2) : '--'} | Soll: ${parseNum(this.config.phSetpoint || 7.2).toFixed(2)} + Tol. ${parseNum(this.config.phDoseTolerance || 0.05).toFixed(2)}`);
+    } else {
+      this.log.info(`pH-Steuerung: keine Prüfzeiten konfiguriert | pH aktuell: ${Number.isFinite(phValue) ? phValue.toFixed(2) : '--'}`);
+    }
+    this.log.info('================================================');
   }
 
   calcVolume() {
@@ -171,6 +169,37 @@ class Poolsteuerung extends utils.Adapter {
     } catch {
       return false;
     }
+  }
+
+  async getStateSnapshot(id) {
+    if (!id) return null;
+    try {
+      return await this.getForeignStateAsync(id);
+    } catch {
+      return null;
+    }
+  }
+
+  updateCirculationPumpRuntime(isOn, stateTs = 0) {
+    const active = !!isOn;
+    const ts = Number(stateTs) || Date.now();
+
+    if (active) {
+      if (!this.lastCirculationPumpOn) {
+        this.circulationPumpStartedAt = ts;
+      } else if (!this.circulationPumpStartedAt) {
+        this.circulationPumpStartedAt = ts;
+      }
+    } else {
+      this.circulationPumpStartedAt = 0;
+    }
+
+    this.lastCirculationPumpOn = active;
+  }
+
+  getPumpOnForSec(nowTs = Date.now()) {
+    if (!this.lastCirculationPumpOn || !this.circulationPumpStartedAt) return 0;
+    return Math.max(0, Math.floor((nowTs - this.circulationPumpStartedAt) / 1000));
   }
 
 
@@ -709,16 +738,20 @@ class Poolsteuerung extends utils.Adapter {
       chlorDecision = 'Steuerung deaktiviert';
     }
     const orpNum = parseNum(orp);
+    const chlorDelaySec = Math.max(0, parseNum(this.config.chlorPumpStartDelaySec || 0));
+    const pumpOnForSec = this.getPumpOnForSec();
 
     if (!chlorEnabledMaster) {
       chlorDecision = 'Steuerung deaktiviert';
     } else if (!pumpOn) {
       chlorDesired = false;
       chlorDecision = 'Pumpe AUS';
+    } else if (chlorDelaySec > 0 && pumpOnForSec < chlorDelaySec) {
+      chlorDesired = false;
+      chlorDecision = `Verzögert nach Pumpenstart (${Math.max(0, chlorDelaySec - pumpOnForSec)}s Rest)`;
     } else if (!Number.isFinite(orpNum)) {
       chlorDesired = false;
       chlorDecision = 'ORP ungültig';
-      if (this.config.alertEventSensorError) await this.sendAlert('sensor_orp_invalid', 'warn', 'ORP-Wert ungültig oder fehlt. Chlor-Steuerung wurde nicht freigegeben.');
     } else if (orpNum <= orpOnThreshold) {
       chlorDesired = true;
       chlorDecision = `ORP niedrig (${orpNum} <= ${orpOnThreshold})`;
@@ -891,181 +924,9 @@ class Poolsteuerung extends utils.Adapter {
     return list.includes(current);
   }
 
+
   getTodayKey(now = new Date()) {
-    const d = now instanceof Date ? now : new Date(now);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  }
-
-  getDoseLockMs() {
-    return Math.max(0, parseNum(this.config.phDoseLockMinutes || 60)) * 60000;
-  }
-
-  getNextPhFollowUpTs(lastDoseTs, lastDoseDurationSec) {
-    const ts = Number(lastDoseTs) || 0;
-    const durationMs = Math.max(0, Number(lastDoseDurationSec) || 0) * 1000;
-    if (!ts) return 0;
-    return ts + durationMs + this.getDoseLockMs();
-  }
-
-  clearPhRecheckTimer() {
-    if (this.phRecheckTimer) {
-      clearTimeout(this.phRecheckTimer);
-      this.phRecheckTimer = null;
-    }
-    this.phRecheckTargetTs = 0;
-  }
-
-  schedulePhRecheck(ts, reason = '') {
-    const targetTs = Number(ts) || 0;
-    if (!targetTs) return;
-
-    if (this.phRecheckTimer && this.phRecheckTargetTs && Math.abs(this.phRecheckTargetTs - targetTs) < 1000) {
-      return;
-    }
-
-    this.clearPhRecheckTimer();
-    this.phRecheckTargetTs = targetTs;
-
-    const delay = Math.max(250, targetTs - Date.now());
-    this.phRecheckTimer = setTimeout(async () => {
-      this.phRecheckTimer = null;
-      this.phRecheckTargetTs = 0;
-      try {
-        await this.updateComputedStates();
-        if (typeof this.applyControlLogic === 'function') {
-          await this.applyControlLogic();
-        }
-        await this.renderVis();
-      } catch (e) {
-        this.log.warn('[PH] Folgeprüfung fehlgeschlagen: ' + (e && e.message ? e.message : e));
-      }
-    }, delay);
-
-    if (this.config.debugMode) {
-      this.log.info(`[PH] Folgeprüfung geplant für ${new Date(targetTs).toLocaleString('de-DE')}${reason ? ' | ' + reason : ''}`);
-    }
-  }
-
-
-  formatLogDateTime(ts) {
-    const n = Number(ts) || 0;
-    if (!n) return 'keine';
-    return new Date(n).toLocaleString('de-DE', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    });
-  }
-
-  getNextConfiguredTimeTs(timesText, now = new Date()) {
-    const list = String(timesText || '').split(',').map(v => v.trim()).filter(Boolean);
-    if (!list.length) return 0;
-    let best = 0;
-    for (const item of list) {
-      const parsed = this.parseHHMM(item);
-      if (parsed === null) continue;
-      const hh = Math.floor(parsed / 60);
-      const mm = parsed % 60;
-      for (let dayOffset = 0; dayOffset <= 2; dayOffset++) {
-        const d = new Date(now);
-        d.setDate(d.getDate() + dayOffset);
-        d.setHours(hh, mm, 0, 0);
-        const ts = d.getTime();
-        if (ts > now.getTime() && (!best || ts < best)) {
-          best = ts;
-        }
-      }
-    }
-    return best;
-  }
-
-  getNextPumpAction(now = new Date()) {
-    const windows = [
-      { label: 'Fenster 1', start: this.config.pumpWindow1Start, end: this.config.pumpWindow1End },
-      { label: 'Fenster 2', start: this.config.pumpWindow2Start, end: this.config.pumpWindow2End }
-    ];
-    let best = null;
-
-    for (const w of windows) {
-      const start = this.parseHHMM(w.start);
-      const end = this.parseHHMM(w.end);
-      if (start === null || end === null || start === end || (start === 0 && end === 0)) continue;
-
-      const events = [
-        { kind: 'EIN', minutes: start },
-        { kind: 'AUS', minutes: end }
-      ];
-
-      for (const event of events) {
-        for (let dayOffset = 0; dayOffset <= 2; dayOffset++) {
-          const d = new Date(now);
-          d.setDate(d.getDate() + dayOffset);
-          d.setHours(Math.floor(event.minutes / 60), event.minutes % 60, 0, 0);
-          const ts = d.getTime();
-          if (ts <= now.getTime()) continue;
-          if (!best || ts < best.ts) {
-            best = { ts, action: event.kind, source: w.label };
-          }
-        }
-      }
-    }
-    return best;
-  }
-
-  async logStartupScheduleSummary() {
-    const now = new Date();
-    const pollMin = Math.max(1, Number(this.config.pollIntervalMin) || 1);
-    const nextPollTs = now.getTime() + pollMin * 60000;
-
-    let pumpNow = false;
-    try {
-      pumpNow = this.config.circulationPumpSocketStateId ? await this.getBool(this.config.circulationPumpSocketStateId) : false;
-    } catch {}
-    const nextPump = this.getNextPumpAction(now);
-
-    const nextFixedPhTs = this.getNextConfiguredTimeTs(this.config.phCheckTimes || '', now);
-    const lastDoseTsState = await this.getStateAsync('status.phDose.lastDoseTs');
-    const lastDoseDurationState = await this.getStateAsync('status.phDose.lastDoseDurationSec');
-    const stopAtState = await this.getStateAsync('status.phDose.stopAtTs');
-    const dailyCountState = await this.getStateAsync('status.phDose.dailyCount');
-    const lastDoseTs = Number(lastDoseTsState && lastDoseTsState.val) || 0;
-    const lastDoseDurationSec = Number(lastDoseDurationState && lastDoseDurationState.val) || 0;
-    const stopAtTs = Number(stopAtState && stopAtState.val) || 0;
-    const dailyCount = Number(dailyCountState && dailyCountState.val) || 0;
-    const nextFollowUpTs = this.getNextPhFollowUpTs(lastDoseTs, lastDoseDurationSec);
-    const hasFutureFollowUp = nextFollowUpTs > now.getTime();
-    const nextPhEvalTs = hasFutureFollowUp && nextFixedPhTs ? Math.min(nextFollowUpTs, nextFixedPhTs) : (hasFutureFollowUp ? nextFollowUpTs : nextFixedPhTs);
-
-    this.log.info('===== PoolSteuerung Start-Zusammenfassung =====');
-    this.log.info(`[START] Umwälzpumpe jetzt: ${pumpNow ? 'EIN' : 'AUS'}${nextPump ? ` | nächste Aktion: ${nextPump.action} am ${this.formatLogDateTime(nextPump.ts)} (${nextPump.source})` : ' | keine nächste Aktion geplant'}`);
-    this.log.info(`[START] Chlor-Steuerung: nächste Prüfung gegen ${this.formatLogDateTime(nextPollTs)} | Poll ${pollMin} min`);
-
-    if (stopAtTs > now.getTime()) {
-      this.log.info(`[START] pH-Dosierung läuft aktuell bis ${this.formatLogDateTime(stopAtTs)}`);
-    }
-
-    if (nextPhEvalTs) {
-      let source = 'nächste pH-Prüfung';
-      if (hasFutureFollowUp && nextPhEvalTs === nextFollowUpTs) source = 'pH-Folgeprüfung nach Dosierung';
-      else if (nextFixedPhTs && nextPhEvalTs === nextFixedPhTs) source = 'konfigurierte pH-Prüfzeit';
-      this.log.info(`[START] pH-Steuerung: nächste Prüfung ${this.formatLogDateTime(nextPhEvalTs)} | Quelle: ${source}`);
-    } else {
-      this.log.info('[START] pH-Steuerung: keine nächste Prüfung geplant');
-    }
-
-    if (lastDoseTs) {
-      this.log.info(`[START] pH letzte Dosierung: ${this.formatLogDateTime(lastDoseTs)} | Tageszähler: ${dailyCount}`);
-    } else {
-      this.log.info(`[START] pH letzte Dosierung: keine | Tageszähler: ${dailyCount}`);
-    }
-    this.log.info('===============================================');
+    return now.toISOString().slice(0, 10);
   }
 
   async getTodayDoseCount(now = new Date()) {
@@ -1077,16 +938,16 @@ class Poolsteuerung extends utils.Adapter {
     let count = Number(countState && countState.val) || 0;
     if (!dayKeyState || dayKeyState.val !== today) {
       count = 0;
-      await this.setOwnStateIfChanged('status.phDose.dayKey', today, true);
-      await this.setOwnStateIfChanged('status.phDose.dailyCount', 0, true);
+      await this.setStateAsync('status.phDose.dayKey', today, true);
+      await this.setStateAsync('status.phDose.dailyCount', 0, true);
     }
     return count;
   }
 
   async incrementTodayDoseCount(now = new Date()) {
     const count = await this.getTodayDoseCount(now);
-    await this.setOwnStateIfChanged('status.phDose.dayKey', this.getTodayKey(now), true);
-    await this.setOwnStateIfChanged('status.phDose.dailyCount', count + 1, true);
+    await this.setStateAsync('status.phDose.dayKey', this.getTodayKey(now), true);
+    await this.setStateAsync('status.phDose.dailyCount', count + 1, true);
     return count + 1;
   }
 
@@ -1138,7 +999,7 @@ class Poolsteuerung extends utils.Adapter {
     if (this.config.simulateMode) {
       await this.setPhStopAtTs(stopAtTs, 'Start Simulationsmodus');
       await this.setPhDoseHistory(Date.now(), sec);
-      const msg = `[PH] würde dosieren | ${context.reason || ('Prüfzeit ' + (context.checkTime || '-'))} | pH=${context.phValue ?? '-'} | Laufzeit=${sec}s | Stop um ${new Date(stopAtTs).toLocaleTimeString('de-DE')}`;
+      const msg = `[PH] würde dosieren | Prüfzeit ${context.checkTime || '-'} | pH=${context.phValue ?? '-'} | Laufzeit=${sec}s | Stop um ${new Date(stopAtTs).toLocaleTimeString('de-DE')}`;
       await this.setStateAsync('status.debug.lastPhStartInfo', msg, true);
       if (this.config.debugMode) this.log.info(msg);
       return true;
@@ -1154,10 +1015,9 @@ class Poolsteuerung extends utils.Adapter {
     await this.setPhDoseHistory(Date.now(), sec);
 
 
-    const msg = `[PH] Dosierpumpe EIN | ${context.reason || ('Prüfzeit ' + (context.checkTime || '-'))} | pH=${context.phValue ?? '-'} | Laufzeit=${sec}s | Stop um ${new Date(stopAtTs).toLocaleTimeString('de-DE')}`;
+    const msg = `[PH] Dosierpumpe EIN | Prüfzeit ${context.checkTime || '-'} | pH=${context.phValue ?? '-'} | Laufzeit=${sec}s | Stop um ${new Date(stopAtTs).toLocaleTimeString('de-DE')}`;
     await this.setStateAsync('status.debug.lastPhStartInfo', msg, true);
     if (this.config.debugMode) this.log.info(msg);
-    if (this.config.alertEventPhDoseStart) await this.sendAlert('ph_dose_start', 'info', `pH-Dosierung gestartet: ${sec}s | pH=${context.phValue ?? '-'} | ${context.reason || ('Prüfzeit ' + (context.checkTime || '-'))}`);
 
     const stopLater = async () => { await this.enforcePhStopIfDue(); };
     setTimeout(stopLater, sec * 1000);
@@ -1176,12 +1036,15 @@ class Poolsteuerung extends utils.Adapter {
     const heatEnabledMaster = this.config.enableHeatpumpControl !== false;
     const chlorEnabledMaster = this.config.enableChlorControl !== false;
     const pumpTarget = circulationEnabled ? this.isPumpScheduleActive(now) : false;
-    const pumpCurrent = await this.getBool(pumpId);
+    const pumpState = await this.getStateSnapshot(pumpId);
+    const pumpCurrent = !!(pumpState && pumpState.val);
+    this.updateCirculationPumpRuntime(pumpCurrent, pumpState && (pumpState.lc || pumpState.ts));
 
     await this.ensureState('status.debug.lastPumpScheduleActive', 'boolean', 'indicator', false, false);
     await this.ensureState('status.debug.lastPumpLoggedDecision', 'string', 'text', '', false);
     const lastScheduleActive = this.lastPumpScheduleActiveMemory === null ? pumpTarget : this.lastPumpScheduleActiveMemory;
     const scheduleEdge = pumpTarget !== lastScheduleActive;
+    const nowMs = now.getTime();
 
     let pumpDecision = !circulationEnabled ? 'Steuerung deaktiviert' : (pumpTarget ? 'Zeitfenster aktiv' : 'Kein aktives Zeitfenster');
 
@@ -1210,7 +1073,50 @@ class Poolsteuerung extends utils.Adapter {
     }
 
     this.lastPumpScheduleActiveMemory = pumpTarget;
-    await this.setOwnStateIfChanged('status.debug.lastPumpScheduleActive', pumpTarget, true);
+    await this.setStateAsync('status.debug.lastPumpScheduleActive', pumpTarget, true);
+
+    const orpValue = await this.getNumber(this.config.orpStateId, 0);
+    const chlorId = this.config.chlorinatorSocketStateId;
+    const chlorCurrent = await this.getBool(chlorId);
+    const orpOnThreshold = parseNum(this.config.orpOnThreshold || 725);
+    const orpOffThreshold = parseNum(this.config.orpOffThreshold || 750);
+    const chlorDelaySec = Math.max(0, parseNum(this.config.chlorPumpStartDelaySec || 0));
+    const pumpOnForSec = this.getPumpOnForSec(nowMs);
+    let chlorDecision = 'keine Prüfung';
+    let chlorTarget = chlorCurrent;
+
+    if (!chlorEnabledMaster) {
+      chlorDecision = chlorCurrent ? 'Steuerung deaktiviert (bleibt EIN)' : 'Steuerung deaktiviert';
+    } else if (!pumpCurrent) {
+      chlorTarget = false;
+      chlorDecision = 'Pumpe AUS';
+    } else if (chlorDelaySec > 0 && pumpOnForSec < chlorDelaySec) {
+      chlorTarget = false;
+      chlorDecision = `Verzögert nach Pumpenstart (${Math.max(0, chlorDelaySec - pumpOnForSec)}s Rest)`;
+    } else if (orpValue === null || !Number.isFinite(orpValue)) {
+      chlorTarget = false;
+      chlorDecision = 'ORP ungültig';
+    } else if (orpValue <= orpOnThreshold) {
+      chlorTarget = true;
+      chlorDecision = `ORP niedrig (${orpValue} <= ${orpOnThreshold})`;
+    } else if (orpValue > orpOffThreshold) {
+      chlorTarget = false;
+      chlorDecision = `ORP hoch (${orpValue} > ${orpOffThreshold})`;
+    } else {
+      chlorDecision = `Hysterese (${orpOnThreshold}-${orpOffThreshold})`;
+    }
+
+    if (!this.config.simulateMode && chlorId && chlorTarget !== chlorCurrent) {
+      try {
+        await this.setSwitchStateCompat(chlorId, chlorTarget);
+      } catch (e) {
+        chlorDecision = `Chlor Schaltfehler: ${e.message || e}`;
+        this.log.warn('Chlorinator konnte nicht gesetzt werden: ' + (e.message || e));
+      }
+    }
+
+    await this.ensureState('status.debug.lastChlorDecision', 'string', 'text', '', false);
+    await this.setStateAsync('status.debug.lastChlorDecision', chlorDecision, true);
 
     const phValue = await this.getNumber(this.config.phStateId, 2);
     const phSet = parseNum(this.config.phSetpoint || 7.2);
@@ -1236,74 +1142,39 @@ class Poolsteuerung extends utils.Adapter {
     await this.ensureState('status.phDose.currentPhValue', 'string', 'text', '--', false);
     await this.ensureState('status.phDose.calculatedDoseSec', 'number', 'value.interval', 0, false);
     const lastDoseState = await this.getStateAsync('status.phDose.lastDoseTs');
-    const lastDoseDurationState = await this.getStateAsync('status.phDose.lastDoseDurationSec');
     const lastDoseTs = Number(lastDoseState && lastDoseState.val) || 0;
-    const lastDoseDurationSec = Number(lastDoseDurationState && lastDoseDurationState.val) || 0;
-    const nowMs = now.getTime();
-    const nextFollowUpTs = this.getNextPhFollowUpTs(lastDoseTs, lastDoseDurationSec);
-    const lockRemainingMs = Math.max(0, nextFollowUpTs - nowMs);
+    const lockRemainingMs = Math.max(0, (lastDoseTs + doseLockMinutes * 60000) - nowMs);
     const dailyCount = await this.getTodayDoseCount(now);
-    const calcDoseSecRaw = this.calcPhDoseDurationSec(phValue, phSet, phTolerance);
-    const calcDoseSec = calcDoseSecRaw > 0 ? calcDoseSecRaw : fallbackDoseDurationSec;
-    const currentPhText = phValue === null || !Number.isFinite(phValue) ? '--' : String(phValue);
-    await this.setOwnStateIfChanged('status.phDose.currentPhValue', currentPhText, true);
-    await this.setOwnStateIfChanged('status.phDose.calculatedDoseSec', Number(calcDoseSecRaw) || 0, true);
+    const calcDoseSec = this.calcPhDoseDurationSec(phValue, phSet, phTolerance) || fallbackDoseDurationSec;
+    await this.setStateIfChanged('status.phDose.currentPhValue', phValue === null || !Number.isFinite(phValue) ? '--' : String(phValue), true);
+    await this.setStateIfChanged('status.phDose.calculatedDoseSec', Number(calcDoseSec) || 0, true);
     const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    const lastDoseToday = lastDoseTs > 0 && this.getTodayKey(new Date(lastDoseTs)) === this.getTodayKey(now);
-    const scheduledDue = this.isPhCheckDue(now);
-    const followUpEnabled = lastDoseToday && dailyCount > 0 && dailyCount < doseMaxPerDay;
-    const followUpDue = followUpEnabled && nextFollowUpTs > 0 && nowMs >= nextFollowUpTs;
-    const evaluationDue = scheduledDue || followUpDue;
-    const evaluationReason = followUpDue ? 'Folgeprüfung nach Sperrzeit' : (scheduledDue ? `Prüfzeit ${currentHHMM}` : 'keine fällige Prüfung');
-
-    const withinDoseLock = followUpEnabled && lockRemainingMs > 0;
-
-    if (withinDoseLock) {
-      this.schedulePhRecheck(nextFollowUpTs, 'pH Folgeprüfung nach Dosierung');
-    } else if (!phDoseActive) {
-      this.clearPhRecheckTimer();
-    }
 
     let phDecision = 'keine Prüfung';
     if (!phEnabled) {
-      this.clearPhRecheckTimer();
       phDecision = 'pH Freigabe AUS';
     } else if (!pumpCurrent) {
-      this.clearPhRecheckTimer();
       phDecision = (phPumpCurrent || phDoseActive) ? 'PH-Dosierung gestoppt (Umwälzpumpe AUS)' : 'Pumpe AUS';
+    } else if (!this.isPhCheckDue(now)) {
+      phDecision = `warte auf Prüfzeit (${this.config.phCheckTimes || '-'})`;
     } else if (phValue === null || !Number.isFinite(phValue)) {
       phDecision = 'pH ungültig';
-      if (this.config.alertEventSensorError) await this.sendAlert('sensor_ph_invalid', 'warn', 'pH-Wert ungültig oder fehlt. pH-Dosierung wurde übersprungen.');
     } else if (dailyCount >= doseMaxPerDay) {
-      this.clearPhRecheckTimer();
       phDecision = `Tageslimit erreicht (${dailyCount}/${doseMaxPerDay})`;
-      if (this.config.alertEventPhDailyLimit) await this.sendAlert('ph_daily_limit', 'warn', `Tageslimit pH-Dosierungen erreicht (${dailyCount}/${doseMaxPerDay}).`);
-    } else if (withinDoseLock) {
-      const whenText = new Date(nextFollowUpTs).toLocaleTimeString('de-DE');
-      phDecision = `Sperrzeit aktiv (${Math.ceil(lockRemainingMs / 60000)} min) | Folgeprüfung um ${whenText}`;
-    } else if (!evaluationDue) {
-      if (followUpEnabled && nextFollowUpTs > 0) {
-        const whenText = new Date(nextFollowUpTs).toLocaleTimeString('de-DE');
-        phDecision = `Sperrzeit aktiv (${Math.ceil(lockRemainingMs / 60000)} min) | Folgeprüfung um ${whenText}`;
-      } else {
-        phDecision = `warte auf Prüfzeit (${this.config.phCheckTimes || '-'})`;
-      }
+    } else if (lockRemainingMs > 0) {
+      phDecision = `Sperrzeit aktiv (${Math.ceil(lockRemainingMs / 60000)} min)`;
     } else if (phValue <= (phSet + phTolerance)) {
-      this.clearPhRecheckTimer();
-      phDecision = `pH OK (${phValue} <= ${this.fmt(phSet + phTolerance, 2, '--')}) | ${evaluationReason}`;
+      phDecision = `pH OK (${phValue} <= ${this.fmt(phSet + phTolerance, 2, '--')})`;
     } else if (phPumpCurrent) {
+      if (!stopAtTs && this.config.debugMode) {
+        // stopAtTs may be held in memory fallback; do not spam logs here.
+      }
       phDecision = stopAtTs ? `Dosierpumpe läuft bis ${new Date(stopAtTs).toLocaleTimeString('de-DE')}` : 'Dosierpumpe läuft bereits';
     } else {
-      const ok = await this.runDosePumpOnce(calcDoseSec, { checkTime: currentHHMM, phValue, reason: evaluationReason });
+      const ok = await this.runDosePumpOnce(calcDoseSec, { checkTime: currentHHMM, phValue });
       if (ok) {
         const newCount = await this.incrementTodayDoseCount(now);
-        const newFollowUpTs = this.getNextPhFollowUpTs(nowMs, calcDoseSec);
-        if (newCount < doseMaxPerDay) {
-          this.schedulePhRecheck(newFollowUpTs, 'nächste pH Folgeprüfung');
-        } else {
-          this.clearPhRecheckTimer();
-        }
-        phDecision = `${this.config.simulateMode ? 'würde dosieren' : 'dosiert'} ${calcDoseSec}s | ${evaluationReason} | pH ${phValue} > ${phSet}+${phTolerance} | Tag ${newCount}/${doseMaxPerDay}`;
+        phDecision = `${this.config.simulateMode ? 'würde dosieren' : 'dosiert'} ${calcDoseSec}s | pH ${phValue} > ${phSet}+${phTolerance} | Tag ${newCount}/${doseMaxPerDay}`;
       } else {
         phDecision = 'Dosierung fehlgeschlagen';
       }
@@ -1311,16 +1182,16 @@ class Poolsteuerung extends utils.Adapter {
 
     await this.ensureState('status.debug.lastPumpDecision', 'string', 'text', '', false);
     await this.ensureState('status.debug.lastPhDecision', 'string', 'text', '', false);
-    await this.setOwnStateIfChanged('status.debug.lastPumpDecision', pumpDecision, true);
+    await this.setStateAsync('status.debug.lastPumpDecision', pumpDecision, true);
     const lastPumpLoggedDecisionState = await this.getStateAsync('status.debug.lastPumpLoggedDecision');
     const lastPumpLoggedDecision = lastPumpLoggedDecisionState && lastPumpLoggedDecisionState.val ? String(lastPumpLoggedDecisionState.val) : '';
     const ownWriteSuppressed = Date.now() < (this.suppressOwnPumpLogUntil || 0);
     const shouldLogPump = !ownWriteSuppressed && (scheduleEdge || pumpDecision !== lastPumpLoggedDecision || pumpDecision.startsWith('Schaltfehler'));
     if (shouldLogPump) {
       this.debug(`Pumpenentscheidung: ${pumpDecision} | zeitfenster=${pumpTarget ? 'aktiv' : 'inaktiv'} | ist=${pumpCurrent ? 'ein' : 'aus'} | edge=${scheduleEdge ? 'ja' : 'nein'}`);
-      await this.setOwnStateIfChanged('status.debug.lastPumpLoggedDecision', pumpDecision, true);
+      await this.setStateAsync('status.debug.lastPumpLoggedDecision', pumpDecision, true);
     }
-    await this.setOwnStateIfChanged('status.debug.lastPhDecision', phDecision, true);
+    await this.setStateAsync('status.debug.lastPhDecision', phDecision, true);
   }
 
 
@@ -1335,12 +1206,7 @@ class Poolsteuerung extends utils.Adapter {
       this.lastWrittenPhStopAtTs = currentNum;
     }
 
-    if (num === 0) {
-      this.phDoseStopAtTsMemory = 0;
-    this.phRecheckTargetTs = 0;
-    } else {
-      this.phDoseStopAtTsMemory = num;
-    }
+    this.phDoseStopAtTsMemory = num;
 
     if (num === 0 && currentNum === 0 && this.lastWrittenPhStopAtTs === 0) {
       return;
@@ -1350,10 +1216,13 @@ class Poolsteuerung extends utils.Adapter {
       return;
     }
 
-    const changed = await this.setOwnStateIfChanged('status.phDose.stopAtTs', num, true);
+    if (currentNum !== num) {
+      await this.setStateAsync('status.phDose.stopAtTs', num, true);
+    }
+
     this.lastWrittenPhStopAtTs = num;
 
-    if (changed && this.config.debugMode) {
+    if (this.config.debugMode) {
       this.log.info(`[PH] stopAtTs ${num ? 'gesetzt' : 'auf 0 gesetzt'}${reason ? ' | ' + reason : ''}${num ? ' | ' + num : ''}`);
     }
   }
@@ -1367,8 +1236,8 @@ class Poolsteuerung extends utils.Adapter {
     this.phLastDoseDurationSecMemory = durNum;
     await this.ensureState('status.phDose.lastDoseTs', 'number', 'value.time', 0, false);
     await this.ensureState('status.phDose.lastDoseDurationSec', 'number', 'value.interval', 0, false);
-    await this.setOwnStateIfChanged('status.phDose.lastDoseTs', tsNum, true);
-    await this.setOwnStateIfChanged('status.phDose.lastDoseDurationSec', durNum, true);
+    await this.setStateIfChanged('status.phDose.lastDoseTs', tsNum, true);
+    await this.setStateIfChanged('status.phDose.lastDoseDurationSec', durNum, true);
   }
 
   async getEffectivePhStopAtTs(phPumpCurrent = false) {
@@ -1406,25 +1275,10 @@ class Poolsteuerung extends utils.Adapter {
           && (!pumpCurrent || Date.now() >= stopAtTs)) {
         const offOk = await this.forceSwitchOffCompat(phPumpId);
         if (offOk) {
-          const stopReason = !pumpCurrent ? 'Umwälzpumpe AUS' : 'Sollzeit erreicht';
-          const stopNowTs = Date.now();
-          await this.ensureState('status.phDose.lastDoseTs', 'number', 'value.time', 0, false);
-          const lastDoseState = await this.getStateAsync('status.phDose.lastDoseTs');
-          const plannedStartTs = Number(lastDoseState && lastDoseState.val) || 0;
-          if (plannedStartTs > 0) {
-            const actualDurationSec = Math.max(1, Math.round((stopNowTs - plannedStartTs) / 1000));
-            await this.setPhDoseHistory(plannedStartTs, actualDurationSec);
-            if (!pumpCurrent) {
-              this.log.info(`[PH] Dosierung vorzeitig beendet nach ${actualDurationSec}s | Grund ${stopReason}`);
-              if (this.config.alertEventPhDoseAbort) await this.sendAlert('ph_dose_abort', 'warn', `pH-Dosierung vorzeitig beendet nach ${actualDurationSec}s | Grund ${stopReason}`);
-            }
-          }
           await this.setPhStopAtTs(0, !pumpCurrent ? 'PH-AUS bestätigt wegen Umwälzpumpe AUS' : 'PH-AUS bestätigt wegen Sollzeit');
           this.phDoseStopAtTsMemory = 0;
-    this.phRecheckTargetTs = 0;
-          this.lastWrittenPhStopAtTs = null;
-          this.log.info(`[PH] Dosierpumpe AUS | Grund ${stopReason}`);
-          if (pumpCurrent && this.config.alertEventPhDoseStop && stopReason === 'Sollzeit erreicht') await this.sendAlert('ph_dose_stop', 'info', 'pH-Dosierung planmäßig beendet.');
+          this.lastWrittenPhStopAtTs = 0;
+          this.log.info(`[PH] Dosierpumpe AUS | Grund ${!pumpCurrent ? 'Umwälzpumpe AUS' : 'Sollzeit erreicht'}`);
         } else if (this.config.debugMode) {
           this.log.warn(`[PH] Dosierpumpe AUS fehlgeschlagen | Grund ${!pumpCurrent ? 'Umwälzpumpe AUS' : 'Sollzeit erreicht'}`);
         }
@@ -1441,32 +1295,25 @@ class Poolsteuerung extends utils.Adapter {
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
-      await this.ensureAlertStates();
       await this.setStateAsync('info.connection', true, true);
       await this.subscribeConfiguredStates();
+      if (this.config.circulationPumpSocketStateId) {
+        const initialPumpState = await this.getStateSnapshot(this.config.circulationPumpSocketStateId);
+        this.updateCirculationPumpRuntime(!!(initialPumpState && initialPumpState.val), initialPumpState && (initialPumpState.lc || initialPumpState.ts));
+      }
       await this.updateComputedStates();
       if (typeof this.applyControlLogic === 'function') {
         await this.applyControlLogic();
       }
       await this.renderVis();
-      await this.ensureState('status.phDose.lastDoseTs', 'number', 'value.time', 0, false);
-      await this.ensureState('status.phDose.lastDoseDurationSec', 'number', 'value.interval', 0, false);
-      const lastDoseState = await this.getStateAsync('status.phDose.lastDoseTs');
-      const lastDoseDurationState = await this.getStateAsync('status.phDose.lastDoseDurationSec');
-      const resumeLastDoseTs = Number(lastDoseState && lastDoseState.val) || 0;
-      const resumeLastDoseDurationSec = Number(lastDoseDurationState && lastDoseDurationState.val) || 0;
-      const resumeFollowUpTs = this.getNextPhFollowUpTs(resumeLastDoseTs, resumeLastDoseDurationSec);
-      if (resumeFollowUpTs > Date.now() && this.getTodayKey(new Date(resumeLastDoseTs)) === this.getTodayKey(new Date())) {
-        this.schedulePhRecheck(resumeFollowUpTs, 'wiederhergestellt nach Adapterstart');
-      }
-      await this.logStartupScheduleSummary();
+      await this.logStartupSummary();
       const pollMin = Math.max(1, Number(this.config.pollIntervalMin) || 1);
       if (this.phStopWatcher) clearInterval(this.phStopWatcher);
-      this.phStopWatcher = setInterval(async () => {
-        await this.enforcePhStopIfDue();
-      }, 1000);
+    this.phStopWatcher = setInterval(async () => {
+      await this.enforcePhStopIfDue();
+    }, 1000);
 
-      this.timer = setInterval(async () => {
+    this.timer = setInterval(async () => {
         try {
           await this.setStateAsync('status.debug.lastCycle', new Date().toISOString(), true);
           await this.updateComputedStates();
@@ -1477,20 +1324,19 @@ class Poolsteuerung extends utils.Adapter {
         } catch (e) {
           this.log.error(`Poll-Fehler: ${e && e.stack ? e.stack : e}`);
           await this.setStateAsync('status.debug.lastStartupError', String(e && e.message ? e.message : e), true);
-          if (this.config.alertEventAdapterError) await this.sendAlert('adapter_poll_error', 'error', `Poll-Fehler: ${String(e && e.message ? e.message : e)}`);
         }
       }, pollMin * 60000);
       this.debug(`VIS-HTML aktiv: poolsteuerung.0.vis.htmlTablet / htmlPhone, Poll=${pollMin}min`);
     } catch (e) {
       this.log.error(`Startfehler: ${e && e.stack ? e.stack : e}`);
       try { await this.setStateAsync('status.debug.lastStartupError', String(e && e.message ? e.message : e), true); } catch {}
-      if (this.config.alertEventAdapterError) await this.sendAlert('adapter_start_error', 'error', `Startfehler: ${String(e && e.message ? e.message : e)}`);
     }
   }
 
   async onStateChange(id, state) {
     if (!state) return;
     if (this.monitoredIds.includes(id)) {
+      this.debug(`State geändert: ${id}`);
       this.queueRender();
     }
   }
@@ -1498,8 +1344,6 @@ class Poolsteuerung extends utils.Adapter {
   async onUnload(callback) {
     try {
       if (this.timer) clearInterval(this.timer);
-      if (this.phStopWatcher) clearInterval(this.phStopWatcher);
-      this.clearPhRecheckTimer();
       await this.setStateAsync('info.connection', false, true);
       callback();
     } catch {
