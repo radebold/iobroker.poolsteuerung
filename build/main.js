@@ -272,6 +272,19 @@ class Poolsteuerung extends utils.Adapter {
     }
   }
 
+  async getHeartbeatOk(targetId) {
+    if (!targetId) return true;
+    try {
+      const s = await this.getStateAsync(targetId);
+      const text = String((s && s.val) || '').trim();
+      if (!text) return true;
+      if (text.includes('keine Heartbeat-Prüfung')) return true;
+      return text.includes(': OK |');
+    } catch {
+      return true;
+    }
+  }
+
   async setSwitchStateCompat(id, on) {
     if (!id) return;
 
@@ -1056,9 +1069,21 @@ class Poolsteuerung extends utils.Adapter {
     await this.ensureState('status.debug.lastPhStartInfo', 'string', 'text', '', false);
 
     const circulationOn = circulationId ? await this.getBool(circulationId) : false;
+    const circulationHeartbeatOk = await this.getHeartbeatOk('status.checks.circulationPump');
+    const phPumpHeartbeatOk = await this.getHeartbeatOk('status.checks.phPump');
     if (!circulationOn) {
       await this.setPhStopAtTs(0, 'Start abgebrochen: Umwälzpumpe AUS');
       if (this.config.debugMode) this.log.info('[PH] Dosierung nicht gestartet: Umwälzpumpe AUS');
+      return false;
+    }
+    if (!circulationHeartbeatOk) {
+      await this.setPhStopAtTs(0, 'Start blockiert: Umwälzpumpe nicht erreichbar');
+      this.log.warn('[PH] Dosierung blockiert: Umwälzpumpe nicht erreichbar');
+      return false;
+    }
+    if (!phPumpHeartbeatOk) {
+      await this.setPhStopAtTs(0, 'Start blockiert: pH-Dosierpumpe nicht erreichbar');
+      this.log.warn('[PH] Dosierung blockiert: pH-Dosierpumpe nicht erreichbar');
       return false;
     }
 
@@ -1156,12 +1181,20 @@ class Poolsteuerung extends utils.Adapter {
     const pumpOnForSec = this.getPumpOnForSec(nowMs);
     let chlorDecision = 'keine Prüfung';
     let chlorTarget = chlorCurrent;
+    const circulationHeartbeatOk = await this.getHeartbeatOk('status.checks.circulationPump');
+    const chlorHeartbeatOk = await this.getHeartbeatOk('status.checks.chlorinator');
 
     if (!chlorEnabledMaster) {
       chlorDecision = chlorCurrent ? 'Steuerung deaktiviert (bleibt EIN)' : 'Steuerung deaktiviert';
     } else if (!pumpCurrent) {
       chlorTarget = false;
       chlorDecision = 'Pumpe AUS';
+    } else if (!circulationHeartbeatOk) {
+      chlorTarget = false;
+      chlorDecision = 'Blockiert: Umwälzpumpe nicht erreichbar';
+    } else if (!chlorHeartbeatOk) {
+      chlorTarget = false;
+      chlorDecision = 'Blockiert: Chlorinator nicht erreichbar';
     } else if (chlorDelaySec > 0 && pumpOnForSec < chlorDelaySec) {
       chlorTarget = false;
       chlorDecision = `Verzögert nach Pumpenstart (${Math.max(0, chlorDelaySec - pumpOnForSec)}s Rest)`;
@@ -1227,6 +1260,10 @@ class Poolsteuerung extends utils.Adapter {
       phDecision = 'pH Freigabe AUS';
     } else if (!pumpCurrent) {
       phDecision = (phPumpCurrent || phDoseActive) ? 'PH-Dosierung gestoppt (Umwälzpumpe AUS)' : 'Pumpe AUS';
+    } else if (!(await this.getHeartbeatOk('status.checks.circulationPump'))) {
+      phDecision = 'Blockiert: Umwälzpumpe nicht erreichbar';
+    } else if (!(await this.getHeartbeatOk('status.checks.phPump'))) {
+      phDecision = 'Blockiert: pH-Dosierpumpe nicht erreichbar';
     } else if (!this.isPhCheckDue(now)) {
       phDecision = `warte auf Prüfzeit (${this.config.phCheckTimes || '-'})`;
     } else if (phValue === null || !Number.isFinite(phValue)) {
@@ -1348,18 +1385,27 @@ class Poolsteuerung extends utils.Adapter {
       const pumpCurrent = this.config.circulationPumpSocketStateId
         ? await this.getBool(this.config.circulationPumpSocketStateId)
         : false;
+      const circulationHeartbeatOk = await this.getHeartbeatOk('status.checks.circulationPump');
+      const phPumpHeartbeatOk = await this.getHeartbeatOk('status.checks.phPump');
 
       if ((phPumpCurrent || (this.phDoseStopAtTsMemory && Date.now() < this.phDoseStopAtTsMemory + 60000))
-          && (!pumpCurrent || Date.now() >= stopAtTs)) {
+          && (!pumpCurrent || !circulationHeartbeatOk || !phPumpHeartbeatOk || Date.now() >= stopAtTs)) {
         const offOk = await this.forceSwitchOffCompat(phPumpId);
         if (offOk) {
-          await this.setPhStopAtTs(0, !pumpCurrent ? 'PH-AUS bestätigt wegen Umwälzpumpe AUS' : 'PH-AUS bestätigt wegen Sollzeit');
+          const stopReason = !pumpCurrent
+            ? 'Umwälzpumpe AUS'
+            : !circulationHeartbeatOk
+              ? 'Umwälzpumpe nicht erreichbar'
+              : !phPumpHeartbeatOk
+                ? 'pH-Dosierpumpe nicht erreichbar'
+                : 'Sollzeit erreicht';
+          await this.setPhStopAtTs(0, `PH-AUS bestätigt wegen ${stopReason}`);
           this.phDoseStopAtTsMemory = 0;
           this.lastWrittenPhStopAtTs = 0;
-          this.log.info(`[PH] Dosierpumpe AUS | Grund ${!pumpCurrent ? 'Umwälzpumpe AUS' : 'Sollzeit erreicht'}`);
-          if (!pumpCurrent && this.config.alertOnPhDoseAborted) {
-            await this.sendAlert('ph_dose_aborted', 'warn', 'Poolsteuerung: pH-Dosierung abgebrochen, weil die Umwälzpumpe AUS ist.');
-          } else if (pumpCurrent && this.config.alertOnPhDoseStopped) {
+          this.log.info(`[PH] Dosierpumpe AUS | Grund ${stopReason}`);
+          if ((stopReason === 'Umwälzpumpe AUS' || stopReason === 'Umwälzpumpe nicht erreichbar' || stopReason === 'pH-Dosierpumpe nicht erreichbar') && this.config.alertOnPhDoseAborted) {
+            await this.sendAlert('ph_dose_aborted', 'warn', `Poolsteuerung: pH-Dosierung abgebrochen, Grund: ${stopReason}.`);
+          } else if (stopReason === 'Sollzeit erreicht' && this.config.alertOnPhDoseStopped) {
             await this.sendAlert('ph_dose_stopped', 'info', 'Poolsteuerung: pH-Dosierung beendet.');
           }
         } else if (this.config.debugMode) {
@@ -1481,6 +1527,7 @@ class Poolsteuerung extends utils.Adapter {
         this.updateCirculationPumpRuntime(!!(initialPumpState && initialPumpState.val), initialPumpState && (initialPumpState.lc || initialPumpState.ts));
       }
       await this.updateComputedStates();
+      await this.runHeartbeatChecks();
       if (typeof this.applyControlLogic === 'function') {
         await this.applyControlLogic();
       }
