@@ -406,8 +406,8 @@ class Poolsteuerung extends utils.Adapter {
 .card{background:linear-gradient(180deg,rgba(17,24,39,.95),rgba(31,41,55,.95));border:1px solid var(--line);border-radius:22px;padding:18px}
 .title{font-size:30px;font-weight:700}.sub{font-size:13px;color:var(--muted);margin-top:6px}
 .tempMain{font-size:82px;font-weight:700;line-height:1;margin:18px 0 8px}.unit{font-size:28px;color:var(--muted)}
-.row{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(148,163,184,.12);padding:12px 0;font-size:20px}.row:last-child{border-bottom:none}
-.label{color:var(--muted)}.value{font-weight:700}.miniGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:14px}
+.row{display:grid;grid-template-columns:minmax(100px,130px) minmax(0,1fr);gap:10px;align-items:start;border-bottom:1px solid rgba(148,163,184,.12);padding:12px 0;font-size:18px}.row:last-child{border-bottom:none}
+.label{color:var(--muted)}.value{font-weight:700;line-height:1.25;overflow-wrap:anywhere;word-break:break-word}.miniGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:14px}
 .mini{background:rgba(15,23,42,.5);border:1px solid var(--line);border-radius:16px;padding:14px}.mini .k{font-size:14px;color:var(--muted);margin-bottom:6px}.mini .v{font-size:34px;font-weight:700}
 .status{display:grid;gap:12px}.statusItem{display:flex;justify-content:space-between;align-items:center;background:rgba(15,23,42,.5);border:1px solid var(--line);border-radius:16px;padding:14px}
 .statusName{font-size:20px;font-weight:700}.statusHint{font-size:13px;color:var(--muted);margin-top:3px}.pill{min-width:96px;text-align:center;padding:10px 12px;border-radius:999px;font-size:15px;font-weight:700;color:#fff}.on{background:var(--ok)}.off{background:var(--off)}
@@ -513,6 +513,8 @@ class Poolsteuerung extends utils.Adapter {
         <div class="ps-pill ${on ? 'on' : 'off'}">${on ? 'EIN' : 'AUS'}</div>
       </div>`;
 
+    const decisionValue = v => `<div class="ps-v ps-wrap">${esc(v)}</div>`;
+
     return `
 <!-- widget-render:${esc(data.updated)} -->
 <style>
@@ -522,9 +524,14 @@ class Poolsteuerung extends utils.Adapter {
   color:#0f172a;font-family:Arial,Helvetica,sans-serif;
   background:linear-gradient(180deg,#0b1220 0%,#0f172a 100%);
 }
-.ps-grid{display:grid;grid-template-columns:1.18fr .92fr .90fr;gap:10px;height:100%}
+.ps-grid{
+  display:grid;
+  grid-template-columns:minmax(320px,1.15fr) minmax(250px,.9fr) minmax(240px,.8fr);
+  gap:10px;
+  height:100%;
+}
 .ps-card{
-  display:flex;flex-direction:column;min-width:0;
+  display:flex;flex-direction:column;min-width:0;overflow:hidden;
   background:linear-gradient(180deg,#f8fbff 0%,#eef4fb 100%);
   border:1px solid rgba(15,23,42,.08);border-radius:22px;padding:14px;
   box-shadow:0 14px 28px rgba(0,0,0,.18);
@@ -532,7 +539,7 @@ class Poolsteuerung extends utils.Adapter {
 .ps-hero{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%)}
 .ps-header{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
 .ps-title{font-size:18px;font-weight:800;color:#0f172a}
-.ps-sub{font-size:11px;color:#475569;text-align:right}
+.ps-sub{font-size:11px;color:#475569;text-align:right;flex:0 0 auto}
 .ps-tempRow{display:flex;align-items:flex-end;gap:8px;margin:10px 0 12px}
 .ps-temp{font-size:70px;font-weight:900;line-height:.9;color:#0f172a}
 .ps-unit{font-size:20px;color:#475569;padding-bottom:8px}
@@ -542,41 +549,56 @@ class Poolsteuerung extends utils.Adapter {
   border-radius:16px;padding:10px;min-height:76px;
 }
 .ps-k{font-size:12px;color:#475569;margin-bottom:6px;font-weight:700}
-.ps-v{font-size:22px;font-weight:800;line-height:1.1;color:#0f172a}
+.ps-v{font-size:22px;font-weight:800;line-height:1.15;color:#0f172a}
+.ps-v.ps-wrap{
+  font-size:14px;font-weight:700;line-height:1.25;
+  word-break:break-word;overflow-wrap:anywhere;white-space:normal;
+}
 .ps-s{font-size:11px;color:#64748b;margin-top:6px}
 .ps-chip{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:800;margin-top:6px}
 .ps-chip.good{background:#dcfce7;color:#166534}
 .ps-chip.warn{background:#fef3c7;color:#92400e}
 .ps-chip.bad{background:#fee2e2;color:#991b1b}
 .ps-chip.neutral{background:#e2e8f0;color:#334155}
-.ps-list{display:grid;gap:8px;margin-top:10px}
+.ps-list{display:grid;gap:8px}
 .ps-row{
-  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;
-  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:9px 11px;min-height:42px
+  display:grid;grid-template-columns:minmax(90px,120px) minmax(0,1fr);gap:8px;align-items:start;
+  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:10px;
 }
-.ps-row .ps-v{font-size:15px;font-weight:800;white-space:nowrap}
-.ps-statuswrap{display:grid;gap:8px;margin-top:10px}
+.ps-statuswrap{display:grid;gap:8px}
 .ps-status{
-  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;
-  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:10px 11px;min-height:58px
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;
+  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:12px;
 }
-.ps-status-name{font-size:15px;font-weight:800;color:#0f172a}
-.ps-status-hint{font-size:11px;color:#64748b;margin-top:3px}
+.ps-status-left{min-width:0}
+.ps-status-name{font-size:16px;font-weight:800;color:#0f172a;line-height:1.15}
+.ps-status-hint{
+  font-size:11px;color:#64748b;margin-top:4px;
+  white-space:normal;overflow-wrap:anywhere;
+}
 .ps-pill{
-  min-width:72px;text-align:center;padding:8px 10px;border-radius:999px;
-  font-size:12px;font-weight:900;color:#fff
+  min-width:72px;text-align:center;padding:9px 12px;border-radius:999px;
+  font-size:13px;font-weight:800;color:#fff
 }
-.ps-pill.on{background:linear-gradient(180deg,#22c55e,#16a34a)}
-.ps-pill.off{background:linear-gradient(180deg,#ef4444,#dc2626)}
+.ps-pill.on{background:#43c05b}
+.ps-pill.off{background:#e64a45}
+@media (max-width: 1050px){
+  .ps-grid{grid-template-columns:1fr}
+}
 </style>
 <div class="ps-root">
   <div class="ps-grid">
     <div class="ps-card ps-hero">
       <div class="ps-header">
-        <div class="ps-title">Pool Manager</div>
+        <div>
+          <div class="ps-title">Pool Manager</div>
+        </div>
         <div class="ps-sub">Aktualisiert<br>${esc(data.updated)}</div>
       </div>
-      <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
+      <div class="ps-tempRow">
+        <div class="ps-temp">${esc(data.poolTemp)}</div>
+        <div class="ps-unit">°C</div>
+      </div>
       <div class="ps-metrics">
         <div class="ps-metric">
           <div class="ps-k">pH</div>
@@ -609,11 +631,11 @@ class Poolsteuerung extends utils.Adapter {
         <div class="ps-row"><div class="ps-k">Netzeinspeisung</div><div class="ps-v">${esc(data.feedIn)} W</div></div>
         <div class="ps-row"><div class="ps-k">Netzbezug</div><div class="ps-v">${esc(data.gridSupply)} W</div></div>
         <div class="ps-row"><div class="ps-k">Batterie SoC</div><div class="ps-v">${esc(data.battery)} %</div></div>
-        <div class="ps-row"><div class="ps-k">WP Freigabe</div><div class="ps-v">${esc(data.heatDecision)}</div></div>
-        <div class="ps-row"><div class="ps-k">Chlor Freigabe</div><div class="ps-v">${esc(data.chlorDecision)}</div></div>
-        <div class="ps-row"><div class="ps-k">Pumpe Zeitplan</div><div class="ps-v">${esc(data.pumpDecision)}</div></div>
-        <div class="ps-row"><div class="ps-k">pH Prüfung</div><div class="ps-v">${esc(data.phDecision)}</div></div>
-        <div class="ps-row"><div class="ps-k">pH Zeiten</div><div class="ps-v">${esc(data.phTimes)}</div></div>
+        <div class="ps-row"><div class="ps-k">WP Freigabe</div>${decisionValue(data.heatDecision)}</div>
+        <div class="ps-row"><div class="ps-k">Chlor Freigabe</div>${decisionValue(data.chlorDecision)}</div>
+        <div class="ps-row"><div class="ps-k">Pumpe Zeitplan</div>${decisionValue(data.pumpDecision)}</div>
+        <div class="ps-row"><div class="ps-k">pH Prüfung</div>${decisionValue(data.phDecision)}</div>
+        <div class="ps-row"><div class="ps-k">pH Zeiten</div>${decisionValue(data.phTimes)}</div>
         <div class="ps-row"><div class="ps-k">Letzte Dosierung</div><div class="ps-v">${esc(data.phLastDoseDurationSec)} s</div></div>
       </div>
     </div>
@@ -639,7 +661,7 @@ class Poolsteuerung extends utils.Adapter {
 </div>`;
   }
 
-  buildPhoneWidget(data) {
+  buildPhoneWidget  buildPhoneWidget(data) {
     const badgeClass = (value, low, high) => {
       const n = parseNum(value);
       if (!Number.isFinite(n)) return 'neutral';
