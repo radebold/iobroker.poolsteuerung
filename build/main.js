@@ -818,6 +818,7 @@ class Poolsteuerung extends utils.Adapter {
     const battery = this.fmt(await this.getNumber(this.config.batterySocStateId, 0), 0, '0');
     const targetTemp = this.fmt(parseNum(this.config.heatpumpTargetTemp), 1, '24.0');
     const heatReason = await this.getText('poolsteuerung.0.status.heatpump.lastReason', '--');
+    const standbyMode = this.config.standbyModeEnabled === true;
     const modeActive = standbyMode ? 'standby' : 'normal';
     const standbyNext = standbyMode ? this.getNextStandbyRun(new Date()) : null;
     const pumpDecision = await this.getText('poolsteuerung.0.status.debug.lastPumpDecision', standbyMode ? 'Standby aktiv' : '--');
@@ -828,7 +829,6 @@ class Poolsteuerung extends utils.Adapter {
     const phMlPer01Per10 = this.fmt(parseNum(this.config.phDoseMlPer01Per10m3), 0, '--');
     const volume = this.fmt(this.calcVolume(), 2, '--');
 
-    const standbyMode = this.config.standbyModeEnabled === true;
     const circulationEnabled = !standbyMode && this.config.enableCirculationControl !== false;
     const phEnabledMaster = !standbyMode && this.config.enablePhControl !== false;
     const heatEnabledMaster = !standbyMode && this.config.enableHeatpumpControl !== false;
