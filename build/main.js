@@ -846,7 +846,7 @@ class Poolsteuerung extends utils.Adapter {
     let chlorDesired = chlorOnRaw;
     let chlorDecision = '';
     if (standbyMode) {
-      chlorTarget = false;
+      chlorDesired = false;
       chlorDecision = 'Standby aktiv';
     } else if (!chlorEnabledMaster) {
       chlorDesired = chlorOnRaw;
