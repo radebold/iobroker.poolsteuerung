@@ -21,6 +21,23 @@
           "label": "Simulationsmodus",
           "newLine": true
         },
+        "standbyModeEnabled": {
+          "type": "checkbox",
+          "label": "Standby-Modus / Vorsommer-Modus aktiv",
+          "newLine": true
+        },
+        "standbyRunTime": {
+          "type": "text",
+          "label": "Standby-Uhrzeit (HH:MM)",
+          "newLine": true,
+          "help": "Täglicher Kurzlauf der Umwälzpumpe, z. B. 12:00"
+        },
+        "standbyPumpDurationSec": {
+          "type": "number",
+          "label": "Standby-Laufzeit Umwälzpumpe (Sekunden)",
+          "newLine": true,
+          "help": "Standard 30 Sekunden"
+        },
         "pollIntervalMin": {
           "type": "number",
           "label": "Prüfintervall (Minuten)",

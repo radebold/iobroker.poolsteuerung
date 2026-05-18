@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.3.13-hotfix9",
+    "version": "0.3.14",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -65,6 +65,9 @@
     "alertOnPhDoseAborted": true,
     "alertOnPhDailyLimit": true,
     "alertOnSensorError": true,
-    "alertOnPollError": true
+    "alertOnPollError": true,
+    "standbyModeEnabled": false,
+    "standbyRunTime": "12:00",
+    "standbyPumpDurationSec": 30
   }
 }

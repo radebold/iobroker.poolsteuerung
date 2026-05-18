@@ -121,6 +121,10 @@ class Poolsteuerung extends utils.Adapter {
     const phValue = await this.getNumber(this.config.phStateId, 2);
     const orpValue = await this.getNumber(this.config.orpStateId, 0);
     this.log.info('===== PoolSteuerung Start-Zusammenfassung =====');
+    if (this.config.standbyModeEnabled === true) {
+      const standbyNext = this.getNextStandbyRun(now);
+      this.log.info(`Modus: STANDBY | Umwälzpumpe nur 1x täglich ${Math.max(1, parseNum(this.config.standbyPumpDurationSec || 30))}s | Nächster Kurzlauf: ${standbyNext ? this.formatDateTimeShort(standbyNext) : 'ungültige Uhrzeit'}`);
+    }
     if (this.config.enableCirculationControl === false) {
       this.log.info(`Umwälzpumpe: Steuerung deaktiviert | Status jetzt: ${pumpCurrent ? 'EIN' : 'AUS'}`);
     } else if (pumpNext) {
@@ -414,7 +418,7 @@ class Poolsteuerung extends utils.Adapter {
 </style></head><body><div class="wrap"><div class="grid">
 <div class="card">
   <div class="title">Pool Manager</div>
-  <div class="sub">Aktualisiert: ${esc(data.updated)}</div>
+  <div class="sub">Modus: ${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')} | Aktualisiert: ${esc(data.updated)}</div>
   <div class="tempMain">${esc(data.poolTemp)} <span class="unit">°C</span></div>
   <div class="miniGrid">
     <div class="mini"><div class="k">pH</div><div class="v">${esc(data.ph)}</div></div>
@@ -593,7 +597,7 @@ class Poolsteuerung extends utils.Adapter {
         <div>
           <div class="ps-title">Pool Manager</div>
         </div>
-        <div class="ps-sub">Aktualisiert<br>${esc(data.updated)}</div>
+        <div class="ps-sub">Modus<br>${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}<br>Aktualisiert<br>${esc(data.updated)}</div>
       </div>
       <div class="ps-tempRow">
         <div class="ps-temp">${esc(data.poolTemp)}</div>
@@ -636,6 +640,7 @@ class Poolsteuerung extends utils.Adapter {
         <div class="ps-row"><div class="ps-k">Pumpe Zeitplan</div>${decisionValue(data.pumpDecision)}</div>
         <div class="ps-row"><div class="ps-k">pH Prüfung</div>${decisionValue(data.phDecision)}</div>
         <div class="ps-row"><div class="ps-k">pH Zeiten</div>${decisionValue(data.phTimes)}</div>
+        <div class="ps-row"><div class="ps-k">Standby nächster Lauf</div>${decisionValue(data.standbyNext)}</div>
         <div class="ps-row"><div class="ps-k">Letzte Dosierung</div><div class="ps-v">${esc(data.phLastDoseDurationSec)} s</div></div>
       </div>
     </div>
@@ -813,7 +818,9 @@ class Poolsteuerung extends utils.Adapter {
     const battery = this.fmt(await this.getNumber(this.config.batterySocStateId, 0), 0, '0');
     const targetTemp = this.fmt(parseNum(this.config.heatpumpTargetTemp), 1, '24.0');
     const heatReason = await this.getText('poolsteuerung.0.status.heatpump.lastReason', '--');
-    const pumpDecision = await this.getText('poolsteuerung.0.status.debug.lastPumpDecision', '--');
+    const modeActive = standbyMode ? 'standby' : 'normal';
+    const standbyNext = standbyMode ? this.getNextStandbyRun(new Date()) : null;
+    const pumpDecision = await this.getText('poolsteuerung.0.status.debug.lastPumpDecision', standbyMode ? 'Standby aktiv' : '--');
     const phDecision = await this.getText('poolsteuerung.0.status.debug.lastPhDecision', '--');
     const phDailyCount = await this.getText('poolsteuerung.0.status.phDose.dailyCount', '0');
     const phLastDoseDurationSec = await this.getText('poolsteuerung.0.status.phDose.lastDoseDurationSec', '0');
@@ -821,13 +828,14 @@ class Poolsteuerung extends utils.Adapter {
     const phMlPer01Per10 = this.fmt(parseNum(this.config.phDoseMlPer01Per10m3), 0, '--');
     const volume = this.fmt(this.calcVolume(), 2, '--');
 
-    const circulationEnabled = this.config.enableCirculationControl !== false;
-    const phEnabledMaster = this.config.enablePhControl !== false;
-    const heatEnabledMaster = this.config.enableHeatpumpControl !== false;
-    const chlorEnabledMaster = this.config.enableChlorControl !== false;
+    const standbyMode = this.config.standbyModeEnabled === true;
+    const circulationEnabled = !standbyMode && this.config.enableCirculationControl !== false;
+    const phEnabledMaster = !standbyMode && this.config.enablePhControl !== false;
+    const heatEnabledMaster = !standbyMode && this.config.enableHeatpumpControl !== false;
+    const chlorEnabledMaster = !standbyMode && this.config.enableChlorControl !== false;
 
     const pumpOn = await this.getBool(this.config.circulationPumpSocketStateId);
-    const pumpScheduleActive = typeof this.isPumpScheduleActive === 'function' ? this.isPumpScheduleActive(new Date()) : false;
+    const pumpScheduleActive = standbyMode ? this.isStandbyPumpActive(new Date()) : (typeof this.isPumpScheduleActive === 'function' ? this.isPumpScheduleActive(new Date()) : false);
     const chlorOnRaw = await this.getBool(this.config.chlorinatorSocketStateId);
     const phPumpOn = await this.getBool(this.config.phPumpSocketStateId);
     const threshold = parseNum(this.config.heatEnableFeedInThresholdW || 1000);
@@ -837,7 +845,10 @@ class Poolsteuerung extends utils.Adapter {
 
     let chlorDesired = chlorOnRaw;
     let chlorDecision = '';
-    if (!chlorEnabledMaster) {
+    if (standbyMode) {
+      chlorTarget = false;
+      chlorDecision = 'Standby aktiv';
+    } else if (!chlorEnabledMaster) {
       chlorDesired = chlorOnRaw;
       chlorDecision = 'Steuerung deaktiviert';
     }
@@ -892,9 +903,10 @@ class Poolsteuerung extends utils.Adapter {
     const heatpumpOn = await this.getBool(this.config.heatpumpPowerStateId);
 
     const stableData = {
-      ph, orp, poolTemp, outsideTemp, pv, feedIn, gridSupply, battery, targetTemp, heatReason, volume,
+      ph, orp, poolTemp, outsideTemp, pv, feedIn, gridSupply, battery, targetTemp, heatReason, volume, modeActive,
       phSet: this.fmt(parseNum(this.config.phSetpoint), 2, '--'),
-      phTimes: this.config.phCheckTimes || '-',
+      phTimes: standbyMode ? '-' : (this.config.phCheckTimes || '-'),
+      standbyNext: standbyNext ? standbyNext.toLocaleString('de-DE') : '-',
       pumpDecision,
       phDecision,
       phDailyCount,
@@ -1007,6 +1019,35 @@ class Poolsteuerung extends utils.Adapter {
     const hh = Number(m[1]), mm = Number(m[2]);
     if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
     return hh * 60 + mm;
+  }
+
+  getStandbyDurationSec() {
+    return Math.max(1, parseNum(this.config.standbyPumpDurationSec || 30));
+  }
+
+  getStandbyRunWindow(now = new Date()) {
+    const mins = this.parseHHMM(this.config.standbyRunTime || '12:00');
+    if (mins === null) return null;
+    const start = new Date(now);
+    start.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
+    const end = new Date(start.getTime() + this.getStandbyDurationSec() * 1000);
+    return { start, end };
+  }
+
+  isStandbyPumpActive(now = new Date()) {
+    if (this.config.standbyModeEnabled !== true) return false;
+    const window = this.getStandbyRunWindow(now);
+    if (!window) return false;
+    return now >= window.start && now < window.end;
+  }
+
+  getNextStandbyRun(now = new Date()) {
+    const mins = this.parseHHMM(this.config.standbyRunTime || '12:00');
+    if (mins === null) return null;
+    const next = new Date(now);
+    next.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
+    if (next <= now) next.setDate(next.getDate() + 1);
+    return next;
   }
 
   isWindowActive(startText, endText, now = new Date()) {
@@ -1153,11 +1194,12 @@ class Poolsteuerung extends utils.Adapter {
   async applyControlLogic() {
     const now = new Date();
     const pumpId = this.config.circulationPumpSocketStateId;
-    const circulationEnabled = this.config.enableCirculationControl !== false;
-    const phEnabledMaster = this.config.enablePhControl !== false;
-    const heatEnabledMaster = this.config.enableHeatpumpControl !== false;
-    const chlorEnabledMaster = this.config.enableChlorControl !== false;
-    const pumpTarget = circulationEnabled ? this.isPumpScheduleActive(now) : false;
+    const standbyMode = this.config.standbyModeEnabled === true;
+    const circulationEnabled = !standbyMode && this.config.enableCirculationControl !== false;
+    const phEnabledMaster = !standbyMode && this.config.enablePhControl !== false;
+    const heatEnabledMaster = !standbyMode && this.config.enableHeatpumpControl !== false;
+    const chlorEnabledMaster = !standbyMode && this.config.enableChlorControl !== false;
+    const pumpTarget = standbyMode ? this.isStandbyPumpActive(now) : (circulationEnabled ? this.isPumpScheduleActive(now) : false);
     const pumpState = await this.getStateSnapshot(pumpId);
     const pumpCurrent = !!(pumpState && pumpState.val);
     this.updateCirculationPumpRuntime(pumpCurrent, pumpState && (pumpState.lc || pumpState.ts));
@@ -1168,9 +1210,21 @@ class Poolsteuerung extends utils.Adapter {
     const scheduleEdge = pumpTarget !== lastScheduleActive;
     const nowMs = now.getTime();
 
-    let pumpDecision = !circulationEnabled ? 'Steuerung deaktiviert' : (pumpTarget ? 'Zeitfenster aktiv' : 'Kein aktives Zeitfenster');
+    let pumpDecision = standbyMode ? (pumpTarget ? `Standby-Kurzlauf aktiv (${this.getStandbyDurationSec()}s)` : 'Standby aktiv') : (!circulationEnabled ? 'Steuerung deaktiviert' : (pumpTarget ? 'Zeitfenster aktiv' : 'Kein aktives Zeitfenster'));
 
-    if (!circulationEnabled) {
+    if (standbyMode) {
+      if (this.config.simulateMode) {
+        pumpDecision = pumpTarget ? `würde EIN (Standby ${this.getStandbyDurationSec()}s, Simulationsmodus)` : 'Standby aktiv (Simulationsmodus)';
+      } else if (pumpId && pumpCurrent !== pumpTarget) {
+        try {
+          await this.setSwitchStateCompat(pumpId, pumpTarget);
+          this.suppressOwnPumpLogUntil = Date.now() + 5000;
+          pumpDecision = pumpTarget ? `EIN via Standby-Kurzlauf (${this.getStandbyDurationSec()}s)` : 'AUS nach Standby-Kurzlauf';
+        } catch (e) {
+          pumpDecision = `Standby Schaltfehler: ${e.message || e}`;
+        }
+      }
+    } else if (!circulationEnabled) {
       pumpDecision = pumpCurrent ? 'Manuell EIN (Steuerung deaktiviert)' : 'Steuerung deaktiviert';
     } else if (scheduleEdge) {
       if (this.config.simulateMode) {
@@ -1196,6 +1250,19 @@ class Poolsteuerung extends utils.Adapter {
 
     this.lastPumpScheduleActiveMemory = pumpTarget;
     await this.setStateAsync('status.debug.lastPumpScheduleActive', pumpTarget, true);
+    await this.ensureState('status.mode.active', 'string', 'text', 'normal', false);
+    await this.setStateAsync('status.mode.active', standbyMode ? 'standby' : 'normal', true);
+    await this.ensureState('status.standby.nextRun', 'string', 'text', '', false);
+    await this.ensureState('status.standby.lastRun', 'number', 'value.time', 0, false);
+    await this.ensureState('status.standby.lastDurationSec', 'number', 'value.interval', 0, false);
+    if (standbyMode) {
+      const standbyNext = this.getNextStandbyRun(now);
+      await this.setStateAsync('status.standby.nextRun', standbyNext ? standbyNext.toLocaleString('de-DE') : 'ungültige Uhrzeit', true);
+      if (pumpTarget) {
+        await this.setStateAsync('status.standby.lastRun', now.getTime(), true);
+        await this.setStateAsync('status.standby.lastDurationSec', this.getStandbyDurationSec(), true);
+      }
+    }
 
     const orpValue = await this.getNumber(this.config.orpStateId, 0);
     const chlorId = this.config.chlorinatorSocketStateId;
@@ -1257,7 +1324,10 @@ class Poolsteuerung extends utils.Adapter {
     let heatReason = 'keine Prüfung';
     let shouldHeat = currentHeat;
 
-    if (!heatEnabledMaster) {
+    if (standbyMode) {
+      shouldHeat = false;
+      heatReason = 'Standby aktiv';
+    } else if (!heatEnabledMaster) {
       shouldHeat = false;
       heatReason = currentHeat ? 'Steuerung deaktiviert (bleibt EIN)' : 'Steuerung deaktiviert';
     } else if (!pumpCurrent) {
@@ -1292,6 +1362,17 @@ class Poolsteuerung extends utils.Adapter {
     await this.ensureState('status.heatpump.lastReason', 'string', 'text', '', false);
     await this.setStateAsync('status.heatpump.lastReason', heatReason, true);
 
+    if (standbyMode) {
+      if (!this.config.simulateMode) {
+        if (chlorId && chlorCurrent) {
+          try { await this.forceSwitchOffCompat(chlorId); } catch {}
+        }
+        if (heatpumpId && currentHeat) {
+          try { await this.forceSwitchOffCompat(heatpumpId); } catch {}
+        }
+      }
+    }
+
     const phValue = await this.getNumber(this.config.phStateId, 2);
     const phSet = parseNum(this.config.phSetpoint || 7.2);
     const phTolerance = parseNum(this.config.phDoseTolerance || 0.05);
@@ -1304,7 +1385,14 @@ class Poolsteuerung extends utils.Adapter {
     const stopAtTs = await this.getEffectivePhStopAtTs(phPumpCurrent);
     const phDoseActive = !!stopAtTs && Date.now() < stopAtTs;
 
-    if (!this.config.simulateMode && (phPumpCurrent || phDoseActive) && (!pumpCurrent || (stopAtTs && Date.now() >= stopAtTs))) {
+    if (!this.config.simulateMode && standbyMode && (phPumpCurrent || phDoseActive)) {
+      try {
+        await this.forceSwitchOffCompat(phPumpId);
+        await this.setPhStopAtTs(0, 'PH-AUS bestätigt wegen Standby aktiv');
+        this.phDoseStopAtTsMemory = 0;
+        this.lastWrittenPhStopAtTs = 0;
+      } catch {}
+    } else if (!this.config.simulateMode && (phPumpCurrent || phDoseActive) && (!pumpCurrent || (stopAtTs && Date.now() >= stopAtTs))) {
       await this.enforcePhStopIfDue();
     }
 
@@ -1325,7 +1413,9 @@ class Poolsteuerung extends utils.Adapter {
     const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
     let phDecision = 'keine Prüfung';
-    if (!phEnabled) {
+    if (standbyMode) {
+      phDecision = 'Standby aktiv';
+    } else if (!phEnabled) {
       phDecision = 'pH Freigabe AUS';
     } else if (!pumpCurrent) {
       phDecision = (phPumpCurrent || phDoseActive) ? 'PH-Dosierung gestoppt (Umwälzpumpe AUS)' : 'Pumpe AUS';
@@ -1606,6 +1696,9 @@ class Poolsteuerung extends utils.Adapter {
       if (this.phStopWatcher) clearInterval(this.phStopWatcher);
     this.phStopWatcher = setInterval(async () => {
       await this.enforcePhStopIfDue();
+      if (this.config.standbyModeEnabled === true && typeof this.applyControlLogic === 'function') {
+        await this.applyControlLogic();
+      }
     }, 1000);
 
     this.timer = setInterval(async () => {
