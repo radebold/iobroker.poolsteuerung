@@ -1220,6 +1220,9 @@ class Poolsteuerung extends utils.Adapter {
           await this.setSwitchStateCompat(pumpId, pumpTarget);
           this.suppressOwnPumpLogUntil = Date.now() + 5000;
           pumpDecision = pumpTarget ? `EIN via Standby-Kurzlauf (${this.getStandbyDurationSec()}s)` : 'AUS nach Standby-Kurzlauf';
+          this.log.info(pumpTarget
+            ? `[STANDBY] Umwälzpumpe EIN | Kurzlauf ${this.getStandbyDurationSec()}s`
+            : '[STANDBY] Umwälzpumpe AUS | Kurzlauf beendet');
         } catch (e) {
           pumpDecision = `Standby Schaltfehler: ${e.message || e}`;
         }
