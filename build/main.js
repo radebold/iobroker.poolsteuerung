@@ -451,21 +451,31 @@ class Poolsteuerung extends utils.Adapter {
       this.statusItemHtml('Wärmepumpe', '', data.heatpumpOn, true),
     ].join('');
 
+    const row = (label, value) => `<div class="row"><div>${esc(label)}</div><div><b>${esc(value)}</b></div></div>`;
+
     return `<!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <style>
 :root{--bg:#0f172a;--card:#111827;--line:#334155;--text:#f8fafc;--muted:#94a3b8;--ok:#22c55e;--off:#ef4444}
 *{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#0b1220,#111827);font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:var(--text)}
-.wrap{padding:14px;max-width:390px;margin:0 auto}.card{background:rgba(17,24,39,.96);border:1px solid var(--line);border-radius:20px;padding:14px;margin-bottom:12px}
-.h1{font-size:24px;font-weight:700}.sub{font-size:12px;color:var(--muted);margin-top:4px}.temp{font-size:56px;font-weight:700;line-height:1;margin:14px 0}
-.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.box{background:rgba(15,23,42,.5);border:1px solid var(--line);border-radius:14px;padding:10px}
-.k{font-size:12px;color:var(--muted);margin-bottom:4px}.v{font-size:26px;font-weight:700}.row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(148,163,184,.12)}.row:last-child{border-bottom:none}
-.statusItem{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(148,163,184,.12)}.statusItem:last-child{border-bottom:none}
+.wrap{padding:14px;max-width:430px;margin:0 auto}
+.card{background:rgba(17,24,39,.96);border:1px solid var(--line);border-radius:20px;padding:14px;margin-bottom:12px}
+.h1{font-size:24px;font-weight:700}.sub{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.3}
+.temp{font-size:56px;font-weight:700;line-height:1;margin:14px 0}
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.box{background:rgba(15,23,42,.5);border:1px solid var(--line);border-radius:14px;padding:10px}
+.k{font-size:12px;color:var(--muted);margin-bottom:4px}
+.v{font-size:26px;font-weight:700;line-height:1.1}
+.row{display:grid;grid-template-columns:minmax(110px,140px) minmax(0,1fr);gap:10px;align-items:start;padding:10px 0;border-bottom:1px solid rgba(148,163,184,.12)}
+.row:last-child{border-bottom:none}
+.row b{line-height:1.25;overflow-wrap:anywhere;word-break:break-word}
+.statusItem{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(148,163,184,.12)}
+.statusItem:last-child{border-bottom:none}
 .pill{min-width:74px;text-align:center;padding:7px 10px;border-radius:999px;font-size:12px;font-weight:700;color:#fff}.on{background:var(--ok)}.off{background:var(--off)}
 </style></head><body><div class="wrap">
 <div class="card">
   <div class="h1">Pool Manager</div>
-  <div class="sub">Aktualisiert: ${esc(data.updated)}</div>
+  <div class="sub">Modus: ${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}<br>Aktualisiert: ${esc(data.updated)}</div>
   <div class="temp">${esc(data.poolTemp)}°C</div>
   <div class="grid2">
     <div class="box"><div class="k">pH</div><div class="v">${esc(data.ph)}</div></div>
@@ -476,11 +486,27 @@ class Poolsteuerung extends utils.Adapter {
 </div>
 <div class="card">
   <div class="h1" style="font-size:20px">Energie</div>
-  <div class="row"><div>PV</div><div><b>${esc(data.pv)} W</b></div></div>
-  <div class="row"><div>Einspeisung</div><div><b>${esc(data.feedIn)} W</b></div></div>
-  <div class="row"><div>Netzbezug</div><div><b>${esc(data.gridSupply)} W</b></div></div>
-  <div class="row"><div>Batterie</div><div><b>${esc(data.battery)} %</b></div></div>
-  <div class="row"><div>Freigabe</div><div><b>${esc(data.heatReason)}</b></div></div>
+  ${row('PV-Leistung', `${data.pv} W`)}
+  ${row('Netzeinspeisung', `${data.feedIn} W`)}
+  ${row('Netzbezug', `${data.gridSupply} W`)}
+  ${row('Batterie SoC', `${data.battery} %`)}
+  ${row('PV-Schwelle', `${data.threshold} W`)}
+</div>
+<div class="card">
+  <div class="h1" style="font-size:20px">Steuerung</div>
+  ${row('Pumpe', data.pumpDecision)}
+  ${row('Chlor', data.chlorDecision)}
+  ${row('pH', data.phDecision)}
+  ${row('Wärmepumpe', data.heatReason)}
+  ${row('Standby nächster Lauf', data.standbyNext)}
+</div>
+<div class="card">
+  <div class="h1" style="font-size:20px">Status</div>
+  ${row('pH Prüfzeiten', data.phTimes)}
+  ${row('Letzte Dosierung', `${data.phLastDoseDurationSec} s`)}
+  ${row('pH Tag', data.phDailyCount)}
+  ${row('ORP Grenzen', `${data.orpOnThreshold} / ${data.orpOffThreshold}`)}
+  ${row('Poolvolumen', `${data.volume} m³`)}
 </div>
 <div class="card">
   <div class="h1" style="font-size:20px">Aktoren</div>
