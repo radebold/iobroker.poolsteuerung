@@ -394,179 +394,174 @@ class Poolsteuerung extends utils.Adapter {
   }
 
   buildTabletHtml(data) {
-    const badgeForPh = () => {
-      const ph = parseNum(data.ph);
-      const set = parseNum(data.phSet);
-      if (!Number.isFinite(ph) || !Number.isFinite(set)) return { cls: 'neutral', txt: '—' };
-      if (ph < set) return { cls: 'low', txt: 'Niedrig' };
-      if (ph > set) return { cls: 'high', txt: 'Hoch' };
-      return { cls: 'ok', txt: 'OK' };
-    };
-    const badgeForOrp = () => {
-      const orp = parseNum(data.orp);
-      const on = parseNum(data.orpOnThreshold);
-      const off = parseNum(data.orpOffThreshold);
-      if (!Number.isFinite(orp) || !Number.isFinite(on) || !Number.isFinite(off)) return { cls: 'neutral', txt: '—' };
-      if (orp < on) return { cls: 'low', txt: 'Niedrig' };
-      if (orp > off) return { cls: 'high', txt: 'Hoch' };
-      return { cls: 'ok', txt: 'OK' };
-    };
+    const phNum = parseNum(data.ph);
+    const phSetNum = parseNum(data.phSet);
+    const orpNum = parseNum(data.orp);
+    const orpOnNum = parseNum(data.orpOnThreshold);
+    const orpOffNum = parseNum(data.orpOffThreshold);
 
-    const phBadge = badgeForPh();
-    const orpBadge = badgeForOrp();
+    const phBadge = !Number.isFinite(phNum) || !Number.isFinite(phSetNum)
+      ? { cls: 'neutral', txt: '—' }
+      : phNum < phSetNum ? { cls: 'low', txt: 'Niedrig' }
+      : phNum > phSetNum ? { cls: 'high', txt: 'Hoch' }
+      : { cls: 'ok', txt: 'OK' };
 
-    const statusCard = (name, hint, on) => `
-      <div class="st-card">
-        <div class="st-left">
-          <div class="st-name">${esc(name)}</div>
-          <div class="st-hint">${esc(hint)}</div>
+    const orpBadge = !Number.isFinite(orpNum) || !Number.isFinite(orpOnNum) || !Number.isFinite(orpOffNum)
+      ? { cls: 'neutral', txt: '—' }
+      : orpNum < orpOnNum ? { cls: 'low', txt: 'Niedrig' }
+      : orpNum > orpOffNum ? { cls: 'high', txt: 'Hoch' }
+      : { cls: 'ok', txt: 'OK' };
+
+    const stat = (name, hint, on) => `
+      <div class="stat">
+        <div class="stat-left">
+          <div class="stat-name">${esc(name)}</div>
+          <div class="stat-hint">${esc(hint)}</div>
         </div>
-        <div class="st-pill ${on ? 'on' : 'off'}">${on ? 'EIN' : 'AUS'}</div>
+        <div class="stat-pill ${on ? 'on' : 'off'}">${on ? 'EIN' : 'AUS'}</div>
       </div>`;
 
-    const infoRow = (label, value) => `
-      <div class="info-row">
-        <div class="info-label">${esc(label)}</div>
-        <div class="info-value">${esc(value)}</div>
+    const line = (label, value) => `
+      <div class="line">
+        <div class="line-label">${esc(label)}</div>
+        <div class="line-value">${esc(value)}</div>
+      </div>`;
+
+    const tile = (label, value, sub = '', badge = null) => `
+      <div class="tile">
+        <div class="tile-label">${esc(label)}</div>
+        <div class="tile-value">${esc(value)}</div>
+        ${sub ? `<div class="tile-sub">${esc(sub)}</div>` : ''}
+        ${badge ? `<div class="badge ${badge.cls}">${badge.txt}</div>` : ''}
       </div>`;
 
     return `<!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <style>
 :root{
-  --bg1:#08101d;--bg2:#0e1a2e;--panel:#edf4ff;--panel2:#f8fbff;--line:#dbe5f1;
-  --txt:#0f172a;--muted:#55627a;--blue:#3b82f6;--cyan:#06b6d4;--ok:#4fbf5b;--off:#e4584d;
-  --low:#e6a800;--high:#d64933;--shadow:0 12px 26px rgba(2,8,23,.18);
+  --bg:#07111f;--bg2:#0c1b31;--card:#0f2039;--card2:#152b4a;--line:rgba(255,255,255,.08);
+  --txt:#f8fbff;--muted:#b6c4d8;--accent:#52c7ff;--accent2:#6c7dff;
+  --ok:#40c463;--off:#f15a4a;--low:#ffb020;--high:#ff6b57;--neutral:#94a3b8;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
-body{background:radial-gradient(circle at top left,#15355e 0%,#08101d 45%,#060b15 100%);font-family:Arial,Helvetica,sans-serif;color:var(--txt)}
-.wrap{width:100%;height:100%;padding:16px}
-.grid{display:grid;grid-template-columns:1.18fr .92fr .82fr;gap:14px;height:100%}
-.panel{
-  background:linear-gradient(180deg,var(--panel2) 0%, var(--panel) 100%);
-  border:1px solid rgba(255,255,255,.5);border-radius:26px;padding:16px;
-  box-shadow:var(--shadow);display:flex;flex-direction:column;min-width:0;overflow:hidden;
+body{
+  font-family:Arial,Helvetica,sans-serif;color:var(--txt);
+  background:
+    radial-gradient(circle at top left, rgba(82,199,255,.18), transparent 26%),
+    radial-gradient(circle at bottom right, rgba(108,125,255,.16), transparent 24%),
+    linear-gradient(180deg,var(--bg2),var(--bg));
+}
+.wrap{width:100%;height:100%;padding:18px}
+.grid{display:grid;grid-template-columns:1.08fr .95fr .84fr;gap:16px;height:100%}
+.card{
+  background:linear-gradient(180deg,rgba(15,32,57,.94),rgba(10,24,44,.96));
+  border:1px solid var(--line);border-radius:28px;padding:18px;min-width:0;overflow:hidden;
+  box-shadow:0 18px 40px rgba(0,0,0,.28);
+  display:flex;flex-direction:column;
+}
+.hero{
+  background:
+    linear-gradient(180deg,rgba(21,43,74,.96),rgba(11,26,48,.98)),
+    linear-gradient(135deg,var(--accent),var(--accent2));
 }
 .head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.title{font-size:18px;font-weight:900;letter-spacing:.2px}
-.top-meta{text-align:right;font-size:11px;color:var(--muted);line-height:1.25}
-.mode-pill{
-  display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:4px 10px;
-  background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;font-size:11px;font-weight:800;margin-bottom:5px
+.title{font-size:18px;font-weight:900;letter-spacing:.3px}
+.meta{text-align:right;font-size:12px;color:var(--muted);line-height:1.25}
+.mode{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:4px 10px;border-radius:999px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff;font-size:11px;font-weight:900;margin-bottom:6px
 }
-.hero{margin:18px 0 12px;display:flex;align-items:flex-end;gap:10px}
-.temp-big{font-size:74px;font-weight:900;line-height:.9;color:#0c1b38}
-.unit{font-size:24px;color:#51617b;padding-bottom:9px}
-.metric-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:auto}
-.metric{
-  background:rgba(255,255,255,.78);backdrop-filter:blur(4px);
-  border:1px solid var(--line);border-radius:18px;padding:12px;min-height:88px
+.temp-wrap{margin:24px 0 14px;display:flex;align-items:flex-end;gap:10px}
+.temp{font-size:88px;font-weight:900;line-height:.9}
+.unit{font-size:26px;color:#c7d6ea;padding-bottom:10px}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:auto}
+.tile{
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);
+  border-radius:20px;padding:14px;backdrop-filter:blur(8px);min-height:100px
 }
-.metric-label{font-size:13px;color:#5d6d86;font-weight:800;margin-bottom:6px}
-.metric-value{font-size:20px;font-weight:900;line-height:1.1}
-.metric-sub{font-size:12px;color:#64748b;margin-top:7px}
-.badge{
-  display:inline-flex;align-items:center;border-radius:999px;padding:4px 10px;margin-top:8px;
-  font-size:12px;font-weight:900
-}
-.badge.ok{background:#dcfce7;color:#166534}
-.badge.low{background:#fef3c7;color:#92400e}
-.badge.high{background:#fee2e2;color:#991b1b}
-.badge.neutral{background:#e2e8f0;color:#334155}
-.section-title{font-size:16px;font-weight:900;margin:2px 0 10px}
+.tile-label{font-size:13px;color:#c8d4e6;font-weight:800;margin-bottom:8px}
+.tile-value{font-size:20px;font-weight:900;line-height:1.1}
+.tile-sub{font-size:12px;color:#aebed5;margin-top:8px}
+.badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 10px;margin-top:10px;font-size:12px;font-weight:900}
+.badge.ok{background:rgba(64,196,99,.18);color:#8ff0ab}
+.badge.low{background:rgba(255,176,32,.18);color:#ffd480}
+.badge.high{background:rgba(255,107,87,.18);color:#ffb2a6}
+.badge.neutral{background:rgba(148,163,184,.18);color:#d8e1ec}
+.section{font-size:16px;font-weight:900;margin-bottom:12px}
 .stack{display:grid;gap:10px}
-.info-row{
-  display:grid;grid-template-columns:minmax(115px,140px) minmax(0,1fr);gap:10px;align-items:start;
-  background:rgba(255,255,255,.75);border:1px solid var(--line);border-radius:18px;padding:12px
+.line{
+  display:grid;grid-template-columns:minmax(110px,140px) minmax(0,1fr);gap:12px;align-items:start;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:18px;padding:12px
 }
-.info-label{font-size:13px;color:#55627a;font-weight:800}
-.info-value{font-size:16px;font-weight:900;color:#0f172a;line-height:1.2;word-break:break-word}
-.st-grid{display:grid;gap:10px}
-.st-card{
+.line-label{font-size:13px;color:#b7c6db;font-weight:800}
+.line-value{font-size:16px;font-weight:900;line-height:1.2;word-break:break-word}
+.stat-grid{display:grid;gap:10px}
+.stat{
   display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;
-  background:rgba(255,255,255,.78);border:1px solid var(--line);border-radius:18px;padding:12px
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:18px;padding:13px
 }
-.st-left{min-width:0}
-.st-name{font-size:17px;font-weight:900;line-height:1.1}
-.st-hint{font-size:12px;color:#64748b;margin-top:4px}
-.st-pill{
-  min-width:82px;text-align:center;border-radius:999px;padding:9px 14px;font-size:13px;font-weight:900;color:#fff
-}
-.st-pill.on{background:linear-gradient(180deg,#67d06f,#41b84f)}
-.st-pill.off{background:linear-gradient(180deg,#f06a5f,#dd493d)}
+.stat-left{min-width:0}
+.stat-name{font-size:17px;font-weight:900;line-height:1.1}
+.stat-hint{font-size:12px;color:#aebed5;margin-top:4px}
+.stat-pill{min-width:84px;text-align:center;padding:10px 12px;border-radius:999px;font-size:13px;font-weight:900;color:#fff}
+.stat-pill.on{background:linear-gradient(180deg,#56d56e,#36b357)}
+.stat-pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}
 .mini-list{display:grid;gap:10px;margin-top:12px}
 .mini{
-  display:grid;grid-template-columns:minmax(90px,1fr) auto;gap:8px;align-items:center;
-  background:rgba(255,255,255,.78);border:1px solid var(--line);border-radius:18px;padding:11px 12px
+  display:grid;grid-template-columns:minmax(95px,1fr) auto;gap:8px;align-items:center;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:18px;padding:12px
 }
-.mini-label{font-size:13px;color:#55627a;font-weight:800}
+.mini-label{font-size:13px;color:#b7c6db;font-weight:800}
 .mini-value{font-size:16px;font-weight:900;text-align:right}
 @media (max-width:1180px){.grid{grid-template-columns:1fr}}
-</style></head>
-<body><div class="wrap"><div class="grid">
-  <section class="panel">
+</style></head><body><div class="wrap"><div class="grid">
+  <section class="card hero">
     <div class="head">
       <div class="title">Pool Manager</div>
-      <div class="top-meta">
-        <div class="mode-pill">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>
+      <div class="meta">
+        <div class="mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>
         Aktualisiert<br>${esc(data.updated)}
       </div>
     </div>
-    <div class="hero">
-      <div class="temp-big">${esc(data.poolTemp)}</div>
+    <div class="temp-wrap">
+      <div class="temp">${esc(data.poolTemp)}</div>
       <div class="unit">°C</div>
     </div>
-    <div class="metric-grid">
-      <div class="metric">
-        <div class="metric-label">pH</div>
-        <div class="metric-value">${esc(data.ph)}</div>
-        <div class="metric-sub">Soll ${esc(data.phSet)}</div>
-        <div class="badge ${phBadge.cls}">${phBadge.txt}</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label">ORP</div>
-        <div class="metric-value">${esc(data.orp)}</div>
-        <div class="metric-sub">Soll ${esc(data.orpSet)}</div>
-        <div class="badge ${orpBadge.cls}">${orpBadge.txt}</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label">Außen</div>
-        <div class="metric-value">${esc(data.outsideTemp)}°C</div>
-        <div class="metric-sub">Außentemperatur</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label">Solltemp</div>
-        <div class="metric-value">${esc(data.targetTemp)}°C</div>
-        <div class="metric-sub">Zieltemperatur</div>
-      </div>
+    <div class="tiles">
+      ${tile('pH', data.ph, `Soll ${data.phSet}`, phBadge)}
+      ${tile('ORP', data.orp, `Soll ${data.orpSet}`, orpBadge)}
+      ${tile('Außen', `${data.outsideTemp}°C`, 'Außentemperatur')}
+      ${tile('Solltemp', `${data.targetTemp}°C`, 'Zieltemperatur')}
     </div>
   </section>
 
-  <section class="panel">
-    <div class="section-title">Energie & Steuerung</div>
+  <section class="card">
+    <div class="section">Energie & Steuerung</div>
     <div class="stack">
-      ${infoRow('PV-Leistung', `${data.pv} W`)}
-      ${infoRow('Netzeinspeisung', `${data.feedIn} W`)}
-      ${infoRow('Netzbezug', `${data.gridSupply} W`)}
-      ${infoRow('Batterie SoC', `${data.battery} %`)}
-      ${infoRow('WP Freigabe', data.heatReason)}
-      ${infoRow('Chlor Freigabe', data.chlorDecision)}
-      ${infoRow('Pumpe Zeitplan', data.pumpDecision)}
-      ${infoRow('pH Prüfung', data.phDecision)}
-      ${infoRow('pH Zeiten', data.phTimes)}
-      ${infoRow('Standby nächster Lauf', data.standbyNext)}
-      ${infoRow('Letzte Dosierung', `${data.phLastDoseDurationSec} s`)}
+      ${line('PV-Leistung', `${data.pv} W`)}
+      ${line('Netzeinspeisung', `${data.feedIn} W`)}
+      ${line('Netzbezug', `${data.gridSupply} W`)}
+      ${line('Batterie SoC', `${data.battery} %`)}
+      ${line('WP Freigabe', data.heatReason)}
+      ${line('Chlor Freigabe', data.chlorDecision)}
+      ${line('Pumpe Zeitplan', data.pumpDecision)}
+      ${line('pH Prüfung', data.phDecision)}
+      ${line('pH Zeiten', data.phTimes)}
+      ${line('Standby nächster Lauf', data.standbyNext)}
+      ${line('Letzte Dosierung', `${data.phLastDoseDurationSec} s`)}
     </div>
   </section>
 
-  <section class="panel">
-    <div class="section-title">Aktoren & Status</div>
-    <div class="st-grid">
-      ${statusCard('Umwälzpumpe', 'IST-Zustand', data.pumpOn)}
-      ${statusCard('Chlorinator', 'ORP-Regelung', data.chlorOn)}
-      ${statusCard('pH-Dosierpumpe', 'Prüfzeiten / Dosierung', data.phPumpOn)}
-      ${statusCard('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
+  <section class="card">
+    <div class="section">Aktoren & Status</div>
+    <div class="stat-grid">
+      ${stat('Umwälzpumpe', 'IST-Zustand', data.pumpOn)}
+      ${stat('Chlorinator', 'ORP-Regelung', data.chlorOn)}
+      ${stat('pH-Dosierpumpe', 'Prüfzeiten / Dosierung', data.phPumpOn)}
+      ${stat('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
     </div>
     <div class="mini-list">
       <div class="mini"><div class="mini-label">Pumpe Zeitplan</div><div class="mini-value">${data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV'}</div></div>
