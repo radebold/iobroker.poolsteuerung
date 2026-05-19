@@ -439,12 +439,11 @@ class Poolsteuerung extends utils.Adapter {
 <html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <style>
 :root{
-  --bg:#07111f;--bg2:#0c1b31;--card:#0f2039;--card2:#152b4a;--line:rgba(255,255,255,.08);
+  --bg:#07111f;--bg2:#0c1b31;--line:rgba(255,255,255,.08);
   --txt:#f8fbff;--muted:#b6c4d8;--accent:#52c7ff;--accent2:#6c7dff;
-  --ok:#40c463;--off:#f15a4a;--low:#ffb020;--high:#ff6b57;--neutral:#94a3b8;
 }
 *{box-sizing:border-box}
-html,body{margin:0;height:100%}
+html,body{margin:0}
 body{
   font-family:Arial,Helvetica,sans-serif;color:var(--txt);
   background:
@@ -452,11 +451,12 @@ body{
     radial-gradient(circle at bottom right, rgba(108,125,255,.16), transparent 24%),
     linear-gradient(180deg,var(--bg2),var(--bg));
 }
-.wrap{width:100%;height:100%;padding:12px;overflow:auto}
-.grid{display:grid;grid-template-columns:minmax(220px,1.08fr) minmax(220px,.95fr) minmax(220px,.84fr);gap:12px}
+.wrap{width:100%;padding:12px}
+.grid{display:grid;grid-template-columns:1.08fr 1fr;gap:12px;align-items:start}
+.full{grid-column:1 / -1}
 .card{
   background:linear-gradient(180deg,rgba(15,32,57,.94),rgba(10,24,44,.96));
-  border:1px solid var(--line);border-radius:24px;padding:14px;min-width:0;overflow:hidden;
+  border:1px solid var(--line);border-radius:24px;padding:16px;min-width:0;overflow:hidden;
   box-shadow:0 18px 40px rgba(0,0,0,.28);display:flex;flex-direction:column
 }
 .hero{
@@ -465,40 +465,45 @@ body{
     linear-gradient(180deg,rgba(21,43,74,.96),rgba(11,26,48,.98));
 }
 .head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-.title{font-size:17px;font-weight:900;letter-spacing:.2px}
-.meta{text-align:right;font-size:11px;color:var(--muted);line-height:1.2;max-width:86px}
+.title{font-size:18px;font-weight:900;letter-spacing:.2px}
+.meta{text-align:right;font-size:11px;color:var(--muted);line-height:1.2;max-width:92px}
 .mode{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:999px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:10px;font-weight:900;margin-bottom:6px}
-.temp-wrap{margin:16px 0 10px;display:flex;align-items:flex-end;gap:8px}
-.temp{font-size:64px;font-weight:900;line-height:.9}
-.unit{font-size:20px;color:#c7d6ea;padding-bottom:7px}
+.temp-wrap{margin:16px 0 12px;display:flex;align-items:flex-end;gap:8px}
+.temp{font-size:74px;font-weight:900;line-height:.9}
+.unit{font-size:22px;color:#c7d6ea;padding-bottom:8px}
 .tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:auto}
-.tile{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:12px;backdrop-filter:blur(8px);min-height:82px}
+.tile{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:12px;backdrop-filter:blur(8px);min-height:90px}
 .tile-label{font-size:12px;color:#c8d4e6;font-weight:800;margin-bottom:6px}
-.tile-value{font-size:18px;font-weight:900;line-height:1.05}
+.tile-value{font-size:20px;font-weight:900;line-height:1.05}
 .tile-sub{font-size:11px;color:#aebed5;margin-top:7px}
 .badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;margin-top:8px;font-size:11px;font-weight:900}
 .badge.ok{background:rgba(64,196,99,.18);color:#8ff0ab}
 .badge.low{background:rgba(255,176,32,.18);color:#ffd480}
 .badge.high{background:rgba(255,107,87,.18);color:#ffb2a6}
 .badge.neutral{background:rgba(148,163,184,.18);color:#d8e1ec}
-.section{font-size:15px;font-weight:900;margin-bottom:10px}
+.section{font-size:16px;font-weight:900;margin-bottom:10px}
 .stack{display:grid;gap:8px}
-.line{display:grid;grid-template-columns:minmax(88px,110px) minmax(0,1fr);gap:10px;align-items:start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:10px}
+.line{display:grid;grid-template-columns:minmax(100px,128px) minmax(0,1fr);gap:10px;align-items:start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:11px}
 .line-label{font-size:12px;color:#b7c6db;font-weight:800}
-.line-value{font-size:14px;font-weight:900;line-height:1.2;word-break:break-word}
-.stat-grid{display:grid;gap:8px}
-.stat{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:10px}
+.line-value{font-size:15px;font-weight:900;line-height:1.2;word-break:break-word}
+.stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.stat{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:12px}
 .stat-left{min-width:0}
 .stat-name{font-size:15px;font-weight:900;line-height:1.1}
 .stat-hint{font-size:11px;color:#aebed5;margin-top:4px}
-.stat-pill{min-width:70px;text-align:center;padding:8px 10px;border-radius:999px;font-size:12px;font-weight:900;color:#fff}
+.stat-pill{min-width:74px;text-align:center;padding:8px 10px;border-radius:999px;font-size:12px;font-weight:900;color:#fff}
 .stat-pill.on{background:linear-gradient(180deg,#56d56e,#36b357)}
 .stat-pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}
-.mini-list{display:grid;gap:8px;margin-top:10px}
-.mini{display:grid;grid-template-columns:minmax(80px,1fr) auto;gap:8px;align-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:10px}
-.mini-label{font-size:12px;color:#b7c6db;font-weight:800}
-.mini-value{font-size:15px;font-weight:900;text-align:right}
-@media (max-width:900px){.grid{grid-template-columns:1fr}}
+.mini-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.mini{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:12px}
+.mini-label{font-size:12px;color:#b7c6db;font-weight:800;margin-bottom:6px}
+.mini-value{font-size:18px;font-weight:900}
+@media (max-width:980px){
+  .grid{grid-template-columns:1fr}
+  .full{grid-column:auto}
+  .stat-grid{grid-template-columns:1fr}
+  .mini-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 </style></head><body><div class="wrap"><div class="grid">
   <section class="card hero">
     <div class="head">
@@ -519,6 +524,7 @@ body{
       ${tile('Solltemp', `${data.targetTemp}°C`, 'Zieltemperatur')}
     </div>
   </section>
+
   <section class="card">
     <div class="section">Energie & Steuerung</div>
     <div class="stack">
@@ -535,7 +541,8 @@ body{
       ${line('Letzte Dosierung', `${data.phLastDoseDurationSec} s`)}
     </div>
   </section>
-  <section class="card">
+
+  <section class="card full">
     <div class="section">Aktoren & Status</div>
     <div class="stat-grid">
       ${statusCard('Umwälzpumpe', 'IST-Zustand', data.pumpOn)}
