@@ -412,7 +412,7 @@ class Poolsteuerung extends utils.Adapter {
       : orpNum > orpOffNum ? { cls: 'high', txt: 'Hoch' }
       : { cls: 'ok', txt: 'OK' };
 
-    const stat = (name, hint, on) => `
+    const statusCard = (name, hint, on) => `
       <div class="stat">
         <div class="stat-left">
           <div class="stat-name">${esc(name)}</div>
@@ -452,71 +452,53 @@ body{
     radial-gradient(circle at bottom right, rgba(108,125,255,.16), transparent 24%),
     linear-gradient(180deg,var(--bg2),var(--bg));
 }
-.wrap{width:100%;height:100%;padding:18px}
-.grid{display:grid;grid-template-columns:1.08fr .95fr .84fr;gap:16px;height:100%}
+.wrap{width:100%;height:100%;padding:12px;overflow:auto}
+.grid{display:grid;grid-template-columns:minmax(220px,1.08fr) minmax(220px,.95fr) minmax(220px,.84fr);gap:12px}
 .card{
   background:linear-gradient(180deg,rgba(15,32,57,.94),rgba(10,24,44,.96));
-  border:1px solid var(--line);border-radius:28px;padding:18px;min-width:0;overflow:hidden;
-  box-shadow:0 18px 40px rgba(0,0,0,.28);
-  display:flex;flex-direction:column;
+  border:1px solid var(--line);border-radius:24px;padding:14px;min-width:0;overflow:hidden;
+  box-shadow:0 18px 40px rgba(0,0,0,.28);display:flex;flex-direction:column
 }
 .hero{
   background:
-    linear-gradient(180deg,rgba(21,43,74,.96),rgba(11,26,48,.98)),
-    linear-gradient(135deg,var(--accent),var(--accent2));
+    radial-gradient(circle at top right, rgba(82,199,255,.22), transparent 28%),
+    linear-gradient(180deg,rgba(21,43,74,.96),rgba(11,26,48,.98));
 }
-.head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.title{font-size:18px;font-weight:900;letter-spacing:.3px}
-.meta{text-align:right;font-size:12px;color:var(--muted);line-height:1.25}
-.mode{
-  display:inline-flex;align-items:center;justify-content:center;
-  padding:4px 10px;border-radius:999px;
-  background:linear-gradient(135deg,var(--accent),var(--accent2));
-  color:#fff;font-size:11px;font-weight:900;margin-bottom:6px
-}
-.temp-wrap{margin:24px 0 14px;display:flex;align-items:flex-end;gap:10px}
-.temp{font-size:88px;font-weight:900;line-height:.9}
-.unit{font-size:26px;color:#c7d6ea;padding-bottom:10px}
-.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:auto}
-.tile{
-  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);
-  border-radius:20px;padding:14px;backdrop-filter:blur(8px);min-height:100px
-}
-.tile-label{font-size:13px;color:#c8d4e6;font-weight:800;margin-bottom:8px}
-.tile-value{font-size:20px;font-weight:900;line-height:1.1}
-.tile-sub{font-size:12px;color:#aebed5;margin-top:8px}
-.badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 10px;margin-top:10px;font-size:12px;font-weight:900}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.title{font-size:17px;font-weight:900;letter-spacing:.2px}
+.meta{text-align:right;font-size:11px;color:var(--muted);line-height:1.2;max-width:86px}
+.mode{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:999px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:10px;font-weight:900;margin-bottom:6px}
+.temp-wrap{margin:16px 0 10px;display:flex;align-items:flex-end;gap:8px}
+.temp{font-size:64px;font-weight:900;line-height:.9}
+.unit{font-size:20px;color:#c7d6ea;padding-bottom:7px}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:auto}
+.tile{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:12px;backdrop-filter:blur(8px);min-height:82px}
+.tile-label{font-size:12px;color:#c8d4e6;font-weight:800;margin-bottom:6px}
+.tile-value{font-size:18px;font-weight:900;line-height:1.05}
+.tile-sub{font-size:11px;color:#aebed5;margin-top:7px}
+.badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;margin-top:8px;font-size:11px;font-weight:900}
 .badge.ok{background:rgba(64,196,99,.18);color:#8ff0ab}
 .badge.low{background:rgba(255,176,32,.18);color:#ffd480}
 .badge.high{background:rgba(255,107,87,.18);color:#ffb2a6}
 .badge.neutral{background:rgba(148,163,184,.18);color:#d8e1ec}
-.section{font-size:16px;font-weight:900;margin-bottom:12px}
-.stack{display:grid;gap:10px}
-.line{
-  display:grid;grid-template-columns:minmax(110px,140px) minmax(0,1fr);gap:12px;align-items:start;
-  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:18px;padding:12px
-}
-.line-label{font-size:13px;color:#b7c6db;font-weight:800}
-.line-value{font-size:16px;font-weight:900;line-height:1.2;word-break:break-word}
-.stat-grid{display:grid;gap:10px}
-.stat{
-  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;
-  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:18px;padding:13px
-}
+.section{font-size:15px;font-weight:900;margin-bottom:10px}
+.stack{display:grid;gap:8px}
+.line{display:grid;grid-template-columns:minmax(88px,110px) minmax(0,1fr);gap:10px;align-items:start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:10px}
+.line-label{font-size:12px;color:#b7c6db;font-weight:800}
+.line-value{font-size:14px;font-weight:900;line-height:1.2;word-break:break-word}
+.stat-grid{display:grid;gap:8px}
+.stat{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:10px}
 .stat-left{min-width:0}
-.stat-name{font-size:17px;font-weight:900;line-height:1.1}
-.stat-hint{font-size:12px;color:#aebed5;margin-top:4px}
-.stat-pill{min-width:84px;text-align:center;padding:10px 12px;border-radius:999px;font-size:13px;font-weight:900;color:#fff}
+.stat-name{font-size:15px;font-weight:900;line-height:1.1}
+.stat-hint{font-size:11px;color:#aebed5;margin-top:4px}
+.stat-pill{min-width:70px;text-align:center;padding:8px 10px;border-radius:999px;font-size:12px;font-weight:900;color:#fff}
 .stat-pill.on{background:linear-gradient(180deg,#56d56e,#36b357)}
 .stat-pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}
-.mini-list{display:grid;gap:10px;margin-top:12px}
-.mini{
-  display:grid;grid-template-columns:minmax(95px,1fr) auto;gap:8px;align-items:center;
-  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:18px;padding:12px
-}
-.mini-label{font-size:13px;color:#b7c6db;font-weight:800}
-.mini-value{font-size:16px;font-weight:900;text-align:right}
-@media (max-width:1180px){.grid{grid-template-columns:1fr}}
+.mini-list{display:grid;gap:8px;margin-top:10px}
+.mini{display:grid;grid-template-columns:minmax(80px,1fr) auto;gap:8px;align-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:10px}
+.mini-label{font-size:12px;color:#b7c6db;font-weight:800}
+.mini-value{font-size:15px;font-weight:900;text-align:right}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
 </style></head><body><div class="wrap"><div class="grid">
   <section class="card hero">
     <div class="head">
@@ -537,7 +519,6 @@ body{
       ${tile('Solltemp', `${data.targetTemp}°C`, 'Zieltemperatur')}
     </div>
   </section>
-
   <section class="card">
     <div class="section">Energie & Steuerung</div>
     <div class="stack">
@@ -554,14 +535,13 @@ body{
       ${line('Letzte Dosierung', `${data.phLastDoseDurationSec} s`)}
     </div>
   </section>
-
   <section class="card">
     <div class="section">Aktoren & Status</div>
     <div class="stat-grid">
-      ${stat('Umwälzpumpe', 'IST-Zustand', data.pumpOn)}
-      ${stat('Chlorinator', 'ORP-Regelung', data.chlorOn)}
-      ${stat('pH-Dosierpumpe', 'Prüfzeiten / Dosierung', data.phPumpOn)}
-      ${stat('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
+      ${statusCard('Umwälzpumpe', 'IST-Zustand', data.pumpOn)}
+      ${statusCard('Chlorinator', 'ORP-Regelung', data.chlorOn)}
+      ${statusCard('pH-Dosierpumpe', 'Prüfzeiten / Dosierung', data.phPumpOn)}
+      ${statusCard('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
     </div>
     <div class="mini-list">
       <div class="mini"><div class="mini-label">Pumpe Zeitplan</div><div class="mini-value">${data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV'}</div></div>
