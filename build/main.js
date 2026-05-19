@@ -412,19 +412,19 @@ class Poolsteuerung extends utils.Adapter {
       : orpNum > orpOffNum ? { cls: 'high', txt: 'Hoch' }
       : { cls: 'ok', txt: 'OK' };
 
-    const row = (label, value) => `
-      <div class="row">
-        <div class="row-label">${esc(label)}</div>
-        <div class="row-value">${esc(value)}</div>
+    const kv = (label, value) => `
+      <div class="kv">
+        <div class="kv-label">${esc(label)}</div>
+        <div class="kv-value">${esc(value)}</div>
       </div>`;
 
-    const statusRow = (name, hint, on) => `
+    const status = (name, hint, on) => `
       <div class="status-row">
         <div class="status-left">
           <div class="status-name">${esc(name)}</div>
           <div class="status-hint">${esc(hint)}</div>
         </div>
-        <div class="status-pill ${on ? 'on' : 'off'}">${on ? 'EIN' : 'AUS'}</div>
+        <div class="pill ${on ? 'on' : 'off'}">${on ? 'EIN' : 'AUS'}</div>
       </div>`;
 
     const metric = (label, value, sub = '', badge = null) => `
@@ -458,11 +458,14 @@ body{
     linear-gradient(180deg,var(--bg2),var(--bg));
 }
 .wrap{width:100%;padding:12px}
-.grid{display:grid;grid-template-columns:280px 1fr 1fr;gap:14px;align-items:start}
+.layout{display:flex;gap:14px;align-items:flex-start}
+.col-left{flex:0 0 29%}
+.col-mid{flex:0 0 33%}
+.col-right{flex:1 1 0}
 .card{
   background:linear-gradient(180deg,rgba(15,32,57,.94),rgba(10,24,44,.96));
-  border:1px solid var(--line);border-radius:24px;padding:16px;min-width:0;
-  box-shadow:0 18px 40px rgba(0,0,0,.28);
+  border:1px solid var(--line);border-radius:24px;padding:16px;overflow:hidden;
+  box-shadow:0 18px 40px rgba(0,0,0,.28)
 }
 .hero{
   background:
@@ -470,14 +473,14 @@ body{
     linear-gradient(180deg,rgba(21,43,74,.96),rgba(11,26,48,.98));
   min-height:430px;
 }
-.head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .title{font-size:18px;font-weight:900;letter-spacing:.2px}
-.meta{text-align:right;font-size:11px;color:var(--muted);line-height:1.2;max-width:92px}
+.meta{text-align:right;font-size:11px;color:var(--muted);line-height:1.2;max-width:96px}
 .mode{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:999px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:10px;font-weight:900;margin-bottom:6px}
-.temp-wrap{margin:18px 0 12px;display:flex;align-items:flex-end;gap:8px}
+.temp-wrap{margin:18px 0 14px;display:flex;align-items:flex-end;gap:8px}
 .temp{font-size:82px;font-weight:900;line-height:.9}
 .unit{font-size:22px;color:#c7d6ea;padding-bottom:9px}
-.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:115px}
+.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:110px}
 .metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:12px;min-height:96px}
 .metric-label{font-size:12px;color:#c8d4e6;font-weight:800;margin-bottom:6px}
 .metric-value{font-size:20px;font-weight:900;line-height:1.05}
@@ -488,79 +491,93 @@ body{
 .badge.high{background:rgba(255,107,87,.18);color:#ffb2a6}
 .badge.neutral{background:rgba(148,163,184,.18);color:#d8e1ec}
 .section{font-size:16px;font-weight:900;margin-bottom:10px}
-.stack{display:grid;gap:9px}
-.row{display:grid;grid-template-columns:122px minmax(0,1fr);gap:10px;align-items:start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:11px}
-.row-label{font-size:12px;color:#b7c6db;font-weight:800}
-.row-value{font-size:15px;font-weight:900;line-height:1.2;word-break:break-word}
+.stack{display:grid;gap:8px}
+.kv{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:11px}
+.kv-label{font-size:12px;color:#b7c6db;font-weight:800;max-width:42%}
+.kv-value{font-size:15px;font-weight:900;line-height:1.2;text-align:right;word-break:break-word;max-width:58%}
+.status-card{margin-bottom:14px}
 .status-list{display:grid;gap:10px}
-.status-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:12px}
-.status-left{min-width:0}
-.status-name{font-size:17px;font-weight:900;line-height:1.1}
+.status-row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:12px}
+.status-left{min-width:0;max-width:calc(100% - 86px)}
+.status-name{font-size:16px;font-weight:900;line-height:1.1}
 .status-hint{font-size:11px;color:#aebed5;margin-top:4px}
-.status-pill{min-width:76px;text-align:center;padding:9px 11px;border-radius:999px;font-size:12px;font-weight:900;color:#fff}
-.status-pill.on{background:linear-gradient(180deg,#56d56e,#36b357)}
-.status-pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}
-.mini-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+.pill{min-width:76px;text-align:center;padding:9px 11px;border-radius:999px;font-size:12px;font-weight:900;color:#fff;flex:0 0 auto}
+.pill.on{background:linear-gradient(180deg,#56d56e,#36b357)}
+.pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}
+.mini-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .mini{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:12px}
 .mini-label{font-size:12px;color:#b7c6db;font-weight:800;margin-bottom:6px}
 .mini-value{font-size:18px;font-weight:900;line-height:1.1}
-@media (max-width:1000px){.grid{grid-template-columns:1fr}}
-</style></head><body><div class="wrap"><div class="grid">
-  <section class="card hero">
-    <div class="head">
-      <div class="title">Pool Manager</div>
-      <div class="meta">
-        <div class="mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>
-        Aktualisiert<br>${esc(data.updated)}
+@media (max-width:1100px){
+  .layout{display:block}
+  .col-left,.col-mid,.col-right{width:auto}
+  .col-mid,.col-right{margin-top:14px}
+}
+</style></head><body><div class="wrap"><div class="layout">
+  <div class="col-left">
+    <div class="card hero">
+      <div class="head">
+        <div class="title">Pool Manager</div>
+        <div class="meta">
+          <div class="mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>
+          Aktualisiert<br>${esc(data.updated)}
+        </div>
+      </div>
+      <div class="temp-wrap">
+        <div class="temp">${esc(data.poolTemp)}</div>
+        <div class="unit">°C</div>
+      </div>
+      <div class="metrics">
+        ${metric('pH', data.ph, `Soll ${data.phSet}`, phBadge)}
+        ${metric('ORP', data.orp, `Soll ${data.orpSet}`, orpBadge)}
+        ${metric('Außen', `${data.outsideTemp}°C`, 'Außentemperatur')}
+        ${metric('Solltemp', `${data.targetTemp}°C`, 'Zieltemperatur')}
       </div>
     </div>
-    <div class="temp-wrap">
-      <div class="temp">${esc(data.poolTemp)}</div>
-      <div class="unit">°C</div>
-    </div>
-    <div class="metrics">
-      ${metric('pH', data.ph, `Soll ${data.phSet}`, phBadge)}
-      ${metric('ORP', data.orp, `Soll ${data.orpSet}`, orpBadge)}
-      ${metric('Außen', `${data.outsideTemp}°C`, 'Außentemperatur')}
-      ${metric('Solltemp', `${data.targetTemp}°C`, 'Zieltemperatur')}
-    </div>
-  </section>
+  </div>
 
-  <section class="card">
-    <div class="section">Energie & Steuerung</div>
-    <div class="stack">
-      ${row('PV-Leistung', `${data.pv} W`)}
-      ${row('Netzeinspeisung', `${data.feedIn} W`)}
-      ${row('Netzbezug', `${data.gridSupply} W`)}
-      ${row('Batterie SoC', `${data.battery} %`)}
-      ${row('WP Freigabe', data.heatReason)}
-      ${row('Chlor Freigabe', data.chlorDecision)}
-      ${row('Pumpe Zeitplan', data.pumpDecision)}
-      ${row('pH Prüfung', data.phDecision)}
-      ${row('pH Zeiten', data.phTimes)}
-      ${row('Standby nächster Lauf', data.standbyNext)}
-      ${row('Letzte Dosierung', `${data.phLastDoseDurationSec} s`)}
+  <div class="col-mid">
+    <div class="card">
+      <div class="section">Energie & Steuerung</div>
+      <div class="stack">
+        ${kv('PV-Leistung', `${data.pv} W`)}
+        ${kv('Netzeinspeisung', `${data.feedIn} W`)}
+        ${kv('Netzbezug', `${data.gridSupply} W`)}
+        ${kv('Batterie SoC', `${data.battery} %`)}
+        ${kv('WP Freigabe', data.heatReason)}
+        ${kv('Chlor Freigabe', data.chlorDecision)}
+        ${kv('Pumpe Zeitplan', data.pumpDecision)}
+        ${kv('pH Prüfung', data.phDecision)}
+        ${kv('pH Zeiten', data.phTimes)}
+        ${kv('Standby nächster Lauf', data.standbyNext)}
+        ${kv('Letzte Dosierung', `${data.phLastDoseDurationSec} s`)}
+      </div>
     </div>
-  </section>
+  </div>
 
-  <section class="card">
-    <div class="section">Aktoren & Status</div>
-    <div class="status-list">
-      ${statusRow('Umwälzpumpe', 'IST-Zustand', data.pumpOn)}
-      ${statusRow('Chlorinator', 'ORP-Regelung', data.chlorOn)}
-      ${statusRow('pH-Dosierpumpe', 'Prüfzeiten / Dosierung', data.phPumpOn)}
-      ${statusRow('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
+  <div class="col-right">
+    <div class="card status-card">
+      <div class="section">Aktoren & Status</div>
+      <div class="status-list">
+        ${status('Umwälzpumpe', 'IST-Zustand', data.pumpOn)}
+        ${status('Chlorinator', 'ORP-Regelung', data.chlorOn)}
+        ${status('pH-Dosierpumpe', 'Prüfzeiten / Dosierung', data.phPumpOn)}
+        ${status('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
+      </div>
     </div>
-    <div class="mini-list">
-      ${mini('Pumpe Zeitplan', data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV')}
-      ${mini('PV Schwelle', `${data.threshold} W`)}
-      ${mini('ORP Grenzen', `${data.orpOnThreshold} / ${data.orpOffThreshold}`)}
-      ${mini('pH Tag', `${data.phDailyCount}`)}
-      ${mini('Pumpe ml/min', `${data.phFlowMlMin}`)}
-      ${mini('ml je 0,1 / 10m³', `${data.phMlPer01Per10}`)}
-      ${mini('Poolvolumen', `${data.volume} m³`)}
+    <div class="card">
+      <div class="section">Zusatzwerte</div>
+      <div class="mini-list">
+        ${mini('Pumpe Zeitplan', data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV')}
+        ${mini('PV Schwelle', `${data.threshold} W`)}
+        ${mini('ORP Grenzen', `${data.orpOnThreshold} / ${data.orpOffThreshold}`)}
+        ${mini('pH Tag', `${data.phDailyCount}`)}
+        ${mini('Pumpe ml/min', `${data.phFlowMlMin}`)}
+        ${mini('ml je 0,1 / 10m³', `${data.phMlPer01Per10}`)}
+        ${mini('Poolvolumen', `${data.volume} m³`)}
+      </div>
     </div>
-  </section>
+  </div>
 </div></div></body></html>`;
   }
 
