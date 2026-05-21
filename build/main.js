@@ -1152,7 +1152,121 @@ body{
     }, 400);
   }
 
+
+  getDependencyRules() {
+    const rules = Array.isArray(this.config.dependencyRules) ? this.config.dependencyRules : [];
+    return rules
+      .map((rule, index) => ({
+        index,
+        enabled: rule && rule.enabled === true,
+        name: String((rule && rule.name) || '').trim(),
+        compareStateId: String((rule && rule.compareStateId) || '').trim(),
+        operator: String((rule && rule.operator) || 'eq').trim(),
+        compareValue: rule && rule.compareValue !== undefined && rule.compareValue !== null ? rule.compareValue : '',
+        targetStateId: String((rule && rule.targetStateId) || '').trim(),
+        thenValue: rule && rule.thenValue !== undefined && rule.thenValue !== null ? rule.thenValue : '',
+        elseValue: rule && rule.elseValue !== undefined && rule.elseValue !== null ? rule.elseValue : '',
+        logEnabled: rule && rule.logEnabled === true
+      }))
+      .filter(rule => rule.enabled && rule.compareStateId && rule.targetStateId);
+  }
+
+  parseRuleValue(raw) {
+    if (raw === undefined || raw === null) return '';
+    if (typeof raw === 'boolean' || typeof raw === 'number') return raw;
+    const s = String(raw).trim();
+    if (s === '') return '';
+    const lower = s.toLowerCase();
+    if (lower === 'true') return true;
+    if (lower === 'false') return false;
+    if (/^-?\d+(?:[\.,]\d+)?$/.test(s)) return Number(s.replace(',', '.'));
+    return s;
+  }
+
+  toTruthy(value) {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value !== 0;
+    const s = String(value ?? '').trim().toLowerCase();
+    return ['true', '1', 'on', 'ein', 'yes', 'ja'].includes(s);
+  }
+
+  valuesEqual(a, b) {
+    if (typeof a === 'number' && typeof b === 'number') return a === b;
+    if (typeof a === 'boolean' || typeof b === 'boolean') return this.toTruthy(a) === this.toTruthy(b);
+    return String(a ?? '') === String(b ?? '');
+  }
+
+  evaluateRuleCondition(actualRaw, operator, expectedRaw) {
+    const expected = this.parseRuleValue(expectedRaw);
+    const actual = typeof expected === 'number'
+      ? Number(String(actualRaw).replace(',', '.'))
+      : typeof expected === 'boolean'
+        ? this.toTruthy(actualRaw)
+        : actualRaw;
+
+    switch (operator) {
+      case 'istrue': return this.toTruthy(actualRaw) === true;
+      case 'isfalse': return this.toTruthy(actualRaw) === false;
+      case 'eq': return this.valuesEqual(actual, expected);
+      case 'neq': return !this.valuesEqual(actual, expected);
+      case 'gt': return Number(actual) > Number(expected);
+      case 'gte': return Number(actual) >= Number(expected);
+      case 'lt': return Number(actual) < Number(expected);
+      case 'lte': return Number(actual) <= Number(expected);
+      default: return this.valuesEqual(actual, expected);
+    }
+  }
+
+  async writeRuleTarget(targetStateId, rawValue, ruleName = '') {
+    const obj = await this.getForeignObjectAsync(targetStateId);
+    const common = obj && obj.common ? obj.common : {};
+    let value = this.parseRuleValue(rawValue);
+
+    if (common.type === 'boolean') {
+      value = this.toTruthy(value);
+    } else if (common.type === 'number') {
+      const num = Number(String(value).replace(',', '.'));
+      if (!Number.isFinite(num)) throw new Error('Zielwert ist keine gültige Zahl');
+      value = num;
+    } else if (common.type === 'string') {
+      value = String(value);
+    }
+
+    const cur = await this.getForeignStateAsync(targetStateId);
+    const curVal = cur ? cur.val : undefined;
+    if (this.valuesEqual(curVal, value)) return false;
+    await this.setForeignStateAsync(targetStateId, value, false);
+    return true;
+  }
+
+  async applyDependencyRules(changedId = '') {
+    if (this.config.adapterEnabled === false) return;
+    const rules = this.getDependencyRules();
+    if (!rules.length) return;
+
+    for (const rule of rules) {
+      if (changedId && rule.compareStateId !== changedId) continue;
+      try {
+        const state = await this.getForeignStateAsync(rule.compareStateId);
+        if (!state) continue;
+        const matched = this.evaluateRuleCondition(state.val, rule.operator, rule.compareValue);
+        const hasElse = String(rule.elseValue ?? '').trim() !== '';
+        const valueToSet = matched ? rule.thenValue : (hasElse ? rule.elseValue : undefined);
+        if (valueToSet === undefined) continue;
+        const changed = await this.writeRuleTarget(rule.targetStateId, valueToSet, rule.name);
+        if (rule.logEnabled && changed) {
+          this.log.info(`[REGEL] ${rule.name || `Regel ${rule.index + 1}`} | ${matched ? 'THEN' : 'ELSE'} -> ${rule.targetStateId} = ${valueToSet}`);
+        }
+      } catch (e) {
+        this.log.warn(`[REGEL] ${rule.name || `Regel ${rule.index + 1}`} fehlgeschlagen: ${e.message || e}`);
+      }
+    }
+  }
+
   async subscribeConfiguredStates() {
+    const ruleIds = this.getDependencyRules().map(rule => rule.compareStateId).filter(Boolean);
+    this.ruleCompareIds = [...new Set(ruleIds)];
+
     const ids = [
       this.config.phStateId,
       this.config.orpStateId,
@@ -1167,7 +1281,8 @@ body{
       this.config.chlorinatorSocketStateId,
       this.config.circulationPumpSocketStateId,
       this.config.heatpumpPowerStateId,
-      'poolsteuerung.0.status.heatpump.lastReason'
+      'poolsteuerung.0.status.heatpump.lastReason',
+      ...this.ruleCompareIds
     ].filter(Boolean);
 
     this.monitoredIds = [...new Set(ids)];
@@ -1857,6 +1972,7 @@ body{
       if (typeof this.applyControlLogic === 'function') {
         await this.applyControlLogic();
       }
+      await this.applyDependencyRules();
       await this.renderVis();
       await this.logStartupSummary();
       const pollMin = Math.max(1, Number(this.config.pollIntervalMin) || 1);
@@ -1876,6 +1992,7 @@ body{
           if (typeof this.applyControlLogic === 'function') {
             await this.applyControlLogic();
           }
+          await this.applyDependencyRules();
           await this.renderVis();
         } catch (e) {
           this.log.error(`Poll-Fehler: ${e && e.stack ? e.stack : e}`);
@@ -1895,6 +2012,9 @@ body{
 
   async onStateChange(id, state) {
     if (!state) return;
+    if (this.ruleCompareIds && this.ruleCompareIds.includes(id)) {
+      await this.applyDependencyRules(id);
+    }
     if (this.monitoredIds.includes(id)) {
       this.debug(`State geändert: ${id}`);
       this.queueRender();

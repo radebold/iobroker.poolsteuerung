@@ -628,6 +628,108 @@
           "newLine": true
         }
       }
+    },
+    "rules": {
+      "type": "panel",
+      "label": "REGELN",
+      "items": {
+        "dependencyRules": {
+          "type": "table",
+          "label": "Abhängigkeiten",
+          "newLine": true,
+          "sm": 12,
+          "md": 12,
+          "lg": 12,
+          "help": "Mit + können beliebig viele Regeln angelegt werden. Beispiel: Wenn Umwälzpumpe == 1, dann setze Dose 4 auf true, sonst false.",
+          "items": {
+            "enabled": {
+              "type": "checkbox",
+              "label": "Aktiv",
+              "width": "70px"
+            },
+            "name": {
+              "type": "text",
+              "label": "Name",
+              "width": "140px"
+            },
+            "compareStateId": {
+              "type": "objectId",
+              "label": "Vergleichs-State",
+              "objectTypes": [
+                "state"
+              ],
+              "width": "220px"
+            },
+            "operator": {
+              "type": "select",
+              "label": "Operator",
+              "width": "90px",
+              "options": [
+                {
+                  "label": "==",
+                  "value": "eq"
+                },
+                {
+                  "label": "!=",
+                  "value": "neq"
+                },
+                {
+                  "label": ">",
+                  "value": "gt"
+                },
+                {
+                  "label": ">=",
+                  "value": "gte"
+                },
+                {
+                  "label": "<",
+                  "value": "lt"
+                },
+                {
+                  "label": "<=",
+                  "value": "lte"
+                },
+                {
+                  "label": "true",
+                  "value": "istrue"
+                },
+                {
+                  "label": "false",
+                  "value": "isfalse"
+                }
+              ]
+            },
+            "compareValue": {
+              "type": "text",
+              "label": "Vergleichswert",
+              "width": "110px"
+            },
+            "targetStateId": {
+              "type": "objectId",
+              "label": "Ziel-State",
+              "objectTypes": [
+                "state"
+              ],
+              "width": "220px"
+            },
+            "thenValue": {
+              "type": "text",
+              "label": "Dann-Wert",
+              "width": "100px"
+            },
+            "elseValue": {
+              "type": "text",
+              "label": "Else-Wert",
+              "width": "100px"
+            },
+            "logEnabled": {
+              "type": "checkbox",
+              "label": "Log",
+              "width": "60px"
+            }
+          }
+        }
+      }
     }
   }
 }
