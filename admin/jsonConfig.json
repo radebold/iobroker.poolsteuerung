@@ -641,28 +641,32 @@
           "md": 12,
           "lg": 12,
           "help": "Mit + können beliebig viele Regeln angelegt werden. Beispiel: Wenn Umwälzpumpe == 1, dann setze Dose 4 auf true, sonst false.",
-          "items": {
-            "enabled": {
+          "items": [
+            {
+              "attr": "enabled",
               "type": "checkbox",
-              "label": "Aktiv",
+              "title": "Aktiv",
               "width": "70px"
             },
-            "name": {
+            {
+              "attr": "name",
               "type": "text",
-              "label": "Name",
+              "title": "Name",
               "width": "140px"
             },
-            "compareStateId": {
+            {
+              "attr": "compareStateId",
               "type": "objectId",
-              "label": "Vergleichs-State",
+              "title": "Vergleichs-State",
               "objectTypes": [
                 "state"
               ],
               "width": "220px"
             },
-            "operator": {
+            {
+              "attr": "operator",
               "type": "select",
-              "label": "Operator",
+              "title": "Operator",
               "width": "90px",
               "options": [
                 {
@@ -699,35 +703,40 @@
                 }
               ]
             },
-            "compareValue": {
+            {
+              "attr": "compareValue",
               "type": "text",
-              "label": "Vergleichswert",
+              "title": "Vergleichswert",
               "width": "110px"
             },
-            "targetStateId": {
+            {
+              "attr": "targetStateId",
               "type": "objectId",
-              "label": "Ziel-State",
+              "title": "Ziel-State",
               "objectTypes": [
                 "state"
               ],
               "width": "220px"
             },
-            "thenValue": {
+            {
+              "attr": "thenValue",
               "type": "text",
-              "label": "Dann-Wert",
+              "title": "Dann-Wert",
               "width": "100px"
             },
-            "elseValue": {
+            {
+              "attr": "elseValue",
               "type": "text",
-              "label": "Else-Wert",
+              "title": "Else-Wert",
               "width": "100px"
             },
-            "logEnabled": {
+            {
+              "attr": "logEnabled",
               "type": "checkbox",
-              "label": "Log",
+              "title": "Log",
               "width": "60px"
             }
-          }
+          ]
         }
       }
     }
