@@ -1044,7 +1044,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const autoChlor = await this.getText('poolsteuerung.0.status.auto.chlor', '--');
     const autoPh = await this.getText('poolsteuerung.0.status.auto.ph', '--');
     const autoHeatpump = await this.getText('poolsteuerung.0.status.auto.heatpump', '--');
-    const standbyMode = this.config.standbyModeEnabled === true;
+    const standbyMode = await this.getControlBool('control.standby', this.config.standbyModeEnabled === true);
     const modeActive = standbyMode ? 'standby' : 'normal';
     const standbyNext = standbyMode ? this.getNextStandbyRun(new Date()) : null;
     const pumpDecision = await this.getText('poolsteuerung.0.status.debug.lastPumpDecision', standbyMode ? 'Standby aktiv' : '--');
@@ -1633,10 +1633,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     await this.ensureState('status.auto.chlor', 'string', 'text', '', false);
     await this.ensureState('status.auto.ph', 'string', 'text', '', false);
     await this.ensureState('status.auto.heatpump', 'string', 'text', '', false);
-    await this.setStateAsync('status.auto.circulation', standbyMode ? 'STANDBY' : (this.config.enableCirculationControl !== false ? 'AKTIV' : 'AUS'), true);
-    await this.setStateAsync('status.auto.chlor', standbyMode ? 'STANDBY' : (this.config.enableChlorControl !== false ? 'AKTIV' : 'AUS'), true);
-    await this.setStateAsync('status.auto.ph', standbyMode ? 'STANDBY' : (this.config.enablePhControl !== false ? 'AKTIV' : 'AUS'), true);
-    await this.setStateAsync('status.auto.heatpump', standbyMode ? 'STANDBY' : (this.config.enableHeatpumpControl !== false ? 'AKTIV' : 'AUS'), true);
+    await this.setStateAsync('status.auto.circulation', standbyMode ? 'STANDBY' : (circulationEnabled ? 'AKTIV' : 'AUS'), true);
+    await this.setStateAsync('status.auto.chlor', standbyMode ? 'STANDBY' : (chlorEnabledMaster ? 'AKTIV' : 'AUS'), true);
+    await this.setStateAsync('status.auto.ph', standbyMode ? 'STANDBY' : (phEnabledMaster ? 'AKTIV' : 'AUS'), true);
+    await this.setStateAsync('status.auto.heatpump', standbyMode ? 'STANDBY' : (heatEnabledMaster ? 'AKTIV' : 'AUS'), true);
     await this.ensureState('status.standby.nextRun', 'string', 'text', '', false);
     await this.ensureState('status.standby.lastRun', 'number', 'value.time', 0, false);
     await this.ensureState('status.standby.lastDurationSec', 'number', 'value.interval', 0, false);
@@ -1714,7 +1714,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatReason = 'Standby aktiv';
     } else if (!heatEnabledMaster) {
       shouldHeat = currentHeat;
-      heatReason = currentHeat ? 'Manuell EIN (Steuerung deaktiviert)' : 'Steuerung deaktiviert';
+      heatReason = currentHeat ? 'Manuell EIN (Auto AUS)' : 'Steuerung deaktiviert';
     } else if (!pumpCurrent) {
       shouldHeat = false;
       heatReason = 'Umwälzpumpe AUS';
