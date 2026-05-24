@@ -406,11 +406,11 @@ class Poolsteuerung extends utils.Adapter {
       ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100))
       : 0;
 
-    const phBadge = !Number.isFinite(phNum) || !Number.isFinite(phSetNum)
+    const phBadge = !Number.isFinite(phNum)
       ? { cls: 'neutral', txt: '—' }
-      : phNum < phSetNum ? { cls: 'low', txt: 'Niedrig' }
-      : phNum > phSetNum ? { cls: 'high', txt: 'Hoch' }
-      : { cls: 'ok', txt: 'OK' };
+      : phNum < 7.1 ? { cls: 'low', txt: 'Niedrig' }
+      : phNum <= 7.25 ? { cls: 'ok', txt: 'OK' }
+      : { cls: 'high', txt: 'Hoch' };
 
     const orpBadge = !Number.isFinite(orpNum) || !Number.isFinite(orpOnNum) || !Number.isFinite(orpOffNum)
       ? { cls: 'neutral', txt: '—' }
@@ -635,23 +635,18 @@ body{
         <div class="status-pill ${on ? 'on' : 'off'}">${on ? 'EIN' : 'AUS'}</div>
       </div>`;
 
-    const row = (label, value) => `
-      <div class="info-row">
-        <div class="info-label">${esc(label)}</div>
-        <div class="info-value">${esc(value)}</div>
-      </div>`;
-
-    const mini = (label, value) => `
-      <div class="mini-card">
-        <div class="mini-label">${esc(label)}</div>
-        <div class="mini-value">${esc(value)}</div>
+    const quick = (label, value) => `
+      <div class="quick-card">
+        <div class="quick-label">${esc(label)}</div>
+        <div class="quick-value">${esc(value)}</div>
       </div>`;
 
     return `<!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <style>
-:root{--bg:#08111f;--bg2:#10203a;--card:#f7fbff;--line:rgba(15,23,42,.08);--text:#0f172a;--muted:#66758a}
-*{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,var(--bg2),var(--bg));font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:var(--text)}
+:root{--bg:#08111f;--bg2:#10203a;--line:rgba(15,23,42,.08);--text:#0f172a;--muted:#66758a}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,var(--bg2),var(--bg));font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:var(--text)}
 .wrap{padding:6px;display:grid;gap:8px}
 .card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid var(--line);border-radius:18px;padding:10px;box-shadow:0 10px 22px rgba(0,0,0,.16)}
 .hero{background:radial-gradient(circle at top right, rgba(85,200,255,.24), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
@@ -663,26 +658,20 @@ body{
 .temp{font-size:48px;font-weight:900;line-height:.9}
 .unit{font-size:17px;padding-bottom:5px;color:#d5e5f6}
 .scale{margin:4px 0 8px}.track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #11305b;transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(255,255,255,.28)}.scale-labels{display:flex;justify-content:space-between;font-size:10px;color:#d2dded;margin-top:4px}
-.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.metrics,.auto-grid,.status-grid,.quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px}
 .metric-label{font-size:11px;color:#d9e5f5}.metric-value{font-size:14px;font-weight:900;color:#fff}.metric-sub{font-size:10px;color:#c4d4e8;margin-top:3px}
 .section-title{font-size:15px;font-weight:900;color:#0f172a;margin-bottom:8px}
-.auto-grid,.mini-grid,.status-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.auto-card,.mini-card,.status-box{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}
-.auto-label,.mini-label,.status-hint{font-size:11px;color:#64748b}
-.auto-label{font-weight:700;margin-bottom:5px}
-.mini-label{font-weight:700;margin-bottom:4px}
-.mini-value{font-size:15px;font-weight:900;color:#0f172a}
+.auto-card,.quick-card,.status-box{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}
+.auto-label,.quick-label,.status-hint{font-size:11px;color:#64748b}
+.auto-label,.quick-label{font-weight:700;margin-bottom:5px}
+.quick-value{font-size:14px;font-weight:900;color:#0f172a;line-height:1.15}
 .mini-pill{display:inline-flex;align-items:center;justify-content:center;width:100%;padding:7px 8px;border-radius:999px;font-size:11px;font-weight:900;color:#fff}
 .mini-pill.active{background:linear-gradient(180deg,#56d56e,#36b357)}.mini-pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}.mini-pill.standby{background:linear-gradient(180deg,#8795aa,#64748b)}
 .status-name{font-size:14px;font-weight:900;color:#0f172a;line-height:1.1}
 .status-hint{margin-top:2px}
 .status-pill{display:inline-flex;align-items:center;justify-content:center;width:100%;margin-top:6px;padding:7px 8px;border-radius:999px;font-size:11px;font-weight:900;color:#fff}
 .status-pill.on{background:linear-gradient(180deg,#56d56e,#36b357)}.status-pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}
-.info-list{display:grid;gap:6px}
-.info-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:8px 10px}
-.info-label{font-size:12px;color:#475569;font-weight:700}
-.info-value{font-size:12px;font-weight:900;color:#0f172a;text-align:right;max-width:150px;word-break:break-word}
 </style></head><body><div class="wrap">
   <div class="card hero">
     <div class="header">
@@ -721,31 +710,19 @@ body{
 
   <div class="card">
     <div class="section-title">Energie & Steuerung</div>
-    <div class="info-list">
-      ${row('PV-Leistung', `${data.pv} W`)}
-      ${row('Netzeinspeisung', `${data.feedIn} W`)}
-      ${row('Netzbezug', `${data.gridSupply} W`)}
-      ${row('Batterie SoC', `${data.battery} %`)}
-      ${row('WP Freigabe', data.heatReason)}
-      ${row('Chlor Freigabe', data.chlorDecision)}
-      ${row('Zeitplan', data.pumpDecision)}
-      ${row('pH Prüfung', data.phDecision)}
-      ${row('pH Zeiten', data.phTimes)}
-      ${row('Standby', data.standbyNext)}
-      ${row('Dosierung', `${data.phLastDoseDurationSec} s`)}
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="section-title">Zusatzwerte</div>
-    <div class="mini-grid">
-      ${mini('Zeitplan', data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV')}
-      ${mini('PV Schwelle', `${data.threshold} W`)}
-      ${mini('ORP Grenzen', `${data.orpOnThreshold} / ${data.orpOffThreshold}`)}
-      ${mini('pH Tag', `${data.phDailyCount}`)}
-      ${mini('Pumpe ml/min', `${data.phFlowMlMin}`)}
-      ${mini('ml je 0,1 / 10m³', `${data.phMlPer01Per10}`)}
-      ${mini('Poolvolumen', `${data.volume} m³`)}
+    <div class="quick-grid">
+      ${quick('PV-Leistung', `${data.pv} W`)}
+      ${quick('Einspeisung', `${data.feedIn} W`)}
+      ${quick('Netzbezug', `${data.gridSupply} W`)}
+      ${quick('Batterie', `${data.battery} %`)}
+      ${quick('WP Freigabe', data.heatReason)}
+      ${quick('Chlor Freigabe', data.chlorDecision)}
+      ${quick('pH Prüfung', data.phDecision)}
+      ${quick('Zeitplan', data.pumpDecision)}
+      ${quick('pH Tag', `${data.phDailyCount}`)}
+      ${quick('ORP Grenzen', `${data.orpOnThreshold} / ${data.orpOffThreshold}`)}
+      ${quick('PV Schwelle', `${data.threshold} W`)}
+      ${quick('Poolvolumen', `${data.volume} m³`)}
     </div>
   </div>
 </div></body></html>`;
@@ -767,7 +744,7 @@ body{
       return 'good';
     };
 
-    const phClass = badgeClass(data.ph, 7.0, 7.4);
+    const phClass = badgeClass(data.ph, 7.1, 7.25);
     const orpClass = badgeClass(data.orp, Number(data.orpOnThreshold || 725), Number(data.orpOffThreshold || 750));
 
     const item = (name, hint, on) => `
@@ -946,9 +923,8 @@ body{
       return '<span class="ps-ab off">AUS</span>';
     };
 
-    const row = (k, v) => `<div class="ps-row"><div class="ps-k">${esc(k)}</div><div class="ps-v">${esc(v)}</div></div>`;
     const statusBox = (name, hint, on) => `<div class="ps-sb"><div class="ps-sn">${esc(name)}</div><div class="ps-sh">${esc(hint)}</div><div class="ps-pill ${on ? 'on' : 'off'}">${on ? 'EIN' : 'AUS'}</div></div>`;
-    const mini = (l, v) => `<div class="ps-mini"><div class="ps-miniL">${esc(l)}</div><div class="ps-miniV">${esc(v)}</div></div>`;
+    const quick = (l, v) => `<div class="ps-q"><div class="ps-ql">${esc(l)}</div><div class="ps-qv">${esc(v)}</div></div>`;
 
     return `<!-- phone-render:${esc(data.updated)} -->
 <style>
@@ -958,67 +934,58 @@ body{
 .ps-header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}.ps-title{font-size:16px;font-weight:900}.ps-sub{font-size:10px;color:#d2dded;text-align:right}.ps-mode{display:inline-flex;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#67cfff,#6f7bff);font-size:9px;font-weight:900;color:#fff;margin-bottom:4px}
 .ps-tempRow{display:flex;align-items:flex-end;gap:5px;margin:8px 0 6px}.ps-temp{font-size:52px;font-weight:900;line-height:.9}.ps-unit{font-size:18px;padding-bottom:6px;color:#d5e5f6}
 .ps-scale{margin:4px 0 8px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #11305b;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;font-size:10px;color:#d2dded;margin-top:4px}
-.ps-metrics,.ps-auto,.ps-statusGrid,.ps-miniGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px}.ps-ml{font-size:11px;color:#d9e5f5}.ps-mv{font-size:14px;font-weight:900;color:#fff}.ps-ms{font-size:10px;color:#c4d4e8;margin-top:3px}
 .ps-section{font-size:15px;font-weight:900;color:#0f172a;margin-bottom:8px}
-.ps-autoCard,.ps-mini,.ps-sb{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}.ps-autoL,.ps-miniL,.ps-sh{font-size:11px;color:#64748b}.ps-autoL{font-weight:700;margin-bottom:5px}.ps-miniL{font-weight:700;margin-bottom:4px}
+.ps-autoCard,.ps-sb,.ps-q{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}.ps-autoL,.ps-ql,.ps-sh{font-size:11px;color:#64748b}.ps-autoL,.ps-ql{font-weight:700;margin-bottom:4px}
 .ps-ab{display:inline-flex;align-items:center;justify-content:center;width:100%;padding:7px 8px;border-radius:999px;font-size:11px;font-weight:900;color:#fff}.ps-ab.active{background:linear-gradient(180deg,#56d56e,#36b357)}.ps-ab.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}.ps-ab.standby{background:linear-gradient(180deg,#8795aa,#64748b)}
 .ps-sn{font-size:14px;font-weight:900;color:#0f172a;line-height:1.1}.ps-sh{margin-top:2px}.ps-pill{display:inline-flex;align-items:center;justify-content:center;width:100%;margin-top:6px;padding:7px 8px;border-radius:999px;font-size:11px;font-weight:900;color:#fff}.ps-pill.on{background:linear-gradient(180deg,#56d56e,#36b357)}.ps-pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}
-.ps-list{display:grid;gap:6px}.ps-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:8px 10px}.ps-k{font-size:12px;color:#475569;font-weight:700}.ps-v{font-size:12px;font-weight:900;color:#0f172a;text-align:right;max-width:150px;word-break:break-word}
-.ps-miniV{font-size:16px;font-weight:900;color:#0f172a}
+.ps-qv{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
 </style>
 <div class="ps-wrap">
-<div class="ps-card ps-hero">
-  <div class="ps-header"><div class="ps-title">Pool Manager</div><div class="ps-sub"><div class="ps-mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div></div>
-  <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
-  <div class="ps-scale"><div class="ps-track"><div class="ps-dot"></div></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
-  <div class="ps-metrics">
-    <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${esc(data.ph)}</div><div class="ps-ms">Soll ${esc(data.phSet)}</div></div>
-    <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${esc(data.orp)}</div><div class="ps-ms">Soll ${esc(data.orpSet)}</div></div>
-    <div class="ps-metric"><div class="ps-ml">Außen</div><div class="ps-mv">${esc(data.outsideTemp)}°C</div><div class="ps-ms">Außen</div></div>
-    <div class="ps-metric"><div class="ps-ml">Soll</div><div class="ps-mv">${esc(data.targetTemp)}°C</div><div class="ps-ms">Soll</div></div>
+  <div class="ps-card ps-hero">
+    <div class="ps-header"><div class="ps-title">Pool Manager</div><div class="ps-sub"><div class="ps-mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div></div>
+    <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
+    <div class="ps-scale"><div class="ps-track"><div class="ps-dot"></div></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
+    <div class="ps-metrics">
+      <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${esc(data.ph)}</div><div class="ps-ms">Soll ${esc(data.phSet)}</div></div>
+      <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${esc(data.orp)}</div><div class="ps-ms">Soll ${esc(data.orpSet)}</div></div>
+      <div class="ps-metric"><div class="ps-ml">Außen</div><div class="ps-mv">${esc(data.outsideTemp)}°C</div><div class="ps-ms">Außen</div></div>
+      <div class="ps-metric"><div class="ps-ml">Soll</div><div class="ps-mv">${esc(data.targetTemp)}°C</div><div class="ps-ms">Soll</div></div>
+    </div>
   </div>
-</div>
 
-<div class="ps-card"><div class="ps-section">Automatik</div><div class="ps-auto">
-  <div class="ps-autoCard"><div class="ps-autoL">Umwälzpumpe</div>${autoBadge(data.autoCirculation)}</div>
-  <div class="ps-autoCard"><div class="ps-autoL">Chlor</div>${autoBadge(data.autoChlor)}</div>
-  <div class="ps-autoCard"><div class="ps-autoL">pH</div>${autoBadge(data.autoPh)}</div>
-  <div class="ps-autoCard"><div class="ps-autoL">Wärmepumpe</div>${autoBadge(data.autoHeatpump)}</div>
-</div></div>
+  <div class="ps-card"><div class="ps-section">Automatik</div><div class="ps-auto">
+    <div class="ps-autoCard"><div class="ps-autoL">Umwälzpumpe</div>${autoBadge(data.autoCirculation)}</div>
+    <div class="ps-autoCard"><div class="ps-autoL">Chlor</div>${autoBadge(data.autoChlor)}</div>
+    <div class="ps-autoCard"><div class="ps-autoL">pH</div>${autoBadge(data.autoPh)}</div>
+    <div class="ps-autoCard"><div class="ps-autoL">Wärmepumpe</div>${autoBadge(data.autoHeatpump)}</div>
+  </div></div>
 
-<div class="ps-card"><div class="ps-section">Aktoren & Status</div><div class="ps-statusGrid">
-  ${statusBox('Umwälzpumpe','IST-Zustand',data.pumpOn)}
-  ${statusBox('Chlorinator','ORP-Regelung',data.chlorOn)}
-  ${statusBox('pH-Dosierpumpe','Prüfzeiten',data.phPumpOn)}
-  ${statusBox('Wärmepumpe','PV-Freigabe',data.heatpumpOn)}
-</div></div>
+  <div class="ps-card"><div class="ps-section">Aktoren & Status</div><div class="ps-statusGrid">
+    ${statusBox('Umwälzpumpe','IST-Zustand',data.pumpOn)}
+    ${statusBox('Chlorinator','ORP-Regelung',data.chlorOn)}
+    ${statusBox('pH-Dosierpumpe','Prüfzeiten',data.phPumpOn)}
+    ${statusBox('Wärmepumpe','PV-Freigabe',data.heatpumpOn)}
+  </div></div>
 
-<div class="ps-card"><div class="ps-section">Energie & Steuerung</div><div class="ps-list">
-  ${row('PV-Leistung', `${data.pv} W`)}
-  ${row('Netzeinspeisung', `${data.feedIn} W`)}
-  ${row('Netzbezug', `${data.gridSupply} W`)}
-  ${row('Batterie SoC', `${data.battery} %`)}
-  ${row('WP Freigabe', data.heatReason)}
-  ${row('Chlor Freigabe', data.chlorDecision)}
-  ${row('Zeitplan', data.pumpDecision)}
-  ${row('pH Prüfung', data.phDecision)}
-  ${row('pH Zeiten', data.phTimes)}
-  ${row('Standby', data.standbyNext)}
-  ${row('Dosierung', `${data.phLastDoseDurationSec} s`)}
-</div></div>
-
-<div class="ps-card"><div class="ps-section">Zusatzwerte</div><div class="ps-miniGrid">
-  ${mini('Zeitplan', data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV')}
-  ${mini('PV Schwelle', `${data.threshold} W`)}
-  ${mini('ORP Grenzen', `${data.orpOnThreshold} / ${data.orpOffThreshold}`)}
-  ${mini('pH Tag', `${data.phDailyCount}`)}
-  ${mini('Pumpe ml/min', `${data.phFlowMlMin}`)}
-  ${mini('ml je 0,1 / 10m³', `${data.phMlPer01Per10}`)}
-  ${mini('Poolvolumen', `${data.volume} m³`)}
-</div></div>
+  <div class="ps-card"><div class="ps-section">Energie & Steuerung</div><div class="ps-quickGrid">
+    ${quick('PV-Leistung', `${data.pv} W`)}
+    ${quick('Einspeisung', `${data.feedIn} W`)}
+    ${quick('Netzbezug', `${data.gridSupply} W`)}
+    ${quick('Batterie', `${data.battery} %`)}
+    ${quick('WP Freigabe', data.heatReason)}
+    ${quick('Chlor Freigabe', data.chlorDecision)}
+    ${quick('pH Prüfung', data.phDecision)}
+    ${quick('Zeitplan', data.pumpDecision)}
+    ${quick('pH Tag', `${data.phDailyCount}`)}
+    ${quick('ORP Grenzen', `${data.orpOnThreshold} / ${data.orpOffThreshold}`)}
+    ${quick('PV Schwelle', `${data.threshold} W`)}
+    ${quick('Poolvolumen', `${data.volume} m³`)}
+  </div></div>
 </div>`;
   }
+
 
 
 
@@ -2034,6 +2001,25 @@ body{
     return !!state.val;
   }
 
+
+  async syncControlStates() {
+    const standby = await this.getControlBool('control.standby', this.config.standbyModeEnabled === true);
+    if (!standby) return;
+    const autoIds = [
+      'control.auto.circulation',
+      'control.auto.chlor',
+      'control.auto.ph',
+      'control.auto.heatpump'
+    ];
+    for (const id of autoIds) {
+      try {
+        await this.setStateIfChanged(id, false, true);
+      } catch (e) {
+        this.log.warn(`Control-State ${id} konnte nicht synchronisiert werden: ${e.message || e}`);
+      }
+    }
+  }
+
   async onReady() {
     try {
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
@@ -2045,6 +2031,7 @@ body{
       await this.ensureControlState('control.auto.chlor', this.config.enableChlorControl !== false);
       await this.ensureControlState('control.auto.ph', this.config.enablePhControl !== false);
       await this.ensureControlState('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
+      await this.syncControlStates();
       await this.setStateAsync('info.connection', true, true);
       await this.subscribeConfiguredStates();
       try { this.subscribeStates('control.*'); } catch {}
@@ -2099,6 +2086,12 @@ body{
     if (!state) return;
     if (id && id.startsWith(`${this.namespace}.control.`)) {
       try {
+        if (id === `${this.namespace}.control.standby` && !!state.val === true) {
+          await this.setStateIfChanged('control.auto.circulation', false, false);
+          await this.setStateIfChanged('control.auto.chlor', false, false);
+          await this.setStateIfChanged('control.auto.ph', false, false);
+          await this.setStateIfChanged('control.auto.heatpump', false, false);
+        }
         await this.applyControlLogic();
         await this.renderVis();
       } catch (e) {
