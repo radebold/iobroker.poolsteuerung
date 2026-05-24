@@ -540,6 +540,10 @@ body{
     <div class="card">
       <div class="section">Energie & Steuerung</div>
       <div class="stack">
+        ${kv('Umwälzpumpe Auto', data.autoCirculation)}
+        ${kv('Chlor Auto', data.autoChlor)}
+        ${kv('pH Auto', data.autoPh)}
+        ${kv('WP Auto', data.autoHeatpump)}
         ${kv('PV-Leistung', `${data.pv} W`)}
         ${kv('Netzeinspeisung', `${data.feedIn} W`)}
         ${kv('Netzbezug', `${data.gridSupply} W`)}
@@ -621,6 +625,13 @@ body{
     <div class="box"><div class="k">Außen</div><div class="v">${esc(data.outsideTemp)}°C</div></div>
     <div class="box"><div class="k">Soll</div><div class="v">${esc(data.targetTemp)}°C</div></div>
   </div>
+</div>
+<div class="card">
+  <div class="h1" style="font-size:20px">Automatik</div>
+  ${row('Umwälzpumpe', data.autoCirculation)}
+  ${row('Chlor', data.autoChlor)}
+  ${row('pH', data.autoPh)}
+  ${row('Wärmepumpe', data.autoHeatpump)}
 </div>
 <div class="card">
   <div class="h1" style="font-size:20px">Energie</div>
@@ -795,6 +806,10 @@ body{
     <div class="ps-card">
       <div class="ps-title">Energie & Steuerung</div>
       <div class="ps-list">
+        <div class="ps-row"><div class="ps-k">Pumpe Auto</div><div class="ps-v">${esc(data.autoCirculation)}</div></div>
+        <div class="ps-row"><div class="ps-k">Chlor Auto</div><div class="ps-v">${esc(data.autoChlor)}</div></div>
+        <div class="ps-row"><div class="ps-k">pH Auto</div><div class="ps-v">${esc(data.autoPh)}</div></div>
+        <div class="ps-row"><div class="ps-k">WP Auto</div><div class="ps-v">${esc(data.autoHeatpump)}</div></div>
         <div class="ps-row"><div class="ps-k">PV-Leistung</div><div class="ps-v">${esc(data.pv)} W</div></div>
         <div class="ps-row"><div class="ps-k">Netzeinspeisung</div><div class="ps-v">${esc(data.feedIn)} W</div></div>
         <div class="ps-row"><div class="ps-k">Netzbezug</div><div class="ps-v">${esc(data.gridSupply)} W</div></div>
@@ -982,6 +997,10 @@ body{
     const battery = this.fmt(await this.getNumber(this.config.batterySocStateId, 0), 0, '0');
     const targetTemp = this.fmt(parseNum(this.config.heatpumpTargetTemp), 1, '24.0');
     const heatReason = await this.getText('poolsteuerung.0.status.heatpump.lastReason', '--');
+    const autoCirculation = await this.getText('poolsteuerung.0.status.auto.circulation', '--');
+    const autoChlor = await this.getText('poolsteuerung.0.status.auto.chlor', '--');
+    const autoPh = await this.getText('poolsteuerung.0.status.auto.ph', '--');
+    const autoHeatpump = await this.getText('poolsteuerung.0.status.auto.heatpump', '--');
     const standbyMode = this.config.standbyModeEnabled === true;
     const modeActive = standbyMode ? 'standby' : 'normal';
     const standbyNext = standbyMode ? this.getNextStandbyRun(new Date()) : null;
@@ -1068,6 +1087,7 @@ body{
 
     const stableData = {
       ph, orp, poolTemp, outsideTemp, pv, feedIn, gridSupply, battery, targetTemp, heatReason, volume, modeActive,
+      autoCirculation, autoChlor, autoPh, autoHeatpump,
       phSet: this.fmt(parseNum(this.config.phSetpoint), 2, '--'),
       phTimes: standbyMode ? '-' : (this.config.phCheckTimes || '-'),
       standbyNext: standbyNext ? standbyNext.toLocaleString('de-DE') : '-',
@@ -1534,6 +1554,14 @@ body{
     await this.setStateAsync('status.debug.lastPumpScheduleActive', pumpTarget, true);
     await this.ensureState('status.mode.active', 'string', 'text', 'normal', false);
     await this.setStateAsync('status.mode.active', standbyMode ? 'standby' : 'normal', true);
+    await this.ensureState('status.auto.circulation', 'string', 'text', '', false);
+    await this.ensureState('status.auto.chlor', 'string', 'text', '', false);
+    await this.ensureState('status.auto.ph', 'string', 'text', '', false);
+    await this.ensureState('status.auto.heatpump', 'string', 'text', '', false);
+    await this.setStateAsync('status.auto.circulation', standbyMode ? 'STANDBY' : (this.config.enableCirculationControl !== false ? 'AKTIV' : 'AUS'), true);
+    await this.setStateAsync('status.auto.chlor', standbyMode ? 'STANDBY' : (this.config.enableChlorControl !== false ? 'AKTIV' : 'AUS'), true);
+    await this.setStateAsync('status.auto.ph', standbyMode ? 'STANDBY' : (this.config.enablePhControl !== false ? 'AKTIV' : 'AUS'), true);
+    await this.setStateAsync('status.auto.heatpump', standbyMode ? 'STANDBY' : (this.config.enableHeatpumpControl !== false ? 'AKTIV' : 'AUS'), true);
     await this.ensureState('status.standby.nextRun', 'string', 'text', '', false);
     await this.ensureState('status.standby.lastRun', 'number', 'value.time', 0, false);
     await this.ensureState('status.standby.lastDurationSec', 'number', 'value.interval', 0, false);
