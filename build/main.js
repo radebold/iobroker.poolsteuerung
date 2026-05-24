@@ -649,22 +649,22 @@ body{
 :root{--bg:#08111f;--bg2:#10203a;--line:rgba(15,23,42,.08);--text:#0f172a;--muted:#66758a}
 *{box-sizing:border-box}
 body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,var(--bg2),var(--bg));font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:var(--text)}
-.wrap{padding:6px;display:grid;gap:8px}
-.card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid var(--line);border-radius:18px;padding:9px;box-shadow:0 10px 22px rgba(0,0,0,.16)}
+.wrap{padding:4px;display:grid;gap:6px}
+.card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid var(--line);border-radius:16px;padding:8px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
 .hero{background:radial-gradient(circle at top right, rgba(85,200,255,.24), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
 .header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}
 .title{font-size:16px;font-weight:900}
 .meta{text-align:right;font-size:10px;color:#d2dded;line-height:1.15}
 .mode-pill{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#67cfff,#6f7bff);color:#fff;font-size:9px;font-weight:900;margin-bottom:4px}
 .temp-row{display:flex;align-items:flex-end;gap:5px;margin:6px 0 5px}
-.temp{font-size:48px;font-weight:900;line-height:.9}
+.temp{font-size:44px;font-weight:900;line-height:.9}
 .unit{font-size:17px;padding-bottom:5px;color:#d5e5f6}
 .scale{margin:3px 0 7px}.track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #11305b;transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(255,255,255,.28)}.scale-labels{display:flex;justify-content:space-between;font-size:10px;color:#d2dded;margin-top:4px}
-.metrics,.auto-grid,.status-grid,.quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
-.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px}
+.metrics,.auto-grid,.status-grid,.quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:7px}
 .metric-label{font-size:11px;color:#d9e5f5}.metric-value{font-size:14px;font-weight:900;color:#fff}.metric-sub{font-size:10px;color:#c4d4e8;margin-top:3px}
-.section-title{font-size:15px;font-weight:900;color:#0f172a;margin-bottom:7px}
-.quick-card,.status-box{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}
+.section-title{font-size:14px;font-weight:900;color:#0f172a;margin-bottom:6px}
+.quick-card,.status-box{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}
 .quick-label,.status-hint{font-size:11px;color:#64748b}
 .quick-label{font-weight:700;margin-bottom:4px}
 .quick-value{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
@@ -719,16 +719,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     <div class="quick-grid">
       ${quick('PV-Leistung', `${data.pv} W`)}
       ${quick('Einspeisung', `${data.feedIn} W`)}
-      ${quick('Netzbezug', `${data.gridSupply} W`)}
       ${quick('Batterie', `${data.battery} %`)}
       ${quick('WP Freigabe', data.heatReason)}
       ${quick('Chlor Freigabe', data.chlorDecision)}
       ${quick('pH Prüfung', data.phDecision)}
-      ${quick('Zeitplan', data.pumpDecision)}
-      ${quick('pH Tag', `${data.phDailyCount}`)}
-      ${quick('ORP Grenzen', `${data.orpOnThreshold} / ${data.orpOffThreshold}`)}
-      ${quick('PV Schwelle', `${data.threshold} W`)}
-      ${quick('Poolvolumen', `${data.volume} m³`)}
     </div>
   </div>
 </div></body></html>`;
@@ -933,16 +927,16 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
     return `<!-- phone-render:${esc(data.updated)} -->
 <style>
-.ps-wrap{background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,#10203a,#08111f);padding:6px;display:grid;gap:8px;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
-.ps-card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:9px;box-shadow:0 10px 22px rgba(0,0,0,.16)}
+.ps-wrap{background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,#10203a,#08111f);padding:4px;display:grid;gap:6px;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
+.ps-card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:8px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
 .ps-hero{background:radial-gradient(circle at top right, rgba(85,200,255,.26), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
 .ps-header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}.ps-title{font-size:16px;font-weight:900}.ps-sub{font-size:10px;color:#d2dded;text-align:right}.ps-mode{display:inline-flex;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#67cfff,#6f7bff);font-size:9px;font-weight:900;color:#fff;margin-bottom:4px}
-.ps-tempRow{display:flex;align-items:flex-end;gap:5px;margin:6px 0 5px}.ps-temp{font-size:52px;font-weight:900;line-height:.9}.ps-unit{font-size:18px;padding-bottom:6px;color:#d5e5f6}
+.ps-tempRow{display:flex;align-items:flex-end;gap:5px;margin:6px 0 5px}.ps-temp{font-size:46px;font-weight:900;line-height:.9}.ps-unit{font-size:18px;padding-bottom:6px;color:#d5e5f6}
 .ps-scale{margin:3px 0 7px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #11305b;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;font-size:10px;color:#d2dded;margin-top:4px}
-.ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
-.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px}.ps-ml{font-size:11px;color:#d9e5f5}.ps-mv{font-size:14px;font-weight:900;color:#fff}.ps-ms{font-size:10px;color:#c4d4e8;margin-top:3px}
-.ps-section{font-size:15px;font-weight:900;color:#0f172a;margin-bottom:7px}
-.ps-sb,.ps-q{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}.ps-ql,.ps-sh{font-size:11px;color:#64748b}.ps-ql{font-weight:700;margin-bottom:4px}
+.ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:7px}.ps-ml{font-size:11px;color:#d9e5f5}.ps-mv{font-size:14px;font-weight:900;color:#fff}.ps-ms{font-size:10px;color:#c4d4e8;margin-top:3px}
+.ps-section{font-size:14px;font-weight:900;color:#0f172a;margin-bottom:6px}
+.ps-sb,.ps-q{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.ps-ql,.ps-sh{font-size:11px;color:#64748b}.ps-ql{font-weight:700;margin-bottom:4px}
 .ps-sb{min-height:54px;display:flex;flex-direction:column;justify-content:center}
 .ps-sb.on-state{background:linear-gradient(180deg,#f7fff8,#eefcf1)}
 .ps-sb.off-state{background:linear-gradient(180deg,#fff8f7,#fff0ee)}
@@ -984,16 +978,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   <div class="ps-card"><div class="ps-section">Energie & Steuerung</div><div class="ps-quickGrid">
     ${quick('PV-Leistung', `${data.pv} W`)}
     ${quick('Einspeisung', `${data.feedIn} W`)}
-    ${quick('Netzbezug', `${data.gridSupply} W`)}
     ${quick('Batterie', `${data.battery} %`)}
     ${quick('WP Freigabe', data.heatReason)}
     ${quick('Chlor Freigabe', data.chlorDecision)}
     ${quick('pH Prüfung', data.phDecision)}
-    ${quick('Zeitplan', data.pumpDecision)}
-    ${quick('pH Tag', `${data.phDailyCount}`)}
-    ${quick('ORP Grenzen', `${data.orpOnThreshold} / ${data.orpOffThreshold}`)}
-    ${quick('PV Schwelle', `${data.threshold} W`)}
-    ${quick('Poolvolumen', `${data.volume} m³`)}
   </div></div>
 </div>`;
   }
