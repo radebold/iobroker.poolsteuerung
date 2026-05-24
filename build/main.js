@@ -622,10 +622,13 @@ body{
       ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100))
       : 0;
 
-    const autoBadge = (state) => {
-      if (state === 'AKTIV') return '<span class="mini-pill active">AKTIV</span>';
-      if (state === 'STANDBY') return '<span class="mini-pill standby">STANDBY</span>';
-      return '<span class="mini-pill off">AUS</span>';
+    const autoBox = (name, state) => {
+      const cls = state === 'AKTIV' ? 'is-on' : state === 'STANDBY' ? 'is-standby' : 'is-off';
+      return `
+      <div class="status-box ${cls}">
+        <div class="status-name">${esc(name)}</div>
+        <div class="status-hint">Automatik · ${esc(state)}</div>
+      </div>`;
     };
 
     const statusBox = (name, hint, on) => `
@@ -661,19 +664,19 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px}
 .metric-label{font-size:11px;color:#d9e5f5}.metric-value{font-size:14px;font-weight:900;color:#fff}.metric-sub{font-size:10px;color:#c4d4e8;margin-top:3px}
 .section-title{font-size:15px;font-weight:900;color:#0f172a;margin-bottom:7px}
-.auto-card,.quick-card,.status-box{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}
-.auto-label,.quick-label,.status-hint{font-size:11px;color:#64748b}
-.auto-label,.quick-label{font-weight:700;margin-bottom:4px}
+.quick-card,.status-box{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}
+.quick-label,.status-hint{font-size:11px;color:#64748b}
+.quick-label{font-weight:700;margin-bottom:4px}
 .quick-value{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
-.mini-pill{display:inline-flex;align-items:center;justify-content:center;width:100%;padding:7px 8px;border-radius:999px;font-size:11px;font-weight:900;color:#fff}
-.mini-pill.active{background:linear-gradient(180deg,#56d56e,#36b357)}.mini-pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}.mini-pill.standby{background:linear-gradient(180deg,#8795aa,#64748b)}
 .status-grid{gap:7px}
 .status-box{padding:7px 8px;min-height:54px;display:flex;flex-direction:column;justify-content:center}
 .status-box.is-on{background:linear-gradient(180deg,#f7fff8,#eefcf1)}
 .status-box.is-off{background:linear-gradient(180deg,#fff8f7,#fff0ee)}
+.status-box.is-standby{background:linear-gradient(180deg,#f6f8fb,#eef2f7)}
 .status-name{font-size:14px;font-weight:900;line-height:1.1}
 .status-box.is-on .status-name{color:#179a3b}
 .status-box.is-off .status-name{color:#d6493b}
+.status-box.is-standby .status-name{color:#64748b}
 .status-hint{margin-top:3px}
 </style></head><body><div class="wrap">
   <div class="card hero">
@@ -693,11 +696,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   <div class="card">
     <div class="section-title">Automatik</div>
-    <div class="auto-grid">
-      <div class="auto-card"><div class="auto-label">Umwälzpumpe</div>${autoBadge(data.autoCirculation)}</div>
-      <div class="auto-card"><div class="auto-label">Chlor</div>${autoBadge(data.autoChlor)}</div>
-      <div class="auto-card"><div class="auto-label">pH</div>${autoBadge(data.autoPh)}</div>
-      <div class="auto-card"><div class="auto-label">Wärmepumpe</div>${autoBadge(data.autoHeatpump)}</div>
+    <div class="status-grid">
+      ${autoBox('Umwälzpumpe', data.autoCirculation)}
+      ${autoBox('Chlor', data.autoChlor)}
+      ${autoBox('pH', data.autoPh)}
+      ${autoBox('Wärmepumpe', data.autoHeatpump)}
     </div>
   </div>
 
@@ -920,10 +923,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100))
       : 0;
 
-    const autoBadge = (state) => {
-      if (state === 'AKTIV') return '<span class="ps-ab active">AKTIV</span>';
-      if (state === 'STANDBY') return '<span class="ps-ab standby">STANDBY</span>';
-      return '<span class="ps-ab off">AUS</span>';
+    const autoBox = (name, state) => {
+      const cls = state === 'AKTIV' ? 'on-state' : state === 'STANDBY' ? 'standby-state' : 'off-state';
+      return `<div class="ps-sb ${cls}"><div class="ps-sn">${esc(name)}</div><div class="ps-sh">Automatik · ${esc(state)}</div></div>`;
     };
 
     const statusBox = (name, hint, on) => `<div class="ps-sb ${on ? 'on-state' : 'off-state'}"><div class="ps-sn">${esc(name)}</div><div class="ps-sh">${esc(hint)} · ${on ? 'EIN' : 'AUS'}</div></div>`;
@@ -940,14 +942,15 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
 .ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px}.ps-ml{font-size:11px;color:#d9e5f5}.ps-mv{font-size:14px;font-weight:900;color:#fff}.ps-ms{font-size:10px;color:#c4d4e8;margin-top:3px}
 .ps-section{font-size:15px;font-weight:900;color:#0f172a;margin-bottom:7px}
-.ps-autoCard,.ps-sb,.ps-q{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}.ps-autoL,.ps-ql,.ps-sh{font-size:11px;color:#64748b}.ps-autoL,.ps-ql{font-weight:700;margin-bottom:4px}
-.ps-ab{display:inline-flex;align-items:center;justify-content:center;width:100%;padding:7px 8px;border-radius:999px;font-size:11px;font-weight:900;color:#fff}.ps-ab.active{background:linear-gradient(180deg,#56d56e,#36b357)}.ps-ab.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}.ps-ab.standby{background:linear-gradient(180deg,#8795aa,#64748b)}
+.ps-sb,.ps-q{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}.ps-ql,.ps-sh{font-size:11px;color:#64748b}.ps-ql{font-weight:700;margin-bottom:4px}
 .ps-sb{min-height:54px;display:flex;flex-direction:column;justify-content:center}
 .ps-sb.on-state{background:linear-gradient(180deg,#f7fff8,#eefcf1)}
 .ps-sb.off-state{background:linear-gradient(180deg,#fff8f7,#fff0ee)}
+.ps-sb.standby-state{background:linear-gradient(180deg,#f6f8fb,#eef2f7)}
 .ps-sn{font-size:14px;font-weight:900;line-height:1.1}
 .ps-sb.on-state .ps-sn{color:#179a3b}
 .ps-sb.off-state .ps-sn{color:#d6493b}
+.ps-sb.standby-state .ps-sn{color:#64748b}
 .ps-sh{margin-top:3px}
 .ps-qv{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
 </style>
@@ -964,11 +967,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     </div>
   </div>
 
-  <div class="ps-card"><div class="ps-section">Automatik</div><div class="ps-auto">
-    <div class="ps-autoCard"><div class="ps-autoL">Umwälzpumpe</div>${autoBadge(data.autoCirculation)}</div>
-    <div class="ps-autoCard"><div class="ps-autoL">Chlor</div>${autoBadge(data.autoChlor)}</div>
-    <div class="ps-autoCard"><div class="ps-autoL">pH</div>${autoBadge(data.autoPh)}</div>
-    <div class="ps-autoCard"><div class="ps-autoL">Wärmepumpe</div>${autoBadge(data.autoHeatpump)}</div>
+  <div class="ps-card"><div class="ps-section">Automatik</div><div class="ps-statusGrid">
+    ${autoBox('Umwälzpumpe', data.autoCirculation)}
+    ${autoBox('Chlor', data.autoChlor)}
+    ${autoBox('pH', data.autoPh)}
+    ${autoBox('Wärmepumpe', data.autoHeatpump)}
   </div></div>
 
   <div class="ps-card"><div class="ps-section">Aktoren & Status</div><div class="ps-statusGrid">
