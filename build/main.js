@@ -613,6 +613,7 @@ body{
         ${mini('Pumpe ml/min', `${data.phFlowMlMin}`, 'info')}
         ${mini('ml je 0,1 / 10m³', `${data.phMlPer01Per10}`, 'info')}
         ${mini('Poolvolumen', `${data.volume} m³`, 'highlight')}
+        ${mini('Granulat manuell', data.manualGranulateText, 'highlight')}
       </div>
     </div>
   </div>
@@ -677,7 +678,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .quick-label,.status-hint{font-size:11px;color:#64748b}
 .quick-label{font-weight:700;margin-bottom:4px}
 .quick-value{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
-.log-card{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.log-text{font-size:12px;font-weight:700;line-height:1.3;color:#0f172a;word-break:break-word}.log-meta{margin-top:4px;font-size:10px;color:#64748b}
+.log-card{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.log-card.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.log-card.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.log-card.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.log-text{font-size:12px;font-weight:700;line-height:1.3;color:#0f172a;word-break:break-word}.log-meta{margin-top:4px;font-size:10px;color:#64748b}
 .status-grid{gap:7px}
 .status-box{padding:7px 8px;min-height:54px;display:flex;flex-direction:column;justify-content:center}
 .status-box.is-on{background:linear-gradient(180deg,#f7fff8,#eefcf1)}
@@ -739,12 +740,14 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   <div class="card">
     <div class="section-title">pH Info</div>
     <div class="quick-grid">
-      ${quick('Berechnet', `${data.phCalculatedDoseSec} s`)}
-      ${quick('Letzte Dosis', `${data.phLastDoseDurationSec} s`)}
+      ${quick('Berechnet', `${data.phCalculatedDoseSec} s / ${data.phCalculatedDoseMl} ml`)}
+      ${quick('Letzte Dosis', `${data.phLastDoseDurationSec} s / ${data.phLastDoseMl} ml`)}
       ${quick('Heute dosiert', `${data.phDailyCount}x`)}
       ${quick('Nächste Prüfung', data.phNextCheck)}
+    ${quick('Granulat manuell', data.manualGranulateText)}
+      ${quick('Granulat manuell', data.manualGranulateText)}
     </div>
-    <div class="log-card">
+    <div class="log-card info-${esc(data.phInfoLevel)}">
       <div class="quick-label">Letzte Meldung</div>
       <div class="log-text">${esc(data.phInfoText)}</div>
       <div class="log-meta">Letzte Dosierung: ${esc(data.phLastDoseAt)}</div>
@@ -976,7 +979,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-sb.standby-state .ps-sn{color:#64748b}
 .ps-sh{margin-top:3px}
 .ps-qv{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
-.ps-log{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.ps-logt{font-size:12px;font-weight:700;line-height:1.3;color:#0f172a;word-break:break-word}.ps-logm{margin-top:4px;font-size:10px;color:#64748b}
+.ps-log{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.ps-log.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.ps-log.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.ps-log.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.ps-logt{font-size:12px;font-weight:700;line-height:1.3;color:#0f172a;word-break:break-word}.ps-logm{margin-top:4px;font-size:10px;color:#64748b}
 </style>
 <div class="ps-wrap">
   <div class="ps-card ps-hero">
@@ -1014,11 +1017,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('pH Prüfung', data.phDecision)}
   </div></div>
   <div class="ps-card"><div class="ps-section">pH Info</div><div class="ps-quickGrid">
-    ${quick('Berechnet', `${data.phCalculatedDoseSec} s`)}
-    ${quick('Letzte Dosis', `${data.phLastDoseDurationSec} s`)}
+    ${quick('Berechnet', `${data.phCalculatedDoseSec} s / ${data.phCalculatedDoseMl} ml`)}
+    ${quick('Letzte Dosis', `${data.phLastDoseDurationSec} s / ${data.phLastDoseMl} ml`)}
     ${quick('Heute dosiert', `${data.phDailyCount}x`)}
     ${quick('Nächste Prüfung', data.phNextCheck)}
-  </div><div class="ps-log"><div class="ps-ql">Letzte Meldung</div><div class="ps-logt">${esc(data.phInfoText)}</div><div class="ps-logm">Letzte Dosierung: ${esc(data.phLastDoseAt)}</div></div></div>
+  </div><div class="ps-log info-${esc(data.phInfoLevel)}"><div class="ps-ql">Letzte Meldung</div><div class="ps-logt">${esc(data.phInfoText)}</div><div class="ps-logm">Letzte Dosierung: ${esc(data.phLastDoseAt)}</div></div></div>
 </div>`;
   }
 
@@ -1055,7 +1058,23 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const phInfoText = phLastStartInfo || phDecision || '--';
     const nextPhCheck = standbyMode ? null : this.getNextPhCheck(new Date());
     const phNextCheck = nextPhCheck ? nextPhCheck.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
-    const phFlowMlMin = this.fmt(parseNum(this.config.phPumpFlowMlPerMin), 0, '--');
+    const phFlowMlMinNum = parseNum(this.config.phPumpFlowMlPerMin);
+    const phFlowMlMin = this.fmt(phFlowMlMinNum, 0, '--');
+    const phCalculatedDoseMl = Number.isFinite(phFlowMlMinNum) ? this.fmt((parseNum(phCalculatedDoseSec) || 0) * phFlowMlMinNum / 60, 0, '0') : '--';
+    const phLastDoseMl = Number.isFinite(phFlowMlMinNum) ? this.fmt((parseNum(phLastDoseDurationSec) || 0) * phFlowMlMinNum / 60, 0, '0') : '--';
+    const phCurrentNum = parseNum(ph);
+    const phTargetNum = parseNum(this.config.phSetpoint);
+    const manualGranulateGNum = Number.isFinite(phCurrentNum) && Number.isFinite(phTargetNum) && phCurrentNum > phTargetNum
+      ? Math.round(((phCurrentNum - phTargetNum) / 0.1) * (this.calcVolume() / 10) * 100)
+      : 0;
+    const manualGranulateG = this.fmt(manualGranulateGNum, 0, '0');
+    const manualGranulateText = manualGranulateGNum > 0 ? `${manualGranulateG} g` : 'nicht nötig';
+    const infoLower = String(phInfoText || '').toLowerCase();
+    const phInfoLevel = infoLower.includes('block') || infoLower.includes('fehler') || infoLower.includes('ungültig')
+      ? 'warn'
+      : infoLower.includes('keine dosierung') || infoLower.includes('freigabe aus') || infoLower.includes('standby')
+        ? 'ok'
+        : 'info';
     const phMlPer01Per10 = this.fmt(parseNum(this.config.phDoseMlPer01Per10m3), 0, '--');
     const volume = this.fmt(this.calcVolume(), 2, '--');
 
@@ -1143,8 +1162,13 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       phDailyCount,
       phLastDoseDurationSec,
       phCalculatedDoseSec,
+      phCalculatedDoseMl,
       phLastDoseAt,
+      phLastDoseMl,
+      manualGranulateG,
+      manualGranulateText,
       phInfoText,
+      phInfoLevel,
       phNextCheck,
       phFlowMlMin,
       phMlPer01Per10,
