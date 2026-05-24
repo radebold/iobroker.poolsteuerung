@@ -261,7 +261,7 @@ class Poolsteuerung extends utils.Adapter {
       ['Umwälzpumpe', this.config.circulationPumpHeartbeatStateId, this.config.circulationPumpHeartbeatMaxAgeMin, 'status.checks.circulationPump'],
       ['Chlorinator', this.config.chlorinatorHeartbeatStateId, this.config.chlorinatorHeartbeatMaxAgeMin, 'status.checks.chlorinator'],
       ['pH-Dosierpumpe', this.config.phPumpHeartbeatStateId, this.config.phPumpHeartbeatMaxAgeMin, 'status.checks.phPump'],
-      ['Wärmepumpe', this.config.heatpumpHeartbeatStateId, this.config.heatpumpHeartbeatMaxAgeMin, 'status.checks.heatpump']
+      ['WP', this.config.heatpumpHeartbeatStateId, this.config.heatpumpHeartbeatMaxAgeMin, 'status.checks.heatpump']
     ];
 
     for (const [label, stateId, maxAgeMin, targetId] of checks) {
@@ -464,75 +464,75 @@ body{
     radial-gradient(circle at bottom right, rgba(106,124,255,.13), transparent 22%),
     linear-gradient(180deg,var(--bg2),var(--bg));
 }
-.wrap{width:100%;padding:12px}
-.layout{display:flex;gap:14px;align-items:flex-start}
-.col-left{flex:0 0 29%}
-.col-mid{flex:0 0 33%}
+.wrap{width:100%;padding:8px}
+.layout{display:flex;gap:10px;align-items:flex-start}
+.col-left{flex:0 0 28%}
+.col-mid{flex:0 0 34%}
 .col-right{flex:1 1 0}
 .card{
   background:linear-gradient(180deg,rgba(15,32,57,.96),rgba(10,24,44,.98));
-  border:1px solid var(--line);border-radius:24px;padding:16px;overflow:hidden;
+  border:1px solid var(--line);border-radius:20px;padding:12px;overflow:hidden;
   box-shadow:0 18px 40px rgba(0,0,0,.28)
 }
 .hero{
   background:
     radial-gradient(circle at top right, rgba(82,199,255,.22), transparent 28%),
     linear-gradient(180deg,rgba(23,46,80,.97),rgba(11,26,48,.98));
-  min-height:430px;
+  min-height:360px;
   border-color:rgba(86,196,255,.18);
 }
 .head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .title{font-size:16px;font-weight:900;letter-spacing:.2px}
-.meta{text-align:right;font-size:11px;color:var(--muted);line-height:1.2;max-width:96px}
+.meta{text-align:right;font-size:10px;color:var(--muted);line-height:1.15;max-width:86px}
 .mode{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:10px;font-weight:900;margin-bottom:6px;box-shadow:0 6px 18px rgba(88,172,255,.25)}
 .temp-wrap{margin:18px 0 6px;display:flex;align-items:flex-end;gap:8px}
-.temp{font-size:82px;font-weight:900;line-height:.9}
-.unit{font-size:22px;color:#d4e5f6;padding-bottom:9px}
-.temp-scale{margin:10px 0 18px}
+.temp{font-size:68px;font-weight:900;line-height:.9}
+.unit{font-size:18px;color:#d4e5f6;padding-bottom:7px}
+.temp-scale{margin:6px 0 10px}
 .scale-row{display:flex;justify-content:space-between;font-size:11px;color:#c7d6ea;margin-top:6px}
-.scale-track{position:relative;height:10px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
-.scale-dot{position:absolute;top:50%;width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid #0f213c;box-shadow:0 0 0 3px rgba(255,255,255,.25), 0 4px 12px rgba(0,0,0,.35);transform:translate(-50%,-50%);left:${tempPct}%}
+.scale-track{position:relative;height:8px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+.scale-dot{position:absolute;top:50%;width:13px;height:13px;border-radius:50%;background:#fff;border:3px solid #0f213c;box-shadow:0 0 0 3px rgba(255,255,255,.25), 0 4px 12px rgba(0,0,0,.35);transform:translate(-50%,-50%);left:${tempPct}%}
 .metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
-.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:12px;min-height:96px;position:relative}
+.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:9px;min-height:78px;position:relative}
 .metric.cool{background:linear-gradient(180deg,rgba(80,166,255,.15),rgba(255,255,255,.05))}
 .metric.warn{background:linear-gradient(180deg,rgba(255,145,96,.12),rgba(255,255,255,.05))}
 .metric-target{background:linear-gradient(180deg,rgba(86,217,120,.10),rgba(255,255,255,.05))}
 .metric-label{font-size:12px;color:#c8d4e6;font-weight:800;margin-bottom:6px}
-.metric-value{font-size:20px;font-weight:900;line-height:1.05}
-.metric-sub{font-size:11px;color:#aebed5;margin-top:7px}
+.metric-value{font-size:17px;font-weight:900;line-height:1.05}
+.metric-sub{font-size:10px;color:#aebed5;margin-top:4px}
 .badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;margin-top:8px;font-size:11px;font-weight:900}
 .badge.ok{background:rgba(64,196,99,.18);color:#9ff5b3}
 .badge.low{background:rgba(255,176,32,.18);color:#ffd480}
 .badge.high{background:rgba(255,107,87,.18);color:#ffc0b7}
 .badge.neutral{background:rgba(148,163,184,.18);color:#d8e1ec}
-.section{font-size:16px;font-weight:900;margin-bottom:10px}
+.section{font-size:15px;font-weight:900;margin-bottom:8px}
 .section.energy{color:#8eddff}
 .section.status{color:#89ffa7}
 .section.extra{color:#ffd37d}
-.stack{display:grid;gap:8px}
+.stack{display:grid;gap:6px}
 .kv{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:14px;padding:8px}
 .kv.energy{background:linear-gradient(90deg,rgba(68,171,255,.10),rgba(255,255,255,.04))}
 .kv.auto{background:linear-gradient(90deg,rgba(109,128,255,.14),rgba(255,255,255,.04))}
 .kv.reason{background:linear-gradient(90deg,rgba(94,210,158,.11),rgba(255,255,255,.04))}
 .kv-label{font-size:12px;color:#c6d7ea;font-weight:800;max-width:42%}
-.kv-value{font-size:15px;font-weight:900;line-height:1.2;text-align:right;word-break:break-word;max-width:58%}
-.status-card{margin-bottom:14px}
+.kv-value{font-size:13px;font-weight:900;line-height:1.15;text-align:right;word-break:break-word;max-width:58%}
+.status-card{margin-bottom:10px}
 .status-list{display:grid;gap:8px}
 .status-row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:14px;padding:9px}
 .status-on{background:linear-gradient(90deg,rgba(78,204,102,.10),rgba(255,255,255,.04))}
 .status-off{background:linear-gradient(90deg,rgba(255,108,95,.10),rgba(255,255,255,.04))}
 .status-left{min-width:0;max-width:calc(100% - 86px)}
-.status-name{font-size:16px;font-weight:900;line-height:1.1}
-.status-hint{font-size:11px;color:#aebed5;margin-top:4px}
-.pill{min-width:76px;text-align:center;padding:9px 11px;border-radius:999px;font-size:12px;font-weight:900;color:#fff;flex:0 0 auto}
+.status-name{font-size:14px;font-weight:900;line-height:1.1}
+.status-hint{font-size:10px;color:#aebed5;margin-top:2px}
+.pill{min-width:64px;text-align:center;padding:7px 8px;border-radius:999px;font-size:10px;font-weight:900;color:#fff;flex:0 0 auto}
 .pill.on{background:linear-gradient(180deg,#56d56e,#36b357);box-shadow:0 8px 18px rgba(56,179,87,.25)}
 .pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d);box-shadow:0 8px 18px rgba(223,74,61,.25)}
-.mini-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.mini-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .mini{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:14px;padding:9px}
 .mini.info{background:linear-gradient(180deg,rgba(90,166,255,.09),rgba(255,255,255,.04))}
 .mini.highlight{background:linear-gradient(180deg,rgba(255,190,76,.11),rgba(255,255,255,.04))}
 .mini-label{font-size:12px;color:#c8d7eb;font-weight:800;margin-bottom:6px}
-.mini-value{font-size:16px;font-weight:900;line-height:1.1}
+.mini-value{font-size:14px;font-weight:900;line-height:1.1}
 @media (max-width:1100px){
   .layout{display:block}
   .col-left,.col-mid,.col-right{width:auto}
@@ -569,7 +569,7 @@ body{
     <div class="card">
       <div class="section energy">Energie & Steuerung</div>
       <div class="stack">
-        ${kv('Umwälzpumpe Auto', data.autoCirculation, 'auto')}
+        ${kv('Pumpe Auto', data.autoCirculation, 'auto')}
         ${kv('Chlor Auto', data.autoChlor, 'auto')}
         ${kv('pH Auto', data.autoPh, 'auto')}
         ${kv('WP Auto', data.autoHeatpump, 'auto')}
