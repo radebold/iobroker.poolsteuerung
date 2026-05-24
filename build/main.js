@@ -1713,8 +1713,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       shouldHeat = false;
       heatReason = 'Standby aktiv';
     } else if (!heatEnabledMaster) {
-      shouldHeat = false;
-      heatReason = currentHeat ? 'Steuerung deaktiviert (bleibt EIN)' : 'Steuerung deaktiviert';
+      shouldHeat = currentHeat;
+      heatReason = currentHeat ? 'Manuell EIN (Steuerung deaktiviert)' : 'Steuerung deaktiviert';
     } else if (!pumpCurrent) {
       shouldHeat = false;
       heatReason = 'Umwälzpumpe AUS';
