@@ -405,6 +405,10 @@ class Poolsteuerung extends utils.Adapter {
     const tempPct = Number.isFinite(poolTempNum)
       ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100))
       : 0;
+    const targetTempNum = parseNum(data.targetTemp);
+    const targetPct = Number.isFinite(targetTempNum)
+      ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100))
+      : 0;
 
     const phBadge = !Number.isFinite(phNum)
       ? { cls: 'neutral', txt: '—' }
@@ -491,6 +495,7 @@ body{
 .temp-scale{margin:6px 0 10px}
 .scale-row{display:flex;justify-content:space-between;font-size:11px;color:#c7d6ea;margin-top:6px}
 .scale-track{position:relative;height:8px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+.scale-target{position:absolute;top:50%;left:${targetPct}%;width:3px;height:18px;border-radius:999px;background:#ffffff;box-shadow:0 0 0 1px rgba(15,33,60,.65), 0 0 0 2px rgba(255,255,255,.15);transform:translate(-50%,-50%)}
 .scale-dot{position:absolute;top:50%;width:13px;height:13px;border-radius:50%;background:#fff;border:3px solid #0f213c;box-shadow:0 0 0 3px rgba(255,255,255,.25), 0 4px 12px rgba(0,0,0,.35);transform:translate(-50%,-50%);left:${tempPct}%}
 .metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
 .metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:9px;min-height:78px;position:relative}
@@ -553,7 +558,7 @@ body{
         <div class="unit">°C</div>
       </div>
       <div class="temp-scale">
-        <div class="scale-track"><div class="scale-dot"></div></div>
+        <div class="scale-track"><div class="scale-target" title="Soll ${esc(data.targetTemp)} °C"></div><div class="scale-dot"></div></div>
         <div class="scale-row"><span>15 °C</span><span>Aktuell: ${esc(data.poolTemp)} °C</span><span>32 °C</span></div>
       </div>
       <div class="metrics">
@@ -621,6 +626,10 @@ body{
     const tempPct = Number.isFinite(poolTempNum)
       ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100))
       : 0;
+    const targetTempNum = parseNum(data.targetTemp);
+    const targetPct = Number.isFinite(targetTempNum)
+      ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100))
+      : 0;
 
     const autoBox = (name, state) => {
       const cls = state === 'AKTIV' ? 'is-on' : state === 'STANDBY' ? 'is-standby' : 'is-off';
@@ -659,7 +668,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .temp-row{display:flex;align-items:flex-end;gap:5px;margin:6px 0 5px}
 .temp{font-size:44px;font-weight:900;line-height:.9}
 .unit{font-size:17px;padding-bottom:5px;color:#d5e5f6}
-.scale{margin:3px 0 7px}.track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #11305b;transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(255,255,255,.28)}.scale-labels{display:flex;justify-content:space-between;font-size:10px;color:#d2dded;margin-top:4px}
+.scale{margin:3px 0 7px}.track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.target-mark{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#ffffff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%);box-shadow:0 0 0 1px rgba(255,255,255,.15)}.dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #11305b;transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(255,255,255,.28)}.scale-labels{display:flex;justify-content:space-between;font-size:10px;color:#d2dded;margin-top:4px}
 .metrics,.auto-grid,.status-grid,.quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:7px}
 .metric-label{font-size:11px;color:#d9e5f5}.metric-value{font-size:14px;font-weight:900;color:#fff}.metric-sub{font-size:10px;color:#c4d4e8;margin-top:3px}
@@ -685,7 +694,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       <div class="meta"><div class="mode-pill">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div>
     </div>
     <div class="temp-row"><div class="temp">${esc(data.poolTemp)}</div><div class="unit">°C</div></div>
-    <div class="scale"><div class="track"><div class="dot"></div></div><div class="scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
+    <div class="scale"><div class="track"><div class="target-mark" title="Soll ${esc(data.targetTemp)} °C"></div><div class="dot"></div></div><div class="scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="metrics">
       <div class="metric"><div class="metric-label">pH</div><div class="metric-value">${esc(data.ph)}</div><div class="metric-sub">Soll ${esc(data.phSet)}</div></div>
       <div class="metric"><div class="metric-label">ORP</div><div class="metric-value">${esc(data.orp)}</div><div class="metric-sub">Soll ${esc(data.orpSet)}</div></div>
@@ -916,6 +925,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const tempPct = Number.isFinite(poolTempNum)
       ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100))
       : 0;
+    const targetTempNum = parseNum(data.targetTemp);
+    const targetPct = Number.isFinite(targetTempNum)
+      ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100))
+      : 0;
 
     const autoBox = (name, state) => {
       const cls = state === 'AKTIV' ? 'on-state' : state === 'STANDBY' ? 'standby-state' : 'off-state';
@@ -932,7 +945,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-hero{background:radial-gradient(circle at top right, rgba(85,200,255,.26), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
 .ps-header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}.ps-title{font-size:16px;font-weight:900}.ps-sub{font-size:10px;color:#d2dded;text-align:right}.ps-mode{display:inline-flex;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#67cfff,#6f7bff);font-size:9px;font-weight:900;color:#fff;margin-bottom:4px}
 .ps-tempRow{display:flex;align-items:flex-end;gap:5px;margin:6px 0 5px}.ps-temp{font-size:46px;font-weight:900;line-height:.9}.ps-unit{font-size:18px;padding-bottom:6px;color:#d5e5f6}
-.ps-scale{margin:3px 0 7px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #11305b;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;font-size:10px;color:#d2dded;margin-top:4px}
+.ps-scale{margin:3px 0 7px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-target{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#ffffff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%);box-shadow:0 0 0 1px rgba(255,255,255,.15)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #11305b;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;font-size:10px;color:#d2dded;margin-top:4px}
 .ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:7px}.ps-ml{font-size:11px;color:#d9e5f5}.ps-mv{font-size:14px;font-weight:900;color:#fff}.ps-ms{font-size:10px;color:#c4d4e8;margin-top:3px}
 .ps-section{font-size:14px;font-weight:900;color:#0f172a;margin-bottom:6px}
@@ -952,7 +965,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   <div class="ps-card ps-hero">
     <div class="ps-header"><div class="ps-title">Pool Manager</div><div class="ps-sub"><div class="ps-mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div></div>
     <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
-    <div class="ps-scale"><div class="ps-track"><div class="ps-dot"></div></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
+    <div class="ps-scale"><div class="ps-track"><div class="ps-target" title="Soll ${esc(data.targetTemp)} °C"></div><div class="ps-dot"></div></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="ps-metrics">
       <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${esc(data.ph)}</div><div class="ps-ms">Soll ${esc(data.phSet)}</div></div>
       <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${esc(data.orp)}</div><div class="ps-ms">Soll ${esc(data.orpSet)}</div></div>
