@@ -622,31 +622,16 @@ body{
       ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100))
       : 0;
 
-    const phNum = parseNum(data.ph);
-    const phSetNum = parseNum(data.phSet);
-    const orpNum = parseNum(data.orp);
-    const orpOnNum = parseNum(data.orpOnThreshold);
-    const orpOffNum = parseNum(data.orpOffThreshold);
-
-    const badge = (state) => {
+    const autoBadge = (state) => {
       if (state === 'AKTIV') return '<span class="mini-pill active">AKTIV</span>';
       if (state === 'STANDBY') return '<span class="mini-pill standby">STANDBY</span>';
       return '<span class="mini-pill off">AUS</span>';
     };
 
-    const signalBadge = (n, low, high) => {
-      if (!Number.isFinite(n)) return '<span class="signal neutral">—</span>';
-      if (n < low) return '<span class="signal low">Niedrig</span>';
-      if (n > high) return '<span class="signal high">Hoch</span>';
-      return '<span class="signal ok">OK</span>';
-    };
-
-    const statusRow = (name, hint, on) => `
-      <div class="status-row">
-        <div class="status-left">
-          <div class="status-name">${esc(name)}</div>
-          <div class="status-hint">${esc(hint)}</div>
-        </div>
+    const statusBox = (name, hint, on) => `
+      <div class="status-box">
+        <div class="status-name">${esc(name)}</div>
+        <div class="status-hint">${esc(hint)}</div>
         <div class="status-pill ${on ? 'on' : 'off'}">${on ? 'EIN' : 'AUS'}</div>
       </div>`;
 
@@ -665,175 +650,72 @@ body{
     return `<!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <style>
-:root{
-  --bg:#08111f;--bg2:#10203a;--card:#f7fbff;--line:rgba(15,23,42,.08);
-  --text:#0f172a;--muted:#66758a;--ok:#22c55e;--off:#ef4444;--standby:#64748b;
-}
-*{box-sizing:border-box}
-body{
-  margin:0;
-  background:
-    radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),
-    linear-gradient(180deg,var(--bg2),var(--bg));
-  font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;
-  color:var(--text)
-}
-.wrap{padding:10px;display:grid;gap:8px}
-.card{
-  background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);
-  border:1px solid var(--line);
-  border-radius:22px;
-  padding:14px;
-  box-shadow:0 14px 28px rgba(0,0,0,.18)
-}
-.hero{
-  background:
-    radial-gradient(circle at top right, rgba(85,200,255,.26), transparent 26%),
-    linear-gradient(180deg,#1b3763 0%,#0f2343 100%);
-  color:#fff;
-  border-color:rgba(255,255,255,.10)
-}
-.header{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+:root{--bg:#08111f;--bg2:#10203a;--card:#f7fbff;--line:rgba(15,23,42,.08);--text:#0f172a;--muted:#66758a}
+*{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,var(--bg2),var(--bg));font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:var(--text)}
+.wrap{padding:6px;display:grid;gap:8px}
+.card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid var(--line);border-radius:18px;padding:10px;box-shadow:0 10px 22px rgba(0,0,0,.16)}
+.hero{background:radial-gradient(circle at top right, rgba(85,200,255,.24), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
+.header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}
 .title{font-size:16px;font-weight:900}
-.meta{text-align:right;font-size:12px;color:#d2dded}
-.mode-pill{
-  display:inline-flex;align-items:center;justify-content:center;
-  padding:3px 8px;border-radius:999px;
-  background:linear-gradient(135deg,#67cfff,#6f7bff);
-  color:#fff;font-size:10px;font-weight:900;margin-bottom:6px
-}
-.temp-row{display:flex;align-items:flex-end;gap:6px;margin:8px 0 6px}
-.temp{font-size:52px;font-weight:900;line-height:.9}
-.unit{font-size:18px;padding-bottom:6px;color:#d5e5f6}
-.scale{margin:6px 0 8px}
-.track{
-  position:relative;height:9px;border-radius:999px;
-  background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)
-}
-.dot{
-  position:absolute;top:50%;left:${tempPct}%;
-  width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid #11305b;
-  transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(255,255,255,.35)
-}
-.scale-labels{display:flex;justify-content:space-between;font-size:11px;color:#d2dded;margin-top:5px}
+.meta{text-align:right;font-size:10px;color:#d2dded;line-height:1.15}
+.mode-pill{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#67cfff,#6f7bff);color:#fff;font-size:9px;font-weight:900;margin-bottom:4px}
+.temp-row{display:flex;align-items:flex-end;gap:5px;margin:8px 0 6px}
+.temp{font-size:48px;font-weight:900;line-height:.9}
+.unit{font-size:17px;padding-bottom:5px;color:#d5e5f6}
+.scale{margin:4px 0 8px}.track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #11305b;transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(255,255,255,.28)}.scale-labels{display:flex;justify-content:space-between;font-size:10px;color:#d2dded;margin-top:4px}
 .metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.metric{
-  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
-  border-radius:14px;padding:8px
-}
-.metric-label{font-size:12px;color:#d9e5f5;margin-bottom:4px}
-.metric-value{font-size:14px;font-weight:900;color:#fff}
-.metric-sub{font-size:10px;color:#c4d4e8;margin-top:3px}
-.signal{
-  display:inline-block;margin-top:6px;padding:3px 8px;border-radius:999px;
-  font-size:11px;font-weight:800
-}
-.signal.ok{background:rgba(84,211,112,.18);color:#b5f4c2}
-.signal.low{background:rgba(255,201,102,.18);color:#ffe4a7}
-.signal.high{background:rgba(255,121,107,.18);color:#ffd0c8}
-.signal.neutral{background:rgba(148,163,184,.18);color:#e2e8f0}
+.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px}
+.metric-label{font-size:11px;color:#d9e5f5}.metric-value{font-size:14px;font-weight:900;color:#fff}.metric-sub{font-size:10px;color:#c4d4e8;margin-top:3px}
 .section-title{font-size:15px;font-weight:900;color:#0f172a;margin-bottom:8px}
-.auto-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.auto-card{
-  background:linear-gradient(180deg,#ffffff,#f2f7ff);
-  border:1px solid rgba(15,23,42,.08);
-  border-radius:14px;padding:8px
-}
-.auto-label{font-size:12px;color:#42546a;font-weight:700;margin-bottom:6px}
-.mini-pill{
-  display:inline-flex;align-items:center;justify-content:center;width:100%;
-  padding:7px 8px;border-radius:999px;font-size:11px;font-weight:900;color:#fff
-}
-.mini-pill.active{background:linear-gradient(180deg,#56d56e,#36b357)}
-.mini-pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}
-.mini-pill.standby{background:linear-gradient(180deg,#8795aa,#64748b)}
-.status-list{display:grid;gap:8px}
-.status-row{
-  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;
-  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:9px
-}
-.status-left{min-width:0}
-.status-name{font-size:15px;font-weight:900;color:#0f172a;line-height:1.15}
-.status-hint{font-size:10px;color:#64748b;margin-top:2px}
-.status-pill{
-  min-width:72px;text-align:center;padding:9px 12px;border-radius:999px;
-  font-size:13px;font-weight:900;color:#fff
-}
-.status-pill.on{background:linear-gradient(180deg,#56d56e,#36b357)}
-.status-pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}
-.info-list{display:grid;gap:8px}
-.info-row{
-  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start;
-  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:8px 10px
-}
-.info-label{font-size:12px;color:#475569;font-weight:700}
-.info-value{font-size:13px;font-weight:900;color:#0f172a;text-align:right}
-.mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.mini-card{
-  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px
-}
-.mini-label{font-size:11px;color:#64748b;font-weight:700;margin-bottom:4px}
+.auto-grid,.mini-grid,.status-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.auto-card,.mini-card,.status-box{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}
+.auto-label,.mini-label,.status-hint{font-size:11px;color:#64748b}
+.auto-label{font-weight:700;margin-bottom:5px}
+.mini-label{font-weight:700;margin-bottom:4px}
 .mini-value{font-size:15px;font-weight:900;color:#0f172a}
+.mini-pill{display:inline-flex;align-items:center;justify-content:center;width:100%;padding:7px 8px;border-radius:999px;font-size:11px;font-weight:900;color:#fff}
+.mini-pill.active{background:linear-gradient(180deg,#56d56e,#36b357)}.mini-pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}.mini-pill.standby{background:linear-gradient(180deg,#8795aa,#64748b)}
+.status-name{font-size:14px;font-weight:900;color:#0f172a;line-height:1.1}
+.status-hint{margin-top:2px}
+.status-pill{display:inline-flex;align-items:center;justify-content:center;width:100%;margin-top:6px;padding:7px 8px;border-radius:999px;font-size:11px;font-weight:900;color:#fff}
+.status-pill.on{background:linear-gradient(180deg,#56d56e,#36b357)}.status-pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}
+.info-list{display:grid;gap:6px}
+.info-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:8px 10px}
+.info-label{font-size:12px;color:#475569;font-weight:700}
+.info-value{font-size:12px;font-weight:900;color:#0f172a;text-align:right;max-width:150px;word-break:break-word}
 </style></head><body><div class="wrap">
   <div class="card hero">
     <div class="header">
       <div class="title">Pool Manager</div>
-      <div class="meta">
-        <div class="mode-pill">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>
-        Aktualisiert<br>${esc(data.updated)}
-      </div>
+      <div class="meta"><div class="mode-pill">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div>
     </div>
-    <div class="temp-row">
-      <div class="temp">${esc(data.poolTemp)}</div>
-      <div class="unit">°C</div>
-    </div>
-    <div class="scale">
-      <div class="track"><div class="dot"></div></div>
-      <div class="scale-labels"><span>15 °C</span><span>32 °C</span></div>
-    </div>
+    <div class="temp-row"><div class="temp">${esc(data.poolTemp)}</div><div class="unit">°C</div></div>
+    <div class="scale"><div class="track"><div class="dot"></div></div><div class="scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="metrics">
-      <div class="metric">
-        <div class="metric-label">pH</div>
-        <div class="metric-value">${esc(data.ph)}</div>
-        <div class="metric-sub">Soll ${esc(data.phSet)}</div>
-        ${signalBadge(phNum, phSetNum, phSetNum)}
-      </div>
-      <div class="metric">
-        <div class="metric-label">ORP</div>
-        <div class="metric-value">${esc(data.orp)}</div>
-        <div class="metric-sub">Soll ${esc(data.orpSet)}</div>
-        ${signalBadge(orpNum, orpOnNum, orpOffNum)}
-      </div>
-      <div class="metric">
-        <div class="metric-label">Außen</div>
-        <div class="metric-value">${esc(data.outsideTemp)}°C</div>
-        <div class="metric-sub">Außen</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label">Soll</div>
-        <div class="metric-value">${esc(data.targetTemp)}°C</div>
-        <div class="metric-sub">Soll</div>
-      </div>
+      <div class="metric"><div class="metric-label">pH</div><div class="metric-value">${esc(data.ph)}</div><div class="metric-sub">Soll ${esc(data.phSet)}</div></div>
+      <div class="metric"><div class="metric-label">ORP</div><div class="metric-value">${esc(data.orp)}</div><div class="metric-sub">Soll ${esc(data.orpSet)}</div></div>
+      <div class="metric"><div class="metric-label">Außen</div><div class="metric-value">${esc(data.outsideTemp)}°C</div><div class="metric-sub">Außen</div></div>
+      <div class="metric"><div class="metric-label">Soll</div><div class="metric-value">${esc(data.targetTemp)}°C</div><div class="metric-sub">Soll</div></div>
     </div>
   </div>
 
   <div class="card">
     <div class="section-title">Automatik</div>
     <div class="auto-grid">
-      <div class="auto-card"><div class="auto-label">Umwälzpumpe</div>${badge(data.autoCirculation)}</div>
-      <div class="auto-card"><div class="auto-label">Chlor</div>${badge(data.autoChlor)}</div>
-      <div class="auto-card"><div class="auto-label">pH</div>${badge(data.autoPh)}</div>
-      <div class="auto-card"><div class="auto-label">Wärmepumpe</div>${badge(data.autoHeatpump)}</div>
+      <div class="auto-card"><div class="auto-label">Umwälzpumpe</div>${autoBadge(data.autoCirculation)}</div>
+      <div class="auto-card"><div class="auto-label">Chlor</div>${autoBadge(data.autoChlor)}</div>
+      <div class="auto-card"><div class="auto-label">pH</div>${autoBadge(data.autoPh)}</div>
+      <div class="auto-card"><div class="auto-label">Wärmepumpe</div>${autoBadge(data.autoHeatpump)}</div>
     </div>
   </div>
 
   <div class="card">
     <div class="section-title">Aktoren & Status</div>
-    <div class="status-list">
-      ${statusRow('Umwälzpumpe', 'IST-Zustand', data.pumpOn)}
-      ${statusRow('Chlorinator', 'ORP-Regelung', data.chlorOn)}
-      ${statusRow('pH-Dosierpumpe', 'Prüfzeiten', data.phPumpOn)}
-      ${statusRow('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
+    <div class="status-grid">
+      ${statusBox('Umwälzpumpe', 'IST-Zustand', data.pumpOn)}
+      ${statusBox('Chlorinator', 'ORP-Regelung', data.chlorOn)}
+      ${statusBox('pH-Dosierpumpe', 'Prüfzeiten', data.phPumpOn)}
+      ${statusBox('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
     </div>
   </div>
 
@@ -849,8 +731,8 @@ body{
       ${row('Zeitplan', data.pumpDecision)}
       ${row('pH Prüfung', data.phDecision)}
       ${row('pH Zeiten', data.phTimes)}
-      ${row('Standby nächster Lauf', data.standbyNext)}
-      ${row('Letzte Dosierung', `${data.phLastDoseDurationSec} s`)}
+      ${row('Standby', data.standbyNext)}
+      ${row('Dosierung', `${data.phLastDoseDurationSec} s`)}
     </div>
   </div>
 
@@ -1064,134 +946,80 @@ body{
       return '<span class="ps-ab off">AUS</span>';
     };
 
-    const row = (k, v) => `
-      <div class="ps-row">
-        <div class="ps-k">${esc(k)}</div>
-        <div class="ps-v">${esc(v)}</div>
-      </div>`;
+    const row = (k, v) => `<div class="ps-row"><div class="ps-k">${esc(k)}</div><div class="ps-v">${esc(v)}</div></div>`;
+    const statusBox = (name, hint, on) => `<div class="ps-sb"><div class="ps-sn">${esc(name)}</div><div class="ps-sh">${esc(hint)}</div><div class="ps-pill ${on ? 'on' : 'off'}">${on ? 'EIN' : 'AUS'}</div></div>`;
+    const mini = (l, v) => `<div class="ps-mini"><div class="ps-miniL">${esc(l)}</div><div class="ps-miniV">${esc(v)}</div></div>`;
 
-    const statusRow = (name, hint, on) => `
-      <div class="ps-status">
-        <div class="ps-status-left">
-          <div class="ps-status-name">${esc(name)}</div>
-          <div class="ps-status-hint">${esc(hint)}</div>
-        </div>
-        <div class="ps-pill ${on ? 'on' : 'off'}">${on ? 'EIN' : 'AUS'}</div>
-      </div>`;
-
-    return `<!-- phone-render:${new Date().toLocaleString('de-DE')} -->
+    return `<!-- phone-render:${esc(data.updated)} -->
 <style>
-.ps-wrap{
-  background:
-    radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),
-    linear-gradient(180deg,#10203a,#08111f);
-  padding:6px;display:grid;gap:8px;
-  font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;
-}
-.ps-card{
-  background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);
-  border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:10px;
-  box-shadow:0 14px 28px rgba(0,0,0,.18);
-}
-.ps-hero{
-  background:
-    radial-gradient(circle at top right, rgba(85,200,255,.26), transparent 26%),
-    linear-gradient(180deg,#1b3763 0%,#0f2343 100%);
-  color:#fff;border-color:rgba(255,255,255,.10)
-}
-.ps-header{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
-.ps-title{font-size:16px;font-weight:900}
-.ps-sub{font-size:11px;color:#d2dded;text-align:right}
-.ps-mode{display:inline-flex;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#67cfff,#6f7bff);font-size:10px;font-weight:900;color:#fff;margin-bottom:6px}
-.ps-tempRow{display:flex;align-items:flex-end;gap:6px;margin:8px 0 6px}
-.ps-temp{font-size:52px;font-weight:900;line-height:.9}
-.ps-unit{font-size:18px;padding-bottom:6px;color:#d5e5f6}
-.ps-scale{margin:6px 0 8px}.ps-track{position:relative;height:9px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid #11305b;transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(255,255,255,.35)}.ps-scale-labels{display:flex;justify-content:space-between;font-size:11px;color:#d2dded;margin-top:5px}
-.ps-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px}
-.ps-ml{font-size:12px;color:#d9e5f5}.ps-mv{font-size:14px;font-weight:900;color:#fff}.ps-ms{font-size:10px;color:#c4d4e8;margin-top:3px}
+.ps-wrap{background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,#10203a,#08111f);padding:6px;display:grid;gap:8px;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
+.ps-card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:10px;box-shadow:0 10px 22px rgba(0,0,0,.16)}
+.ps-hero{background:radial-gradient(circle at top right, rgba(85,200,255,.26), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
+.ps-header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}.ps-title{font-size:16px;font-weight:900}.ps-sub{font-size:10px;color:#d2dded;text-align:right}.ps-mode{display:inline-flex;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#67cfff,#6f7bff);font-size:9px;font-weight:900;color:#fff;margin-bottom:4px}
+.ps-tempRow{display:flex;align-items:flex-end;gap:5px;margin:8px 0 6px}.ps-temp{font-size:52px;font-weight:900;line-height:.9}.ps-unit{font-size:18px;padding-bottom:6px;color:#d5e5f6}
+.ps-scale{margin:4px 0 8px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #11305b;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;font-size:10px;color:#d2dded;margin-top:4px}
+.ps-metrics,.ps-auto,.ps-statusGrid,.ps-miniGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px}.ps-ml{font-size:11px;color:#d9e5f5}.ps-mv{font-size:14px;font-weight:900;color:#fff}.ps-ms{font-size:10px;color:#c4d4e8;margin-top:3px}
 .ps-section{font-size:15px;font-weight:900;color:#0f172a;margin-bottom:8px}
-.ps-auto{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.ps-autoCard{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}
-.ps-autoL{font-size:12px;color:#42546a;font-weight:700;margin-bottom:6px}
-.ps-ab{display:inline-flex;align-items:center;justify-content:center;width:100%;padding:7px 8px;border-radius:999px;font-size:11px;font-weight:900;color:#fff}
-.ps-ab.active{background:linear-gradient(180deg,#56d56e,#36b357)}.ps-ab.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}.ps-ab.standby{background:linear-gradient(180deg,#8795aa,#64748b)}
-.ps-statusList,.ps-list{display:grid;gap:8px}
-.ps-status,.ps-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:9px}
-.ps-status-name{font-size:15px;font-weight:900;color:#0f172a}.ps-status-hint{font-size:10px;color:#64748b;margin-top:2px}
-.ps-pill{min-width:64px;text-align:center;padding:7px 9px;border-radius:999px;font-size:11px;font-weight:900;color:#fff}
-.ps-pill.on{background:linear-gradient(180deg,#56d56e,#36b357)}.ps-pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}
-.ps-k{font-size:12px;color:#475569;font-weight:700}.ps-v{font-size:13px;font-weight:900;color:#0f172a;text-align:right}
-.ps-miniGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.ps-mini{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}.ps-miniL{font-size:11px;color:#64748b;font-weight:700;margin-bottom:4px}.ps-miniV{font-size:15px;font-weight:900;color:#0f172a}
+.ps-autoCard,.ps-mini,.ps-sb{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}.ps-autoL,.ps-miniL,.ps-sh{font-size:11px;color:#64748b}.ps-autoL{font-weight:700;margin-bottom:5px}.ps-miniL{font-weight:700;margin-bottom:4px}
+.ps-ab{display:inline-flex;align-items:center;justify-content:center;width:100%;padding:7px 8px;border-radius:999px;font-size:11px;font-weight:900;color:#fff}.ps-ab.active{background:linear-gradient(180deg,#56d56e,#36b357)}.ps-ab.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}.ps-ab.standby{background:linear-gradient(180deg,#8795aa,#64748b)}
+.ps-sn{font-size:14px;font-weight:900;color:#0f172a;line-height:1.1}.ps-sh{margin-top:2px}.ps-pill{display:inline-flex;align-items:center;justify-content:center;width:100%;margin-top:6px;padding:7px 8px;border-radius:999px;font-size:11px;font-weight:900;color:#fff}.ps-pill.on{background:linear-gradient(180deg,#56d56e,#36b357)}.ps-pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}
+.ps-list{display:grid;gap:6px}.ps-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:8px 10px}.ps-k{font-size:12px;color:#475569;font-weight:700}.ps-v{font-size:12px;font-weight:900;color:#0f172a;text-align:right;max-width:150px;word-break:break-word}
+.ps-miniV{font-size:16px;font-weight:900;color:#0f172a}
 </style>
 <div class="ps-wrap">
-  <div class="ps-card ps-hero">
-    <div class="ps-header">
-      <div class="ps-title">Pool Manager</div>
-      <div class="ps-sub"><div class="ps-mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div>
-    </div>
-    <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
-    <div class="ps-scale"><div class="ps-track"><div class="ps-dot"></div></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
-    <div class="ps-metrics">
-      <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${esc(data.ph)}</div><div class="ps-ms">Soll ${esc(data.phSet)}</div></div>
-      <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${esc(data.orp)}</div><div class="ps-ms">Soll ${esc(data.orpSet)}</div></div>
-      <div class="ps-metric"><div class="ps-ml">Außen</div><div class="ps-mv">${esc(data.outsideTemp)}°C</div><div class="ps-ms">Außen</div></div>
-      <div class="ps-metric"><div class="ps-ml">Soll</div><div class="ps-mv">${esc(data.targetTemp)}°C</div><div class="ps-ms">Soll</div></div>
-    </div>
+<div class="ps-card ps-hero">
+  <div class="ps-header"><div class="ps-title">Pool Manager</div><div class="ps-sub"><div class="ps-mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div></div>
+  <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
+  <div class="ps-scale"><div class="ps-track"><div class="ps-dot"></div></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
+  <div class="ps-metrics">
+    <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${esc(data.ph)}</div><div class="ps-ms">Soll ${esc(data.phSet)}</div></div>
+    <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${esc(data.orp)}</div><div class="ps-ms">Soll ${esc(data.orpSet)}</div></div>
+    <div class="ps-metric"><div class="ps-ml">Außen</div><div class="ps-mv">${esc(data.outsideTemp)}°C</div><div class="ps-ms">Außen</div></div>
+    <div class="ps-metric"><div class="ps-ml">Soll</div><div class="ps-mv">${esc(data.targetTemp)}°C</div><div class="ps-ms">Soll</div></div>
   </div>
+</div>
 
-  <div class="ps-card">
-    <div class="ps-section">Automatik</div>
-    <div class="ps-auto">
-      <div class="ps-autoCard"><div class="ps-autoL">Umwälzpumpe</div>${autoBadge(data.autoCirculation)}</div>
-      <div class="ps-autoCard"><div class="ps-autoL">Chlor</div>${autoBadge(data.autoChlor)}</div>
-      <div class="ps-autoCard"><div class="ps-autoL">pH</div>${autoBadge(data.autoPh)}</div>
-      <div class="ps-autoCard"><div class="ps-autoL">Wärmepumpe</div>${autoBadge(data.autoHeatpump)}</div>
-    </div>
-  </div>
+<div class="ps-card"><div class="ps-section">Automatik</div><div class="ps-auto">
+  <div class="ps-autoCard"><div class="ps-autoL">Umwälzpumpe</div>${autoBadge(data.autoCirculation)}</div>
+  <div class="ps-autoCard"><div class="ps-autoL">Chlor</div>${autoBadge(data.autoChlor)}</div>
+  <div class="ps-autoCard"><div class="ps-autoL">pH</div>${autoBadge(data.autoPh)}</div>
+  <div class="ps-autoCard"><div class="ps-autoL">Wärmepumpe</div>${autoBadge(data.autoHeatpump)}</div>
+</div></div>
 
-  <div class="ps-card">
-    <div class="ps-section">Aktoren & Status</div>
-    <div class="ps-statusList">
-      ${statusRow('Umwälzpumpe', 'IST-Zustand', data.pumpOn)}
-      ${statusRow('Chlorinator', 'ORP-Regelung', data.chlorOn)}
-      ${statusRow('pH-Dosierpumpe', 'Prüfzeiten', data.phPumpOn)}
-      ${statusRow('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
-    </div>
-  </div>
+<div class="ps-card"><div class="ps-section">Aktoren & Status</div><div class="ps-statusGrid">
+  ${statusBox('Umwälzpumpe','IST-Zustand',data.pumpOn)}
+  ${statusBox('Chlorinator','ORP-Regelung',data.chlorOn)}
+  ${statusBox('pH-Dosierpumpe','Prüfzeiten',data.phPumpOn)}
+  ${statusBox('Wärmepumpe','PV-Freigabe',data.heatpumpOn)}
+</div></div>
 
-  <div class="ps-card">
-    <div class="ps-section">Energie & Steuerung</div>
-    <div class="ps-list">
-      ${row('PV-Leistung', `${data.pv} W`)}
-      ${row('Netzeinspeisung', `${data.feedIn} W`)}
-      ${row('Netzbezug', `${data.gridSupply} W`)}
-      ${row('Batterie SoC', `${data.battery} %`)}
-      ${row('WP Freigabe', data.heatReason)}
-      ${row('Chlor Freigabe', data.chlorDecision)}
-      ${row('Zeitplan', data.pumpDecision)}
-      ${row('pH Prüfung', data.phDecision)}
-      ${row('pH Zeiten', data.phTimes)}
-      ${row('Standby nächster Lauf', data.standbyNext)}
-      ${row('Letzte Dosierung', `${data.phLastDoseDurationSec} s`)}
-    </div>
-  </div>
+<div class="ps-card"><div class="ps-section">Energie & Steuerung</div><div class="ps-list">
+  ${row('PV-Leistung', `${data.pv} W`)}
+  ${row('Netzeinspeisung', `${data.feedIn} W`)}
+  ${row('Netzbezug', `${data.gridSupply} W`)}
+  ${row('Batterie SoC', `${data.battery} %`)}
+  ${row('WP Freigabe', data.heatReason)}
+  ${row('Chlor Freigabe', data.chlorDecision)}
+  ${row('Zeitplan', data.pumpDecision)}
+  ${row('pH Prüfung', data.phDecision)}
+  ${row('pH Zeiten', data.phTimes)}
+  ${row('Standby', data.standbyNext)}
+  ${row('Dosierung', `${data.phLastDoseDurationSec} s`)}
+</div></div>
 
-  <div class="ps-card">
-    <div class="ps-section">Zusatzwerte</div>
-    <div class="ps-miniGrid">
-      <div class="ps-mini"><div class="ps-miniL">Zeitplan</div><div class="ps-miniV">${data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV'}</div></div>
-      <div class="ps-mini"><div class="ps-miniL">PV Schwelle</div><div class="ps-miniV">${esc(data.threshold)} W</div></div>
-      <div class="ps-mini"><div class="ps-miniL">ORP Grenzen</div><div class="ps-miniV">${esc(data.orpOnThreshold)} / ${esc(data.orpOffThreshold)}</div></div>
-      <div class="ps-mini"><div class="ps-miniL">pH Tag</div><div class="ps-miniV">${esc(data.phDailyCount)}</div></div>
-      <div class="ps-mini"><div class="ps-miniL">Pumpe ml/min</div><div class="ps-miniV">${esc(data.phFlowMlMin)}</div></div>
-      <div class="ps-mini"><div class="ps-miniL">ml je 0,1 / 10m³</div><div class="ps-miniV">${esc(data.phMlPer01Per10)}</div></div>
-      <div class="ps-mini"><div class="ps-miniL">Poolvolumen</div><div class="ps-miniV">${esc(data.volume)} m³</div></div>
-    </div>
-  </div>
+<div class="ps-card"><div class="ps-section">Zusatzwerte</div><div class="ps-miniGrid">
+  ${mini('Zeitplan', data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV')}
+  ${mini('PV Schwelle', `${data.threshold} W`)}
+  ${mini('ORP Grenzen', `${data.orpOnThreshold} / ${data.orpOffThreshold}`)}
+  ${mini('pH Tag', `${data.phDailyCount}`)}
+  ${mini('Pumpe ml/min', `${data.phFlowMlMin}`)}
+  ${mini('ml je 0,1 / 10m³', `${data.phMlPer01Per10}`)}
+  ${mini('Poolvolumen', `${data.volume} m³`)}
+</div></div>
 </div>`;
   }
+
 
 
   async renderVis() {
