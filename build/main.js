@@ -677,6 +677,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .quick-label,.status-hint{font-size:11px;color:#64748b}
 .quick-label{font-weight:700;margin-bottom:4px}
 .quick-value{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
+.log-card{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.log-text{font-size:12px;font-weight:700;line-height:1.3;color:#0f172a;word-break:break-word}.log-meta{margin-top:4px;font-size:10px;color:#64748b}
 .status-grid{gap:7px}
 .status-box{padding:7px 8px;min-height:54px;display:flex;flex-direction:column;justify-content:center}
 .status-box.is-on{background:linear-gradient(180deg,#f7fff8,#eefcf1)}
@@ -732,6 +733,21 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       ${quick('WP Freigabe', data.heatReason)}
       ${quick('Chlor Freigabe', data.chlorDecision)}
       ${quick('pH Prüfung', data.phDecision)}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">pH Info</div>
+    <div class="quick-grid">
+      ${quick('Berechnet', `${data.phCalculatedDoseSec} s`)}
+      ${quick('Letzte Dosis', `${data.phLastDoseDurationSec} s`)}
+      ${quick('Heute dosiert', `${data.phDailyCount}x`)}
+      ${quick('Nächste Prüfung', data.phNextCheck)}
+    </div>
+    <div class="log-card">
+      <div class="quick-label">Letzte Meldung</div>
+      <div class="log-text">${esc(data.phInfoText)}</div>
+      <div class="log-meta">Letzte Dosierung: ${esc(data.phLastDoseAt)}</div>
     </div>
   </div>
 </div></body></html>`;
@@ -960,6 +976,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-sb.standby-state .ps-sn{color:#64748b}
 .ps-sh{margin-top:3px}
 .ps-qv{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
+.ps-log{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.ps-logt{font-size:12px;font-weight:700;line-height:1.3;color:#0f172a;word-break:break-word}.ps-logm{margin-top:4px;font-size:10px;color:#64748b}
 </style>
 <div class="ps-wrap">
   <div class="ps-card ps-hero">
@@ -996,6 +1013,12 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Chlor Freigabe', data.chlorDecision)}
     ${quick('pH Prüfung', data.phDecision)}
   </div></div>
+  <div class="ps-card"><div class="ps-section">pH Info</div><div class="ps-quickGrid">
+    ${quick('Berechnet', `${data.phCalculatedDoseSec} s`)}
+    ${quick('Letzte Dosis', `${data.phLastDoseDurationSec} s`)}
+    ${quick('Heute dosiert', `${data.phDailyCount}x`)}
+    ${quick('Nächste Prüfung', data.phNextCheck)}
+  </div><div class="ps-log"><div class="ps-ql">Letzte Meldung</div><div class="ps-logt">${esc(data.phInfoText)}</div><div class="ps-logm">Letzte Dosierung: ${esc(data.phLastDoseAt)}</div></div></div>
 </div>`;
   }
 
@@ -1025,6 +1048,13 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const phDecision = await this.getText('poolsteuerung.0.status.debug.lastPhDecision', '--');
     const phDailyCount = await this.getText('poolsteuerung.0.status.phDose.dailyCount', '0');
     const phLastDoseDurationSec = await this.getText('poolsteuerung.0.status.phDose.lastDoseDurationSec', '0');
+    const phCalculatedDoseSec = await this.getText('poolsteuerung.0.status.phDose.calculatedDoseSec', '0');
+    const phLastDoseTsRaw = await this.getNumber('poolsteuerung.0.status.phDose.lastDoseTs', 0);
+    const phLastDoseAt = phLastDoseTsRaw ? new Date(phLastDoseTsRaw).toLocaleString('de-DE') : '-';
+    const phLastStartInfo = await this.getText('poolsteuerung.0.status.debug.lastPhStartInfo', '');
+    const phInfoText = phLastStartInfo || phDecision || '--';
+    const nextPhCheck = standbyMode ? null : this.getNextPhCheck(new Date());
+    const phNextCheck = nextPhCheck ? nextPhCheck.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
     const phFlowMlMin = this.fmt(parseNum(this.config.phPumpFlowMlPerMin), 0, '--');
     const phMlPer01Per10 = this.fmt(parseNum(this.config.phDoseMlPer01Per10m3), 0, '--');
     const volume = this.fmt(this.calcVolume(), 2, '--');
@@ -1112,6 +1142,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       phDecision,
       phDailyCount,
       phLastDoseDurationSec,
+      phCalculatedDoseSec,
+      phLastDoseAt,
+      phInfoText,
+      phNextCheck,
       phFlowMlMin,
       phMlPer01Per10,
       orpSet: this.fmt(parseNum(this.config.orpSetpoint), 0, '--'),
