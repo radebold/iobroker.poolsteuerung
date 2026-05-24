@@ -481,10 +481,10 @@ body{
   min-height:430px;
   border-color:rgba(86,196,255,.18);
 }
-.head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.title{font-size:18px;font-weight:900;letter-spacing:.2px}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.title{font-size:16px;font-weight:900;letter-spacing:.2px}
 .meta{text-align:right;font-size:11px;color:var(--muted);line-height:1.2;max-width:96px}
-.mode{display:inline-flex;align-items:center;justify-content:center;padding:4px 10px;border-radius:999px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:10px;font-weight:900;margin-bottom:6px;box-shadow:0 6px 18px rgba(88,172,255,.25)}
+.mode{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:10px;font-weight:900;margin-bottom:6px;box-shadow:0 6px 18px rgba(88,172,255,.25)}
 .temp-wrap{margin:18px 0 6px;display:flex;align-items:flex-end;gap:8px}
 .temp{font-size:82px;font-weight:900;line-height:.9}
 .unit{font-size:22px;color:#d4e5f6;padding-bottom:9px}
@@ -492,7 +492,7 @@ body{
 .scale-row{display:flex;justify-content:space-between;font-size:11px;color:#c7d6ea;margin-top:6px}
 .scale-track{position:relative;height:10px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
 .scale-dot{position:absolute;top:50%;width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid #0f213c;box-shadow:0 0 0 3px rgba(255,255,255,.25), 0 4px 12px rgba(0,0,0,.35);transform:translate(-50%,-50%);left:${tempPct}%}
-.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:8px}
+.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
 .metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:12px;min-height:96px;position:relative}
 .metric.cool{background:linear-gradient(180deg,rgba(80,166,255,.15),rgba(255,255,255,.05))}
 .metric.warn{background:linear-gradient(180deg,rgba(255,145,96,.12),rgba(255,255,255,.05))}
@@ -510,15 +510,15 @@ body{
 .section.status{color:#89ffa7}
 .section.extra{color:#ffd37d}
 .stack{display:grid;gap:8px}
-.kv{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:11px}
+.kv{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:14px;padding:8px}
 .kv.energy{background:linear-gradient(90deg,rgba(68,171,255,.10),rgba(255,255,255,.04))}
 .kv.auto{background:linear-gradient(90deg,rgba(109,128,255,.14),rgba(255,255,255,.04))}
 .kv.reason{background:linear-gradient(90deg,rgba(94,210,158,.11),rgba(255,255,255,.04))}
 .kv-label{font-size:12px;color:#c6d7ea;font-weight:800;max-width:42%}
 .kv-value{font-size:15px;font-weight:900;line-height:1.2;text-align:right;word-break:break-word;max-width:58%}
 .status-card{margin-bottom:14px}
-.status-list{display:grid;gap:10px}
-.status-row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:12px}
+.status-list{display:grid;gap:8px}
+.status-row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:14px;padding:9px}
 .status-on{background:linear-gradient(90deg,rgba(78,204,102,.10),rgba(255,255,255,.04))}
 .status-off{background:linear-gradient(90deg,rgba(255,108,95,.10),rgba(255,255,255,.04))}
 .status-left{min-width:0;max-width:calc(100% - 86px)}
@@ -528,11 +528,11 @@ body{
 .pill.on{background:linear-gradient(180deg,#56d56e,#36b357);box-shadow:0 8px 18px rgba(56,179,87,.25)}
 .pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d);box-shadow:0 8px 18px rgba(223,74,61,.25)}
 .mini-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.mini{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:12px}
+.mini{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:14px;padding:9px}
 .mini.info{background:linear-gradient(180deg,rgba(90,166,255,.09),rgba(255,255,255,.04))}
 .mini.highlight{background:linear-gradient(180deg,rgba(255,190,76,.11),rgba(255,255,255,.04))}
 .mini-label{font-size:12px;color:#c8d7eb;font-weight:800;margin-bottom:6px}
-.mini-value{font-size:18px;font-weight:900;line-height:1.1}
+.mini-value{font-size:16px;font-weight:900;line-height:1.1}
 @media (max-width:1100px){
   .layout{display:block}
   .col-left,.col-mid,.col-right{width:auto}
@@ -559,8 +559,8 @@ body{
       <div class="metrics">
         ${metric('pH', data.ph, `Soll ${data.phSet}`, phBadge, 'warn')}
         ${metric('ORP', data.orp, `Soll ${data.orpSet}`, orpBadge, 'warn')}
-        ${metric('Außen', `${data.outsideTemp}°C`, 'Außentemperatur', null, 'cool')}
-        ${metric('Solltemp', `${data.targetTemp}°C`, 'Zieltemperatur', null, 'metric-target')}
+        ${metric('Außen', `${data.outsideTemp}°C`, 'Außen', null, 'cool')}
+        ${metric('Solltemp', `${data.targetTemp}°C`, 'Soll', null, 'metric-target')}
       </div>
     </div>
   </div>
@@ -579,7 +579,7 @@ body{
         ${kv('Batterie SoC', `${data.battery} %`, 'energy')}
         ${kv('WP Freigabe', data.heatReason, 'reason')}
         ${kv('Chlor Freigabe', data.chlorDecision, 'reason')}
-        ${kv('Pumpe Zeitplan', data.pumpDecision, 'reason')}
+        ${kv('Zeitplan', data.pumpDecision, 'reason')}
         ${kv('pH Prüfung', data.phDecision, 'reason')}
         ${kv('pH Zeiten', data.phTimes)}
         ${kv('Standby nächster Lauf', data.standbyNext)}
@@ -594,14 +594,14 @@ body{
       <div class="status-list">
         ${status('Umwälzpumpe', 'IST-Zustand', data.pumpOn)}
         ${status('Chlorinator', 'ORP-Regelung', data.chlorOn)}
-        ${status('pH-Dosierpumpe', 'Prüfzeiten / Dosierung', data.phPumpOn)}
+        ${status('pH-Dosierpumpe', 'Prüfzeiten', data.phPumpOn)}
         ${status('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
       </div>
     </div>
     <div class="card">
       <div class="section extra">Zusatzwerte</div>
       <div class="mini-list">
-        ${mini('Pumpe Zeitplan', data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV', 'highlight')}
+        ${mini('Zeitplan', data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV', 'highlight')}
         ${mini('PV Schwelle', `${data.threshold} W`, 'info')}
         ${mini('ORP Grenzen', `${data.orpOnThreshold} / ${data.orpOffThreshold}`, 'highlight')}
         ${mini('pH Tag', `${data.phDailyCount}`, 'info')}
@@ -678,7 +678,7 @@ body{
   font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;
   color:var(--text)
 }
-.wrap{padding:10px;display:grid;gap:10px}
+.wrap{padding:10px;display:grid;gap:8px}
 .card{
   background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);
   border:1px solid var(--line);
@@ -694,18 +694,18 @@ body{
   border-color:rgba(255,255,255,.10)
 }
 .header{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
-.title{font-size:18px;font-weight:900}
+.title{font-size:16px;font-weight:900}
 .meta{text-align:right;font-size:12px;color:#d2dded}
 .mode-pill{
   display:inline-flex;align-items:center;justify-content:center;
-  padding:4px 10px;border-radius:999px;
+  padding:3px 8px;border-radius:999px;
   background:linear-gradient(135deg,#67cfff,#6f7bff);
   color:#fff;font-size:10px;font-weight:900;margin-bottom:6px
 }
-.temp-row{display:flex;align-items:flex-end;gap:6px;margin:12px 0 8px}
-.temp{font-size:62px;font-weight:900;line-height:.9}
-.unit{font-size:20px;padding-bottom:8px;color:#d5e5f6}
-.scale{margin:8px 0 12px}
+.temp-row{display:flex;align-items:flex-end;gap:6px;margin:8px 0 6px}
+.temp{font-size:52px;font-weight:900;line-height:.9}
+.unit{font-size:18px;padding-bottom:6px;color:#d5e5f6}
+.scale{margin:6px 0 8px}
 .track{
   position:relative;height:9px;border-radius:999px;
   background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)
@@ -716,14 +716,14 @@ body{
   transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(255,255,255,.35)
 }
 .scale-labels{display:flex;justify-content:space-between;font-size:11px;color:#d2dded;margin-top:5px}
-.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .metric{
   background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
-  border-radius:16px;padding:10px
+  border-radius:14px;padding:8px
 }
 .metric-label{font-size:12px;color:#d9e5f5;margin-bottom:4px}
-.metric-value{font-size:16px;font-weight:900;color:#fff}
-.metric-sub{font-size:11px;color:#c4d4e8;margin-top:5px}
+.metric-value{font-size:14px;font-weight:900;color:#fff}
+.metric-sub{font-size:10px;color:#c4d4e8;margin-top:3px}
 .signal{
   display:inline-block;margin-top:6px;padding:3px 8px;border-radius:999px;
   font-size:11px;font-weight:800
@@ -732,29 +732,29 @@ body{
 .signal.low{background:rgba(255,201,102,.18);color:#ffe4a7}
 .signal.high{background:rgba(255,121,107,.18);color:#ffd0c8}
 .signal.neutral{background:rgba(148,163,184,.18);color:#e2e8f0}
-.section-title{font-size:16px;font-weight:900;color:#0f172a;margin-bottom:10px}
-.auto-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.section-title{font-size:15px;font-weight:900;color:#0f172a;margin-bottom:8px}
+.auto-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .auto-card{
   background:linear-gradient(180deg,#ffffff,#f2f7ff);
   border:1px solid rgba(15,23,42,.08);
-  border-radius:16px;padding:11px
+  border-radius:14px;padding:8px
 }
-.auto-label{font-size:13px;color:#42546a;font-weight:700;margin-bottom:8px}
+.auto-label{font-size:12px;color:#42546a;font-weight:700;margin-bottom:6px}
 .mini-pill{
   display:inline-flex;align-items:center;justify-content:center;width:100%;
-  padding:8px 10px;border-radius:999px;font-size:12px;font-weight:900;color:#fff
+  padding:7px 8px;border-radius:999px;font-size:11px;font-weight:900;color:#fff
 }
 .mini-pill.active{background:linear-gradient(180deg,#56d56e,#36b357)}
 .mini-pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}
 .mini-pill.standby{background:linear-gradient(180deg,#8795aa,#64748b)}
-.status-list{display:grid;gap:10px}
+.status-list{display:grid;gap:8px}
 .status-row{
   display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;
-  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:12px
+  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:9px
 }
 .status-left{min-width:0}
-.status-name{font-size:16px;font-weight:900;color:#0f172a;line-height:1.15}
-.status-hint{font-size:11px;color:#64748b;margin-top:4px}
+.status-name{font-size:15px;font-weight:900;color:#0f172a;line-height:1.15}
+.status-hint{font-size:10px;color:#64748b;margin-top:2px}
 .status-pill{
   min-width:72px;text-align:center;padding:9px 12px;border-radius:999px;
   font-size:13px;font-weight:900;color:#fff
@@ -764,16 +764,16 @@ body{
 .info-list{display:grid;gap:8px}
 .info-row{
   display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start;
-  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:10px 12px
+  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:8px 10px
 }
-.info-label{font-size:13px;color:#475569;font-weight:700}
-.info-value{font-size:14px;font-weight:900;color:#0f172a;text-align:right}
-.mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.info-label{font-size:12px;color:#475569;font-weight:700}
+.info-value{font-size:13px;font-weight:900;color:#0f172a;text-align:right}
+.mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .mini-card{
-  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:11px
+  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px
 }
-.mini-label{font-size:12px;color:#64748b;font-weight:700;margin-bottom:6px}
-.mini-value{font-size:18px;font-weight:900;color:#0f172a}
+.mini-label{font-size:11px;color:#64748b;font-weight:700;margin-bottom:4px}
+.mini-value{font-size:15px;font-weight:900;color:#0f172a}
 </style></head><body><div class="wrap">
   <div class="card hero">
     <div class="header">
@@ -807,12 +807,12 @@ body{
       <div class="metric">
         <div class="metric-label">Außen</div>
         <div class="metric-value">${esc(data.outsideTemp)}°C</div>
-        <div class="metric-sub">Außentemperatur</div>
+        <div class="metric-sub">Außen</div>
       </div>
       <div class="metric">
         <div class="metric-label">Soll</div>
         <div class="metric-value">${esc(data.targetTemp)}°C</div>
-        <div class="metric-sub">Zieltemperatur</div>
+        <div class="metric-sub">Soll</div>
       </div>
     </div>
   </div>
@@ -832,7 +832,7 @@ body{
     <div class="status-list">
       ${statusRow('Umwälzpumpe', 'IST-Zustand', data.pumpOn)}
       ${statusRow('Chlorinator', 'ORP-Regelung', data.chlorOn)}
-      ${statusRow('pH-Dosierpumpe', 'Prüfzeiten / Dosierung', data.phPumpOn)}
+      ${statusRow('pH-Dosierpumpe', 'Prüfzeiten', data.phPumpOn)}
       ${statusRow('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
     </div>
   </div>
@@ -846,7 +846,7 @@ body{
       ${row('Batterie SoC', `${data.battery} %`)}
       ${row('WP Freigabe', data.heatReason)}
       ${row('Chlor Freigabe', data.chlorDecision)}
-      ${row('Pumpe Zeitplan', data.pumpDecision)}
+      ${row('Zeitplan', data.pumpDecision)}
       ${row('pH Prüfung', data.phDecision)}
       ${row('pH Zeiten', data.phTimes)}
       ${row('Standby nächster Lauf', data.standbyNext)}
@@ -857,7 +857,7 @@ body{
   <div class="card">
     <div class="section-title">Zusatzwerte</div>
     <div class="mini-grid">
-      ${mini('Pumpe Zeitplan', data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV')}
+      ${mini('Zeitplan', data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV')}
       ${mini('PV Schwelle', `${data.threshold} W`)}
       ${mini('ORP Grenzen', `${data.orpOnThreshold} / ${data.orpOffThreshold}`)}
       ${mini('pH Tag', `${data.phDailyCount}`)}
@@ -917,7 +917,7 @@ body{
 .ps-card{
   display:flex;flex-direction:column;min-width:0;overflow:hidden;
   background:linear-gradient(180deg,#f8fbff 0%,#eef4fb 100%);
-  border:1px solid rgba(15,23,42,.08);border-radius:22px;padding:14px;
+  border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:10px;
   box-shadow:0 14px 28px rgba(0,0,0,.18);
 }
 .ps-hero{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%)}
@@ -930,7 +930,7 @@ body{
 .ps-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:auto}
 .ps-metric{
   background:#ffffff;border:1px solid rgba(15,23,42,.08);
-  border-radius:16px;padding:10px;min-height:76px;
+  border-radius:14px;padding:8px;min-height:76px;
 }
 .ps-k{font-size:12px;color:#475569;margin-bottom:6px;font-weight:700}
 .ps-v{font-size:22px;font-weight:800;line-height:1.15;color:#0f172a}
@@ -947,17 +947,17 @@ body{
 .ps-list{display:grid;gap:8px}
 .ps-row{
   display:grid;grid-template-columns:minmax(90px,120px) minmax(0,1fr);gap:8px;align-items:start;
-  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:10px;
+  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px;
 }
 .ps-statuswrap{display:grid;gap:8px}
 .ps-status{
   display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;
-  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:12px;
+  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:9px;
 }
 .ps-status-left{min-width:0}
 .ps-status-name{font-size:16px;font-weight:800;color:#0f172a;line-height:1.15}
 .ps-status-hint{
-  font-size:11px;color:#64748b;margin-top:4px;
+  font-size:10px;color:#64748b;margin-top:2px;
   white-space:normal;overflow-wrap:anywhere;
 }
 .ps-pill{
@@ -999,12 +999,12 @@ body{
         <div class="ps-metric">
           <div class="ps-k">Außen</div>
           <div class="ps-v">${esc(data.outsideTemp)}°C</div>
-          <div class="ps-s">Außentemperatur</div>
+          <div class="ps-s">Außen</div>
         </div>
         <div class="ps-metric">
           <div class="ps-k">Solltemp</div>
           <div class="ps-v">${esc(data.targetTemp)}°C</div>
-          <div class="ps-s">Zieltemperatur</div>
+          <div class="ps-s">Soll</div>
         </div>
       </div>
     </div>
@@ -1021,7 +1021,7 @@ body{
         <div class="ps-row"><div class="ps-k">Batterie SoC</div><div class="ps-v">${esc(data.battery)} %</div></div>
         <div class="ps-row"><div class="ps-k">WP Freigabe</div>${decisionValue(data.heatDecision)}</div>
         <div class="ps-row"><div class="ps-k">Chlor Freigabe</div>${decisionValue(data.chlorDecision)}</div>
-        <div class="ps-row"><div class="ps-k">Pumpe Zeitplan</div>${decisionValue(data.pumpDecision)}</div>
+        <div class="ps-row"><div class="ps-k">Zeitplan</div>${decisionValue(data.pumpDecision)}</div>
         <div class="ps-row"><div class="ps-k">pH Prüfung</div>${decisionValue(data.phDecision)}</div>
         <div class="ps-row"><div class="ps-k">pH Zeiten</div>${decisionValue(data.phTimes)}</div>
         <div class="ps-row"><div class="ps-k">Standby nächster Lauf</div>${decisionValue(data.standbyNext)}</div>
@@ -1033,11 +1033,11 @@ body{
       <div class="ps-statuswrap">
         ${item('Umwälzpumpe','IST-Zustand',data.pumpOn)}
         ${item('Chlorinator','ORP-Regelung',data.chlorOn)}
-        ${item('pH-Dosierpumpe','Prüfzeiten / Dosierung',data.phPumpOn)}
+        ${item('pH-Dosierpumpe','Prüfzeiten',data.phPumpOn)}
         ${item('Wärmepumpe','PV-Freigabe',data.heatpumpOn)}
       </div>
       <div class="ps-list" style="margin-top:10px">
-        <div class="ps-row"><div class="ps-k">Pumpe Zeitplan</div><div class="ps-v">${data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV'}</div></div>
+        <div class="ps-row"><div class="ps-k">Zeitplan</div><div class="ps-v">${data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV'}</div></div>
         <div class="ps-row"><div class="ps-k">PV Schwelle</div><div class="ps-v">${esc(data.threshold)} W</div></div>
         <div class="ps-row"><div class="ps-k">ORP Grenzen</div><div class="ps-v">${esc(data.orpOnThreshold)} / ${esc(data.orpOffThreshold)}</div></div>
         <div class="ps-row"><div class="ps-k">pH Tag</div><div class="ps-v">${esc(data.phDailyCount)}</div></div>
@@ -1085,12 +1085,12 @@ body{
   background:
     radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),
     linear-gradient(180deg,#10203a,#08111f);
-  padding:10px;display:grid;gap:10px;
+  padding:6px;display:grid;gap:8px;
   font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;
 }
 .ps-card{
   background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);
-  border:1px solid rgba(15,23,42,.08);border-radius:22px;padding:14px;
+  border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:10px;
   box-shadow:0 14px 28px rgba(0,0,0,.18);
 }
 .ps-hero{
@@ -1100,30 +1100,30 @@ body{
   color:#fff;border-color:rgba(255,255,255,.10)
 }
 .ps-header{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
-.ps-title{font-size:18px;font-weight:900}
-.ps-sub{font-size:12px;color:#d2dded;text-align:right}
-.ps-mode{display:inline-flex;padding:4px 10px;border-radius:999px;background:linear-gradient(135deg,#67cfff,#6f7bff);font-size:10px;font-weight:900;color:#fff;margin-bottom:6px}
-.ps-tempRow{display:flex;align-items:flex-end;gap:6px;margin:12px 0 8px}
-.ps-temp{font-size:62px;font-weight:900;line-height:.9}
-.ps-unit{font-size:20px;padding-bottom:8px;color:#d5e5f6}
-.ps-scale{margin:8px 0 12px}.ps-track{position:relative;height:9px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid #11305b;transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(255,255,255,.35)}.ps-scale-labels{display:flex;justify-content:space-between;font-size:11px;color:#d2dded;margin-top:5px}
-.ps-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:10px}
-.ps-ml{font-size:12px;color:#d9e5f5}.ps-mv{font-size:16px;font-weight:900;color:#fff}.ps-ms{font-size:11px;color:#c4d4e8;margin-top:5px}
-.ps-section{font-size:16px;font-weight:900;color:#0f172a;margin-bottom:10px}
-.ps-auto{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.ps-autoCard{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:11px}
-.ps-autoL{font-size:13px;color:#42546a;font-weight:700;margin-bottom:8px}
-.ps-ab{display:inline-flex;align-items:center;justify-content:center;width:100%;padding:8px 10px;border-radius:999px;font-size:12px;font-weight:900;color:#fff}
+.ps-title{font-size:16px;font-weight:900}
+.ps-sub{font-size:11px;color:#d2dded;text-align:right}
+.ps-mode{display:inline-flex;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#67cfff,#6f7bff);font-size:10px;font-weight:900;color:#fff;margin-bottom:6px}
+.ps-tempRow{display:flex;align-items:flex-end;gap:6px;margin:8px 0 6px}
+.ps-temp{font-size:52px;font-weight:900;line-height:.9}
+.ps-unit{font-size:18px;padding-bottom:6px;color:#d5e5f6}
+.ps-scale{margin:6px 0 8px}.ps-track{position:relative;height:9px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid #11305b;transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(255,255,255,.35)}.ps-scale-labels{display:flex;justify-content:space-between;font-size:11px;color:#d2dded;margin-top:5px}
+.ps-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px}
+.ps-ml{font-size:12px;color:#d9e5f5}.ps-mv{font-size:14px;font-weight:900;color:#fff}.ps-ms{font-size:10px;color:#c4d4e8;margin-top:3px}
+.ps-section{font-size:15px;font-weight:900;color:#0f172a;margin-bottom:8px}
+.ps-auto{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ps-autoCard{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}
+.ps-autoL{font-size:12px;color:#42546a;font-weight:700;margin-bottom:6px}
+.ps-ab{display:inline-flex;align-items:center;justify-content:center;width:100%;padding:7px 8px;border-radius:999px;font-size:11px;font-weight:900;color:#fff}
 .ps-ab.active{background:linear-gradient(180deg,#56d56e,#36b357)}.ps-ab.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}.ps-ab.standby{background:linear-gradient(180deg,#8795aa,#64748b)}
-.ps-statusList,.ps-list{display:grid;gap:10px}
-.ps-status,.ps-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:12px}
-.ps-status-name{font-size:16px;font-weight:900;color:#0f172a}.ps-status-hint{font-size:11px;color:#64748b;margin-top:4px}
-.ps-pill{min-width:72px;text-align:center;padding:9px 12px;border-radius:999px;font-size:13px;font-weight:900;color:#fff}
+.ps-statusList,.ps-list{display:grid;gap:8px}
+.ps-status,.ps-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:9px}
+.ps-status-name{font-size:15px;font-weight:900;color:#0f172a}.ps-status-hint{font-size:10px;color:#64748b;margin-top:2px}
+.ps-pill{min-width:64px;text-align:center;padding:7px 9px;border-radius:999px;font-size:11px;font-weight:900;color:#fff}
 .ps-pill.on{background:linear-gradient(180deg,#56d56e,#36b357)}.ps-pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d)}
-.ps-k{font-size:13px;color:#475569;font-weight:700}.ps-v{font-size:14px;font-weight:900;color:#0f172a;text-align:right}
-.ps-miniGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.ps-mini{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:11px}.ps-miniL{font-size:12px;color:#64748b;font-weight:700;margin-bottom:6px}.ps-miniV{font-size:18px;font-weight:900;color:#0f172a}
+.ps-k{font-size:12px;color:#475569;font-weight:700}.ps-v{font-size:13px;font-weight:900;color:#0f172a;text-align:right}
+.ps-miniGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ps-mini{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}.ps-miniL{font-size:11px;color:#64748b;font-weight:700;margin-bottom:4px}.ps-miniV{font-size:15px;font-weight:900;color:#0f172a}
 </style>
 <div class="ps-wrap">
   <div class="ps-card ps-hero">
@@ -1136,8 +1136,8 @@ body{
     <div class="ps-metrics">
       <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${esc(data.ph)}</div><div class="ps-ms">Soll ${esc(data.phSet)}</div></div>
       <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${esc(data.orp)}</div><div class="ps-ms">Soll ${esc(data.orpSet)}</div></div>
-      <div class="ps-metric"><div class="ps-ml">Außen</div><div class="ps-mv">${esc(data.outsideTemp)}°C</div><div class="ps-ms">Außentemperatur</div></div>
-      <div class="ps-metric"><div class="ps-ml">Soll</div><div class="ps-mv">${esc(data.targetTemp)}°C</div><div class="ps-ms">Zieltemperatur</div></div>
+      <div class="ps-metric"><div class="ps-ml">Außen</div><div class="ps-mv">${esc(data.outsideTemp)}°C</div><div class="ps-ms">Außen</div></div>
+      <div class="ps-metric"><div class="ps-ml">Soll</div><div class="ps-mv">${esc(data.targetTemp)}°C</div><div class="ps-ms">Soll</div></div>
     </div>
   </div>
 
@@ -1156,7 +1156,7 @@ body{
     <div class="ps-statusList">
       ${statusRow('Umwälzpumpe', 'IST-Zustand', data.pumpOn)}
       ${statusRow('Chlorinator', 'ORP-Regelung', data.chlorOn)}
-      ${statusRow('pH-Dosierpumpe', 'Prüfzeiten / Dosierung', data.phPumpOn)}
+      ${statusRow('pH-Dosierpumpe', 'Prüfzeiten', data.phPumpOn)}
       ${statusRow('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
     </div>
   </div>
@@ -1170,7 +1170,7 @@ body{
       ${row('Batterie SoC', `${data.battery} %`)}
       ${row('WP Freigabe', data.heatReason)}
       ${row('Chlor Freigabe', data.chlorDecision)}
-      ${row('Pumpe Zeitplan', data.pumpDecision)}
+      ${row('Zeitplan', data.pumpDecision)}
       ${row('pH Prüfung', data.phDecision)}
       ${row('pH Zeiten', data.phTimes)}
       ${row('Standby nächster Lauf', data.standbyNext)}
@@ -1181,7 +1181,7 @@ body{
   <div class="ps-card">
     <div class="ps-section">Zusatzwerte</div>
     <div class="ps-miniGrid">
-      <div class="ps-mini"><div class="ps-miniL">Pumpe Zeitplan</div><div class="ps-miniV">${data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV'}</div></div>
+      <div class="ps-mini"><div class="ps-miniL">Zeitplan</div><div class="ps-miniV">${data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV'}</div></div>
       <div class="ps-mini"><div class="ps-miniL">PV Schwelle</div><div class="ps-miniV">${esc(data.threshold)} W</div></div>
       <div class="ps-mini"><div class="ps-miniL">ORP Grenzen</div><div class="ps-miniV">${esc(data.orpOnThreshold)} / ${esc(data.orpOffThreshold)}</div></div>
       <div class="ps-mini"><div class="ps-miniL">pH Tag</div><div class="ps-miniV">${esc(data.phDailyCount)}</div></div>
