@@ -745,7 +745,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       ${quick('Heute dosiert', `${data.phDailyCount}x`)}
       ${quick('Nächste Prüfung', data.phNextCheck)}
     ${quick('Granulat manuell', data.manualGranulateText)}
-      ${quick('Granulat manuell', data.manualGranulateText)}
+      
     </div>
     <div class="log-card info-${esc(data.phInfoLevel)}">
       <div class="quick-label">Letzte Meldung</div>
