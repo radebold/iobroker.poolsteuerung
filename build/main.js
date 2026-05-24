@@ -1529,11 +1529,11 @@ body{
   async applyControlLogic() {
     const now = new Date();
     const pumpId = this.config.circulationPumpSocketStateId;
-    const standbyMode = this.config.standbyModeEnabled === true;
-    const circulationEnabled = !standbyMode && this.config.enableCirculationControl !== false;
-    const phEnabledMaster = !standbyMode && this.config.enablePhControl !== false;
-    const heatEnabledMaster = !standbyMode && this.config.enableHeatpumpControl !== false;
-    const chlorEnabledMaster = !standbyMode && this.config.enableChlorControl !== false;
+    const standbyMode = await this.getControlBool('control.standby', this.config.standbyModeEnabled === true);
+    const circulationEnabled = !standbyMode && await this.getControlBool('control.auto.circulation', this.config.enableCirculationControl !== false);
+    const phEnabledMaster = !standbyMode && await this.getControlBool('control.auto.ph', this.config.enablePhControl !== false);
+    const heatEnabledMaster = !standbyMode && await this.getControlBool('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
+    const chlorEnabledMaster = !standbyMode && await this.getControlBool('control.auto.chlor', this.config.enableChlorControl !== false);
     const pumpTarget = standbyMode ? this.isStandbyPumpActive(now) : (circulationEnabled ? this.isPumpScheduleActive(now) : false);
     const pumpState = await this.getStateSnapshot(pumpId);
     const pumpCurrent = !!(pumpState && pumpState.val);
@@ -2019,14 +2019,35 @@ body{
     return sent;
   }
 
+
+  async ensureControlState(id, def) {
+    await this.ensureState(id, 'boolean', 'switch.enable', def, true);
+    const cur = await this.getStateAsync(id);
+    if (!cur || cur.val === null || cur.val === undefined) {
+      await this.setStateAsync(id, !!def, true);
+    }
+  }
+
+  async getControlBool(id, fallback) {
+    const state = await this.getStateAsync(id);
+    if (!state || state.val === null || state.val === undefined) return !!fallback;
+    return !!state.val;
+  }
+
   async onReady() {
     try {
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
       await this.ensureAlertStates();
+      await this.ensureControlState('control.standby', this.config.standbyModeEnabled === true);
+      await this.ensureControlState('control.auto.circulation', this.config.enableCirculationControl !== false);
+      await this.ensureControlState('control.auto.chlor', this.config.enableChlorControl !== false);
+      await this.ensureControlState('control.auto.ph', this.config.enablePhControl !== false);
+      await this.ensureControlState('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
       await this.setStateAsync('info.connection', true, true);
       await this.subscribeConfiguredStates();
+      try { this.subscribeStates('control.*'); } catch {}
       if (this.config.circulationPumpSocketStateId) {
         const initialPumpState = await this.getStateSnapshot(this.config.circulationPumpSocketStateId);
         this.updateCirculationPumpRuntime(!!(initialPumpState && initialPumpState.val), initialPumpState && (initialPumpState.lc || initialPumpState.ts));
@@ -2076,6 +2097,15 @@ body{
 
   async onStateChange(id, state) {
     if (!state) return;
+    if (id && id.startsWith(`${this.namespace}.control.`)) {
+      try {
+        await this.applyControlLogic();
+        await this.renderVis();
+      } catch (e) {
+        this.log.warn(`Control-State konnte nicht angewendet werden: ${e.message || e}`);
+      }
+      return;
+    }
     if (this.ruleCompareIds && this.ruleCompareIds.includes(id)) {
       await this.applyDependencyRules(id);
     }
