@@ -783,7 +783,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       ${quick('Heute dosiert', `${data.phDailyCount}x`)}
       ${quick('Nächste Prüfung', data.phNextCheck)}
       ${quick('Granulat manuell', data.manualGranulateText)}
-      <div class="manual-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})">PH Manuell<small>${esc(data.phManualDoseSec)} Sek.</small></div>
+      <div class="manual-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></div>
     </div>
   </div>
   </div>
@@ -1121,7 +1121,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Heute dosiert', `${data.phDailyCount}x`)}
     ${quick('Nächste Prüfung', data.phNextCheck)}
     ${quick('Granulat manuell', data.manualGranulateText)}
-    <div class="manual-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})">PH Manuell<small>${esc(data.phManualDoseSec)} Sek.</small></div>
+    <div class="manual-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></div>
   </div></div></div>
 </div>`;
   }
@@ -1293,7 +1293,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       batteryRounded: Math.round(parseNum(battery)),
       namespace: this.namespace,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf42'
+      adapterVersion: 'v0.3.15hf43'
     };
 
     const now = Date.now();
