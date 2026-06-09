@@ -756,10 +756,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   <div class="card">
     <div class="section-title">Aktoren & Status</div>
     <div class="status-grid">
-      ${statusBox('Umwälzpumpe', 'IST-Zustand', data.pumpOn)}
-      ${statusBox('Chlorinator', 'ORP-Regelung', data.chlorOn)}
-      ${statusBox('pH-Dosierpumpe', 'Prüfzeiten', data.phPumpOn)}
-      ${statusBox('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
+      ${statusBox('Umwälzpumpe', data.pumpOn)}
+      ${statusBox('Chlorinator', data.chlorOn)}
+      ${statusBox('pH-Dosierpumpe', data.phPumpOn)}
+      ${statusBox('Wärmepumpe', data.heatpumpOn)}
     </div>
   </div>
 
@@ -1257,7 +1257,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       batteryRounded: Math.round(parseNum(battery)),
       namespace: this.namespace,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf39'
+      adapterVersion: 'v0.3.15hf40'
     };
 
     const now = Date.now();
