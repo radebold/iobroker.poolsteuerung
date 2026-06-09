@@ -174,7 +174,14 @@ class Poolsteuerung extends utils.Adapter {
     if (!id) return false;
     try {
       const s = await this.getForeignStateAsync(id);
-      return !!(s && s.val);
+      const val = s ? s.val : undefined;
+      if (typeof val === 'boolean') return val;
+      if (typeof val === 'number') return val !== 0;
+      const str = String(val ?? '').trim().toLowerCase();
+      if (!str) return false;
+      if (['true', '1', 'on', 'ein', 'yes', 'ja'].includes(str)) return true;
+      if (['false', '0', 'off', 'aus', 'no', 'nein'].includes(str)) return false;
+      return !!val;
     } catch {
       return false;
     }
@@ -1250,7 +1257,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       batteryRounded: Math.round(parseNum(battery)),
       namespace: this.namespace,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf38'
+      adapterVersion: 'v0.3.15hf39'
     };
 
     const now = Date.now();
