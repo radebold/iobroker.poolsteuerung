@@ -693,30 +693,30 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .card{padding:5px !important;border-radius:13px !important}
 .hero{padding:6px !important}
 .header{gap:4px !important}
-.title{font-size:14px !important}
+.title{font-size:15px !important}
 .meta{font-size:9px !important}
 .temp-row{margin:4px 0 4px !important}
-.temp{font-size:40px !important}
-.unit{font-size:15px !important;padding-bottom:3px !important}
+.temp{font-size:43px !important}
+.unit{font-size:16px !important;padding-bottom:3px !important}
 .scale{margin:2px 0 4px !important}
 .scale-labels{font-size:9px !important}
 .metrics,.auto-grid,.status-grid,.quick-grid{gap:3px !important}
 .metric{padding:5px !important;border-radius:11px !important}
-.metric-label{font-size:10px !important}.metric-value{font-size:13px !important}.metric-sub{display:none !important}
+.metric-label{font-size:10px !important}.metric-value{font-size:14px !important}.metric-sub{display:none !important}
 .section-title{font-size:12px !important;margin-bottom:2px !important}
 .quick-card,.status-box{padding:5px !important;border-radius:11px !important}
-.quick-label,.status-hint{font-size:8px !important}
-.quick-value{font-size:11px !important;line-height:1.05 !important}
+.quick-label,.status-hint{font-size:9px !important}
+.quick-value{font-size:12px !important;line-height:1.08 !important}
 .status-box{min-height:34px !important}
-.status-name{font-size:11px !important;line-height:1.0 !important}
+.status-name{font-size:12px !important;line-height:1.03 !important}
 .log-card{margin-top:4px !important;padding:6px !important}
-.log-text{font-size:10px !important;line-height:1.1 !important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.log-meta{font-size:8px !important;margin-top:2px !important}
+.log-text{font-size:11px !important;line-height:1.12 !important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.log-meta{font-size:9px !important;margin-top:2px !important}
 .target-wrap{position:relative}
 .target-label{position:absolute;left:${targetPct}%;top:14px;transform:translateX(-50%);font-size:9px;color:#d2dded;white-space:nowrap}
 .manual-placeholder{border:1px dashed rgba(15,23,42,.22) !important;background:linear-gradient(180deg,#f8fbff,#eef3fb) !important}
-.ps-phGrid{grid-template-columns:repeat(3,minmax(0,1fr)) !important}.ps-phGrid .ps-q{min-height:40px}.ps-phGrid .ps-qv{font-size:10px !important}.ps-phGrid .ps-ql{font-size:8px !important}
-.ph-grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important}.ph-grid .quick-card{min-height:40px}.ph-grid .quick-value{font-size:10px !important}.ph-grid .quick-label{font-size:8px !important}
+.ps-phGrid{grid-template-columns:repeat(3,minmax(0,1fr)) !important}.ps-phGrid .ps-q{min-height:40px}.ps-phGrid .ps-qv{font-size:11px !important}.ps-phGrid .ps-ql{font-size:9px !important}
+.ph-grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important}.ph-grid .quick-card{min-height:40px}.ph-grid .quick-value{font-size:11px !important}.ph-grid .quick-label{font-size:9px !important}
 </style></head><body><div class="wrap">
   <div class="card hero">
     <div class="header">
@@ -1012,24 +1012,24 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-card{padding:5px !important;border-radius:13px !important}
 .ps-hero{padding:6px !important}
 .ps-header{gap:4px !important}
-.ps-title{font-size:14px !important}
+.ps-title{font-size:15px !important}
 .ps-sub{font-size:9px !important}
 .ps-tempRow{margin:4px 0 4px !important}
-.ps-temp{font-size:40px !important}
-.ps-unit{font-size:15px !important;padding-bottom:3px !important}
+.ps-temp{font-size:43px !important}
+.ps-unit{font-size:16px !important;padding-bottom:3px !important}
 .ps-scale{margin:2px 0 4px !important}
 .ps-scale-labels{font-size:9px !important}
 .ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{gap:3px !important}
 .ps-metric{padding:5px !important;border-radius:11px !important}
-.ps-ml{font-size:10px !important}.ps-mv{font-size:13px !important}.ps-ms{display:none !important}
+.ps-ml{font-size:10px !important}.ps-mv{font-size:14px !important}.ps-ms{display:none !important}
 .ps-section{font-size:12px !important;margin-bottom:2px !important}
 .ps-sb,.ps-q{padding:5px !important;border-radius:11px !important}
 .ps-sb{min-height:34px !important}
-.ps-sn{font-size:11px !important;line-height:1.0 !important}
-.ps-qv{font-size:11px !important;line-height:1.05 !important}
+.ps-sn{font-size:12px !important;line-height:1.03 !important}
+.ps-qv{font-size:12px !important;line-height:1.08 !important}
 .ps-log{margin-top:4px !important;padding:6px !important}
-.ps-logt{font-size:10px !important;line-height:1.1 !important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.ps-logm{font-size:8px !important;margin-top:2px !important}
+.ps-logt{font-size:11px !important;line-height:1.12 !important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ps-logm{font-size:9px !important;margin-top:2px !important}
 .ps-targetWrap{position:relative}
 .ps-targetLabel{position:absolute;left:${targetPct}%;top:14px;transform:translateX(-50%);font-size:9px;color:#d2dded;white-space:nowrap}
 .manual-placeholder{border:1px dashed rgba(15,23,42,.22) !important;background:linear-gradient(180deg,#f8fbff,#eef3fb) !important}
