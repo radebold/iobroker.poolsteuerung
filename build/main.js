@@ -823,271 +823,157 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       if (n > high) return 'bad';
       return 'good';
     };
-
     const phClass = badgeClass(data.ph, 7.1, 7.25);
     const orpClass = badgeClass(data.orp, Number(data.orpOnThreshold || 725), Number(data.orpOffThreshold || 750));
-
-    const item = (name, hint, on) => `
-      <div class="ps-status">
-        <div class="ps-status-left">
-          <div class="ps-status-name">${esc(name)}</div>
-          <div class="ps-status-hint">${esc(hint)}</div>
-        </div>
-        <div class="ps-pill ${on ? 'on' : 'off'}">${on ? 'EIN' : 'AUS'}</div>
-      </div>`;
-
+    const autoBtn = (label, key, active) => `
+      <button class="ps-action-btn ${active ? 'is-on' : 'is-off'}" onclick="poolToggleControl('${key}', ${active ? 'true' : 'false'})">
+        <span class="ps-action-name">${esc(label)}</span>
+        <span class="ps-action-state">${active ? 'AKTIV' : 'AUS'}</span>
+      </button>`;
+    const deviceBtn = (label, stateId, active) => `
+      <button class="ps-action-btn ${active ? 'is-on' : 'is-off'}" ${stateId ? `onclick="poolToggleState(${JSON.stringify(stateId)}, ${active ? 'true' : 'false'})"` : 'disabled'}>
+        <span class="ps-action-name">${esc(label)}</span>
+        <span class="ps-action-state">${active ? 'EIN' : 'AUS'}</span>
+      </button>`;
     const decisionValue = v => `<div class="ps-v ps-wrap">${esc(v)}</div>`;
-
     return `
 <!-- widget-render:${esc(data.updated)} -->
 <style>
 .ps-root,*{box-sizing:border-box}
-.ps-root{
-  width:100%;max-width:1000px;height:730px;max-height:730px;overflow:hidden;padding:8px;margin:0 auto;
-  color:#0f172a;font-family:Arial,Helvetica,sans-serif;
-  background:linear-gradient(180deg,#0b1220 0%,#0f172a 100%);
-}
-.ps-grid{
-  display:grid;
-  grid-template-columns:276px 340px 360px;
-  gap:8px;
-  width:100%;
-  height:714px;
-  overflow:hidden;
-}
-.ps-card{
-  display:flex;flex-direction:column;min-width:0;overflow:hidden;
-  background:linear-gradient(180deg,#f8fbff 0%,#eef4fb 100%);
-  border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:10px;
-  box-shadow:0 14px 28px rgba(0,0,0,.18);
-}
-.ps-hero{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%)}
-.ps-header{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
-.ps-title{font-size:18px;font-weight:800;color:#0f172a}
-.ps-sub{font-size:11px;color:#475569;text-align:right;flex:0 0 auto}
-.ps-tempRow{display:flex;align-items:flex-end;gap:8px;margin:10px 0 12px}
-.ps-temp{font-size:70px;font-weight:900;line-height:.9;color:#0f172a}
-.ps-unit{font-size:20px;color:#475569;padding-bottom:8px}
-.ps-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:auto}
-.ps-metric{
-  background:#ffffff;border:1px solid rgba(15,23,42,.08);
-  border-radius:14px;padding:8px;min-height:76px;
-}
-.ps-k{font-size:12px;color:#475569;margin-bottom:6px;font-weight:700}
-.ps-v{font-size:22px;font-weight:800;line-height:1.15;color:#0f172a}
-.ps-v.ps-wrap{
-  font-size:14px;font-weight:700;line-height:1.25;
-  word-break:break-word;overflow-wrap:anywhere;white-space:normal;
-}
-.ps-s{font-size:11px;color:#64748b;margin-top:6px}
-.ps-chip{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:800;margin-top:6px}
-.ps-chip.good{background:#dcfce7;color:#166534}
-.ps-chip.warn{background:#fef3c7;color:#92400e}
-.ps-chip.bad{background:#fee2e2;color:#991b1b}
-.ps-chip.neutral{background:#e2e8f0;color:#334155}
-.ps-list{display:grid;gap:6px}
-.ps-row{
-  display:grid;grid-template-columns:minmax(90px,120px) minmax(0,1fr);gap:8px;align-items:start;
-  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px;
-}
-.ps-statuswrap{display:grid;gap:8px}
-.ps-status{
-  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;
-  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:9px;
-}
-.ps-status-left{min-width:0}
-.ps-status-name{font-size:16px;font-weight:800;color:#0f172a;line-height:1.15}
-.ps-status-hint{
-  font-size:10px;color:#64748b;margin-top:2px;
-  white-space:normal;overflow-wrap:anywhere;
-}
-.ps-pill{
-  min-width:72px;text-align:center;padding:9px 12px;border-radius:999px;
-  font-size:13px;font-weight:800;color:#fff
-}
-.ps-pill.on{background:#43c05b}
-.ps-pill.off{background:#e64a45}
-@media (max-width: 1050px){
-  .ps-grid{grid-template-columns:1fr}
-}
+.ps-root{width:100%;max-width:1000px;height:730px;max-height:730px;overflow:hidden;padding:8px;margin:0 auto;color:#0f172a;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(180deg,#0b1220 0%,#0f172a 100%)}
+.ps-grid{display:grid;grid-template-columns:278px 330px 368px;gap:8px;width:100%;height:714px;overflow:hidden}
+.ps-card{display:flex;flex-direction:column;min-width:0;overflow:hidden;background:linear-gradient(180deg,#f8fbff 0%,#eef4fb 100%);border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:10px;box-shadow:0 14px 28px rgba(0,0,0,.18)}
+.ps-hero{background:radial-gradient(circle at top right, rgba(85,200,255,.22), transparent 28%),linear-gradient(180deg,#1b3763 0%,#102342 100%);color:#fff;border-color:rgba(255,255,255,.1)}
+.ps-header{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.ps-title{font-size:18px;font-weight:800;color:inherit}.ps-ver{font-size:11px;font-weight:800;color:#b9d7ff;margin-left:6px}.ps-sub{font-size:11px;color:#d4deec;text-align:right;flex:0 0 auto}.ps-mode{display:inline-flex;align-items:center;justify-content:center;padding:4px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(180deg,#334f84,#1b3158);font-weight:800;font-size:11px;color:#fff;cursor:pointer}
+.ps-tempRow{display:flex;align-items:flex-end;gap:8px;margin:10px 0 10px}.ps-temp{font-size:70px;font-weight:900;line-height:.9;color:inherit}.ps-unit{font-size:20px;color:#d7e5f5;padding-bottom:8px}
+.ps-scale{margin:2px 0 10px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-target{position:absolute;top:50%;left:${Math.max(0, Math.min(100, ((parseNum(data.targetTemp)-15)/(32-15))*100 || 0))}%;width:3px;height:14px;border-radius:999px;background:#fff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.ps-dot{position:absolute;top:50%;left:${Math.max(0, Math.min(100, ((parseNum(data.poolTemp)-15)/(32-15))*100 || 0))}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:#e3edf9}.ps-target-label{position:relative;height:12px;font-size:10px;color:#e3edf9}.ps-target-label span{position:absolute;left:${Math.max(0, Math.min(100, ((parseNum(data.targetTemp)-15)/(32-15))*100 || 0))}%;transform:translateX(-50%)}
+.ps-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:auto}.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px;min-height:74px}.ps-k{font-size:12px;color:inherit;opacity:.88;margin-bottom:6px;font-weight:700}.ps-v{font-size:22px;font-weight:800;line-height:1.15;color:#0f172a}.ps-v.ps-wrap{font-size:13px;font-weight:700;line-height:1.2;word-break:break-word;overflow-wrap:anywhere;white-space:normal}.ps-s{font-size:11px;color:#e3edf9;margin-top:6px}.ps-hero .ps-v{color:#fff}.ps-chip{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:800;margin-top:6px}.ps-chip.good{background:#dcfce7;color:#166534}.ps-chip.warn{background:#fef3c7;color:#92400e}.ps-chip.bad{background:#fee2e2;color:#991b1b}.ps-chip.neutral{background:#e2e8f0;color:#334155}
+.ps-block-title{font-size:18px;font-weight:800;color:#0f172a;margin-bottom:8px}.ps-list{display:grid;gap:6px}.ps-row{display:grid;grid-template-columns:minmax(88px,116px) minmax(0,1fr);gap:8px;align-items:start;background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}.ps-actions-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}.ps-action-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:10px 12px;border-radius:14px;min-height:58px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:4px}.ps-action-btn:disabled{opacity:.5;cursor:default}.ps-action-name{font-size:14px;font-weight:800}.ps-action-state{font-size:12px;font-weight:800}.ps-action-btn.is-on .ps-action-name,.ps-action-btn.is-on .ps-action-state{color:#67dd7c}.ps-action-btn.is-off .ps-action-name,.ps-action-btn.is-off .ps-action-state{color:#ff8d7b}.ps-statuswrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+@media (max-width: 1050px){.ps-grid{grid-template-columns:1fr}}
 </style>
-<div class="ps-root">
-  <div class="ps-grid">
-    <div class="ps-card ps-hero">
-      <div class="ps-header">
-        <div>
-          <div class="ps-title">Pool Manager <span class="ps-ver">${esc(data.adapterVersion)}</span></div>
-        </div>
-        <div class="ps-sub">Modus<br>${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}<br>Aktualisiert<br>${esc(data.updated)}</div>
-      </div>
-      <div class="ps-tempRow">
-        <div class="ps-temp">${esc(data.poolTemp)}</div>
-        <div class="ps-unit">°C</div>
-      </div>
-      <div class="ps-metrics">
-        <div class="ps-metric">
-          <div class="ps-k">pH</div>
-          <div class="ps-v">${esc(data.ph)}</div>
-          <div class="ps-s">Soll ${esc(data.phSet)}</div>
-          <div class="ps-chip ${phClass}">${phClass === 'good' ? 'OK' : phClass === 'warn' ? 'Niedrig' : 'Hoch'}</div>
-        </div>
-        <div class="ps-metric">
-          <div class="ps-k">ORP</div>
-          <div class="ps-v">${esc(data.orp)}</div>
-          <div class="ps-s">Soll ${esc(data.orpSet)}</div>
-          <div class="ps-chip ${orpClass}">${orpClass === 'good' ? 'OK' : orpClass === 'warn' ? 'Niedrig' : 'Hoch'}</div>
-        </div>
-        <div class="ps-metric">
-          <div class="ps-k">Außen</div>
-          <div class="ps-v">${esc(data.outsideTemp)}°C</div>
-          <div class="ps-s">Außen</div>
-        </div>
-        <div class="ps-metric">
-          <div class="ps-k">Solltemp</div>
-          <div class="ps-v">${esc(data.targetTemp)}°C</div>
-          <div class="ps-s">Soll</div>
-        </div>
-      </div>
+<div class="ps-root"><div class="ps-grid">
+  <div class="ps-card ps-hero">
+    <div class="ps-header">
+      <div><div class="ps-title">Pool Manager <span class="ps-ver">${esc(data.adapterVersion)}</span></div></div>
+      <div class="ps-sub"><button class="ps-mode" onclick="poolToggleStandby(${data.standbyControl ? 'true' : 'false'})">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</button><br>Aktualisiert<br>${esc(data.updated)}</div>
     </div>
-    <div class="ps-card">
-      <div class="ps-title">Energie & Steuerung</div>
-      <div class="ps-list">
-        <div class="ps-row"><div class="ps-k">Pumpe Auto</div><div class="ps-v">${esc(data.autoCirculation)}</div></div>
-        <div class="ps-row"><div class="ps-k">Chlor Auto</div><div class="ps-v">${esc(data.autoChlor)}</div></div>
-        <div class="ps-row"><div class="ps-k">pH Auto</div><div class="ps-v">${esc(data.autoPh)}</div></div>
-        <div class="ps-row"><div class="ps-k">WP Auto</div><div class="ps-v">${esc(data.autoHeatpump)}</div></div>
-        <div class="ps-row"><div class="ps-k">PV-Leistung</div><div class="ps-v">${esc(data.pv)} W</div></div>
-        <div class="ps-row"><div class="ps-k">Netzeinspeisung</div><div class="ps-v">${esc(data.feedIn)} W</div></div>
-        <div class="ps-row"><div class="ps-k">Netzbezug</div><div class="ps-v">${esc(data.gridSupply)} W</div></div>
-        <div class="ps-row"><div class="ps-k">Batterie SoC</div><div class="ps-v">${esc(data.battery)} %</div></div>
-        <div class="ps-row"><div class="ps-k">WP Freigabe</div>${decisionValue(data.heatDecision)}</div>
-        <div class="ps-row"><div class="ps-k">Chlor Freigabe</div>${decisionValue(data.chlorDecision)}</div>
-        <div class="ps-row"><div class="ps-k">Zeitplan</div>${decisionValue(data.pumpDecision)}</div>
-        <div class="ps-row"><div class="ps-k">pH Prüfung</div>${decisionValue(data.phDecision)}</div>
-        <div class="ps-row"><div class="ps-k">pH Zeiten</div>${decisionValue(data.phTimes)}</div>
-        <div class="ps-row"><div class="ps-k">Standby nächster Lauf</div>${decisionValue(data.standbyNext)}</div>
-        <div class="ps-row"><div class="ps-k">Letzte Dosierung</div><div class="ps-v">${esc(data.phLastDoseDurationSec)} s</div></div>
-      </div>
-    </div>
-    <div class="ps-card">
-      <div class="ps-title">Aktoren & Status</div>
-      <div class="ps-statuswrap">
-        ${item('Umwälzpumpe','IST-Zustand',data.pumpOn)}
-        ${item('Chlorinator','ORP-Regelung',data.chlorOn)}
-        ${item('pH-Dosierpumpe','Prüfzeiten',data.phPumpOn)}
-        ${item('Wärmepumpe','PV-Freigabe',data.heatpumpOn)}
-      </div>
-      <div class="ps-list" style="margin-top:10px">
-        <div class="ps-row"><div class="ps-k">Zeitplan</div><div class="ps-v">${data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV'}</div></div>
-        <div class="ps-row"><div class="ps-k">PV Schwelle</div><div class="ps-v">${esc(data.threshold)} W</div></div>
-        <div class="ps-row"><div class="ps-k">ORP Grenzen</div><div class="ps-v">${esc(data.orpOnThreshold)} / ${esc(data.orpOffThreshold)}</div></div>
-        <div class="ps-row"><div class="ps-k">pH Tag</div><div class="ps-v">${esc(data.phDailyCount)}</div></div>
-        <div class="ps-row"><div class="ps-k">Pumpe ml/min</div><div class="ps-v">${esc(data.phFlowMlMin)}</div></div>
-        <div class="ps-row"><div class="ps-k">ml je 0,1 / 10m³</div><div class="ps-v">${esc(data.phMlPer01Per10)}</div></div>
-        <div class="ps-row"><div class="ps-k">Poolvolumen</div><div class="ps-v">${esc(data.volume)} m³</div></div>
-      </div>
+    <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
+    <div class="ps-scale"><div class="ps-track"><div class="ps-target"></div><div class="ps-dot"></div></div><div class="ps-target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
+    <div class="ps-metrics">
+      <div class="ps-metric"><div class="ps-k">pH</div><div class="ps-v">${esc(data.ph)}</div><div class="ps-s">Soll ${esc(data.phSet)}</div><div class="ps-chip ${phClass}">${phClass === 'good' ? 'OK' : phClass === 'warn' ? 'Niedrig' : 'Hoch'}</div></div>
+      <div class="ps-metric"><div class="ps-k">ORP</div><div class="ps-v">${esc(data.orp)}</div><div class="ps-s">Soll ${esc(data.orpSet)}</div><div class="ps-chip ${orpClass}">${orpClass === 'good' ? 'OK' : orpClass === 'warn' ? 'Niedrig' : 'Hoch'}</div></div>
+      <div class="ps-metric"><div class="ps-k">Außen</div><div class="ps-v">${esc(data.outsideTemp)}°C</div></div>
+      <div class="ps-metric"><div class="ps-k">Solltemp</div><div class="ps-v">${esc(data.targetTemp)}°C</div></div>
     </div>
   </div>
-</div>`;
+  <div class="ps-card">
+    <div class="ps-block-title">Automatik</div>
+    <div class="ps-actions-grid">
+      ${autoBtn('Umwälzpumpe','circulation',!!data.autoCirculationControl)}
+      ${autoBtn('Chlor','chlor',!!data.autoChlorControl)}
+      ${autoBtn('pH','ph',!!data.autoPhControl)}
+      ${autoBtn('Wärmepumpe','heatpump',!!data.autoHeatpumpControl)}
+    </div>
+    <div class="ps-block-title">Energie & Steuerung</div>
+    <div class="ps-list">
+      <div class="ps-row"><div class="ps-k">PV-Leistung</div><div class="ps-v">${esc(data.pv)} W</div></div>
+      <div class="ps-row"><div class="ps-k">Netzeinspeisung</div><div class="ps-v">${esc(data.feedIn)} W</div></div>
+      <div class="ps-row"><div class="ps-k">Netzbezug</div><div class="ps-v">${esc(data.gridSupply)} W</div></div>
+      <div class="ps-row"><div class="ps-k">Batterie SoC</div><div class="ps-v">${esc(data.battery)} %</div></div>
+      <div class="ps-row"><div class="ps-k">WP Freigabe</div>${decisionValue(data.heatDecision)}</div>
+      <div class="ps-row"><div class="ps-k">Chlor Freigabe</div>${decisionValue(data.chlorDecision)}</div>
+      <div class="ps-row"><div class="ps-k">Zeitplan</div>${decisionValue(data.pumpDecision)}</div>
+      <div class="ps-row"><div class="ps-k">pH Prüfung</div>${decisionValue(data.phDecision)}</div>
+    </div>
+  </div>
+  <div class="ps-card">
+    <div class="ps-block-title">Aktoren & Status</div>
+    <div class="ps-statuswrap">
+      ${deviceBtn('Umwälzpumpe',data.circulationPumpStateId,!!data.pumpOn)}
+      ${deviceBtn('Chlorinator',data.chlorinatorStateId,!!data.chlorOn)}
+      ${deviceBtn('pH-Dosierpumpe',data.phPumpStateId,!!data.phPumpOn)}
+      ${deviceBtn('Wärmepumpe',data.heatpumpStateId,!!data.heatpumpOn)}
+    </div>
+    <div class="ps-list">
+      <div class="ps-row"><div class="ps-k">Zeitplan</div><div class="ps-v">${data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV'}</div></div>
+      <div class="ps-row"><div class="ps-k">PV Schwelle</div><div class="ps-v">${esc(data.threshold)} W</div></div>
+      <div class="ps-row"><div class="ps-k">ORP Grenzen</div><div class="ps-v">${esc(data.orpOnThreshold)} / ${esc(data.orpOffThreshold)}</div></div>
+      <div class="ps-row"><div class="ps-k">pH Tag</div><div class="ps-v">${esc(data.phDailyCount)}</div></div>
+      <div class="ps-row"><div class="ps-k">Pumpe ml/min</div><div class="ps-v">${esc(data.phFlowMlMin)}</div></div>
+      <div class="ps-row"><div class="ps-k">ml je 0,1 / 10m³</div><div class="ps-v">${esc(data.phMlPer01Per10)}</div></div>
+      <div class="ps-row"><div class="ps-k">Poolvolumen</div><div class="ps-v">${esc(data.volume)} m³</div></div>
+      <div class="ps-row"><div class="ps-k">Granulat manuell</div><div class="ps-v">${esc(data.manualGranulateText)}</div></div>
+    </div>
+  </div>
+</div></div>
+<script>
+(function(){
+  window.poolSetState = async function(id,val){
+    try{ if(window.vis&&window.vis.conn&&typeof window.vis.conn.setState==='function'){ window.vis.conn.setState(id,val); return true; } }catch(e){}
+    try{ if(window.parent&&window.parent.vis&&window.parent.vis.conn&&typeof window.parent.vis.conn.setState==='function'){ window.parent.vis.conn.setState(id,val); return true; } }catch(e){}
+    try{ if(window.top&&window.top.vis&&window.top.vis.conn&&typeof window.top.vis.conn.setState==='function'){ window.top.vis.conn.setState(id,val); return true; } }catch(e){}
+    return false;
+  };
+  window.poolToggleControl = async function(key,current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.auto.'+key, !current); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolToggleStandby = async function(current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.standby', !current); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolToggleState = async function(id,current){ const ok=await window.poolSetState(id, !current); if(!ok) alert('VIS setState nicht verfügbar'); };
+})();
+</script>`;
   }
 
   buildPhoneWidget(data) {
     const poolTempNum = parseNum(data.poolTemp);
     const tempScaleMin = 15;
     const tempScaleMax = 32;
-    const tempPct = Number.isFinite(poolTempNum)
-      ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100))
-      : 0;
+    const tempPct = Number.isFinite(poolTempNum) ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
     const targetTempNum = parseNum(data.targetTemp);
-    const targetPct = Number.isFinite(targetTempNum)
-      ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100))
-      : 0;
-
-    const autoBox = (name, state) => {
-      const cls = state === 'AKTIV' ? 'on-state' : state === 'STANDBY' ? 'standby-state' : 'off-state';
-      return `<div class="ps-sb ${cls}"><div class="ps-sn">${esc(name)}</div></div>`;
-    };
-
-    const statusBox = (name, on) => `<div class="ps-sb ${on ? 'on-state' : 'off-state'}"><div class="ps-sn">${esc(name)} · ${on ? 'EIN' : 'AUS'}</div></div>`;
+    const targetPct = Number.isFinite(targetTempNum) ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
+    const autoBtn = (label, key, active) => `<button class="ps-btn ${active ? 'is-on' : 'is-off'}" onclick="poolToggleControl('${key}', ${active ? 'true' : 'false'})"><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
+    const deviceBtn = (label, id, active) => `<button class="ps-btn ${active ? 'is-on' : 'is-off'}" ${id ? `onclick="poolToggleState(${JSON.stringify(id)}, ${active ? 'true' : 'false'})"` : 'disabled'}><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'EIN' : 'AUS'}</span></button>`;
     const quick = (l, v) => `<div class="ps-q"><div class="ps-ql">${esc(l)}</div><div class="ps-qv">${esc(v)}</div></div>`;
-
     return `<!-- phone-render:${esc(data.updated)} -->
 <style>
-.ps-wrap{background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,#10203a,#08111f);padding:4px;display:grid;gap:6px;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
+.ps-wrap{width:100%;max-width:510px;margin:0 auto;display:grid;gap:6px;padding:4px;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,#10203a,#08111f);font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
 .ps-card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:8px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
 .ps-hero{background:radial-gradient(circle at top right, rgba(85,200,255,.26), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
-.ps-header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}.ps-title{font-size:16px;font-weight:900}.ps-ver{font-size:10px;font-weight:800;color:#b9d7ff;margin-left:6px;vertical-align:middle}.ps-sub{font-size:10px;color:#d2dded;text-align:right}.ps-mode{display:inline-flex;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#67cfff,#6f7bff);font-size:9px;font-weight:900;color:#fff;margin-bottom:4px}
-.ps-tempRow{display:flex;align-items:flex-end;gap:5px;margin:6px 0 5px}.ps-temp{font-size:46px;font-weight:900;line-height:.9}.ps-unit{font-size:18px;padding-bottom:6px;color:#d5e5f6}
-.ps-scale{margin:3px 0 7px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-target{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#ffffff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%);box-shadow:0 0 0 1px rgba(255,255,255,.15)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #11305b;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;font-size:10px;color:#d2dded;margin-top:4px}
-.ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
-.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:7px}.ps-ml{font-size:11px;color:#d9e5f5}.ps-mv{font-size:14px;font-weight:900;color:#fff}.ps-ms{font-size:10px;color:#c4d4e8;margin-top:3px}
-.ps-section{font-size:13px;font-weight:900;color:#0f172a;margin-bottom:4px}
-.ps-sb,.ps-q{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.ps-ql,.ps-sh{font-size:11px;color:#64748b}.ps-ql{font-weight:700;margin-bottom:4px}
-.ps-sb{min-height:46px;display:flex;flex-direction:column;justify-content:center;padding:6px 7px}
-.ps-sb.on-state{background:linear-gradient(180deg,#f7fff8,#eefcf1)}
-.ps-sb.off-state{background:linear-gradient(180deg,#fff8f7,#fff0ee)}
-.ps-sb.standby-state{background:linear-gradient(180deg,#f6f8fb,#eef2f7)}
-.ps-sn{font-size:12.5px;font-weight:900;line-height:1.05}
-.ps-sb.on-state .ps-sn{color:#179a3b}
-.ps-sb.off-state .ps-sn{color:#d6493b}
-.ps-sb.standby-state .ps-sn{color:#64748b}
-.ps-sh{margin-top:3px}
-.ps-qv{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
-</style>
-<style>
-.ps-wrap{width:100%;max-width:390px;height:730px;max-height:730px;overflow:hidden;margin:0 auto;gap:3px !important}
-.ps-card{padding:5px !important;border-radius:13px !important}
-.ps-hero{padding:6px !important}
-.ps-header{gap:4px !important}
-.ps-title{font-size:15px !important}.ps-ver{font-size:9px !important;margin-left:5px !important}
-.ps-sub{font-size:9px !important}
-.ps-tempRow{margin:4px 0 4px !important}
-.ps-temp{font-size:43px !important}
-.ps-unit{font-size:16px !important;padding-bottom:3px !important}
-.ps-scale{margin:2px 0 4px !important}
-.ps-scale-labels{font-size:9px !important}
-.ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{gap:3px !important}
-.ps-metric{padding:5px !important;border-radius:11px !important}
-.ps-ml{font-size:10px !important}.ps-mv{font-size:14px !important}.ps-ms{display:none !important}
-.ps-section{font-size:12px !important;margin-bottom:2px !important}
-.ps-sb,.ps-q{padding:5px !important;border-radius:11px !important}
-.ps-sb{min-height:34px !important}
-.ps-sn{font-size:12px !important;line-height:1.03 !important}
-.ps-qv{font-size:12px !important;line-height:1.08 !important}
-.ps-targetWrap{position:relative}
-.ps-targetLabel{position:absolute;left:${targetPct}%;top:14px;transform:translateX(-50%);font-size:9px;color:#d2dded;white-space:nowrap}
-.manual-placeholder{border:1px dashed rgba(15,23,42,.22) !important;background:linear-gradient(180deg,#f8fbff,#eef3fb) !important}.manual-btn{position:relative !important;display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;text-align:center !important;color:#fff !important;font-weight:800 !important;font-size:12px !important;border-radius:999px !important;border:1px solid rgba(255,255,255,.22) !important;min-height:40px !important;padding:4px 12px !important;cursor:pointer !important;user-select:none !important;overflow:hidden !important;white-space:nowrap !important;background:linear-gradient(180deg,#6d727a 0%,#434850 18%,#23272d 52%,#101216 100%) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.28), inset 0 -5px 12px rgba(0,0,0,.42), 0 4px 10px rgba(0,0,0,.20) !important}.manual-btn::before{content:'' !important;position:absolute !important;left:6px !important;right:6px !important;top:5px !important;height:44% !important;border-radius:999px !important;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,.03)) !important;pointer-events:none !important}.manual-btn::after{content:'' !important;position:absolute !important;inset:0 !important;border-radius:999px !important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06), inset 0 -10px 18px rgba(0,0,0,.18) !important;pointer-events:none !important}.manual-btn:active{transform:translateY(1px) scale(.99) !important}.manual-btn span,.manual-btn small{position:relative !important;z-index:1 !important}.manual-btn small{display:block;font-size:9px !important;font-weight:700 !important;opacity:.92 !important;color:#d7dde8 !important;margin-top:1px !important}
-.ps-phGrid{grid-template-columns:repeat(3,minmax(0,1fr)) !important}.ps-phGrid .ps-q{min-height:40px}.ps-phGrid .ps-qv{font-size:11px !important}.ps-phGrid .ps-ql{font-size:9px !important}
+.ps-header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}.ps-title{font-size:16px;font-weight:900}.ps-ver{font-size:10px;font-weight:800;color:#b9d7ff;margin-left:6px}.ps-sub{font-size:10px;color:#d2dded;text-align:right}.ps-mode{display:inline-flex;align-items:center;justify-content:center;padding:4px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(180deg,#334f84,#1b3158);font-weight:800;font-size:10px;color:#fff;cursor:pointer}
+.ps-tempRow{display:flex;align-items:flex-end;gap:5px;margin:6px 0 5px}.ps-temp{font-size:48px;font-weight:900;line-height:.9}.ps-unit{font-size:18px;padding-bottom:6px;color:#d5e5f6}
+.ps-scale{margin:3px 0 7px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-target{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#fff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:#e3edf9}.ps-target-label{position:relative;height:12px;font-size:10px;color:#d2dded}.ps-target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}
+.ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.ps-phGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:7px}.ps-ml{font-size:11px;color:#d9e5f5}.ps-mv{font-size:14px;font-weight:900;color:#fff}.ps-ms{display:none}.ps-section{font-size:13px;font-weight:900;color:#0f172a;margin-bottom:4px}
+.ps-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:8px 10px;border-radius:14px;min-height:52px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}.ps-btn:disabled{opacity:.5;cursor:default}.ps-btn-name{font-size:13px;font-weight:800}.ps-btn-state{font-size:11px;font-weight:800}.ps-btn.is-on .ps-btn-name,.ps-btn.is-on .ps-btn-state{color:#67dd7c}.ps-btn.is-off .ps-btn-name,.ps-btn.is-off .ps-btn-state{color:#ff8d7b}
+.ps-q{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.ps-ql{font-size:10px;color:#64748b;font-weight:700;margin-bottom:4px}.ps-qv{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
+.manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:8px 10px;border-radius:999px;min-height:52px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}.manual-btn span{font-size:13px}.manual-btn small{font-size:11px;color:#dbeafe}
 </style>
 <div class="ps-wrap">
   <div class="ps-card ps-hero">
-    <div class="ps-header"><div class="ps-title">Pool Manager <span class="ps-ver">${esc(data.adapterVersion)}</span></div><div class="ps-sub"><div class="ps-mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div></div>
+    <div class="ps-header"><div class="ps-title">Pool Manager <span class="ps-ver">${esc(data.adapterVersion)}</span></div><div class="ps-sub"><button class="ps-mode" onclick="poolToggleStandby(${data.standbyControl ? 'true' : 'false'})">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</button><br>Aktualisiert<br>${esc(data.updated)}</div></div>
     <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
-    <div class="ps-scale"><div class="ps-targetWrap"><div class="ps-track"><div class="ps-target" title="Soll ${esc(data.targetTemp)} °C"></div><div class="ps-dot"></div></div><div class="ps-targetLabel">Soll ${esc(data.targetTemp)}°C</div></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
+    <div class="ps-scale"><div class="ps-track"><div class="ps-target"></div><div class="ps-dot"></div></div><div class="ps-target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="ps-metrics">
-      <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${esc(data.ph)}</div><div class="ps-ms">Soll ${esc(data.phSet)}</div></div>
-      <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${esc(data.orp)}</div><div class="ps-ms">Soll ${esc(data.orpSet)}</div></div>
+      <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${esc(data.ph)}</div></div>
+      <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${esc(data.orp)}</div></div>
       <div class="ps-metric"><div class="ps-ml">Außen</div><div class="ps-mv">${esc(data.outsideTemp)}°C</div></div>
       <div class="ps-metric"><div class="ps-ml">Soll</div><div class="ps-mv">${esc(data.targetTemp)}°C</div></div>
     </div>
   </div>
   <div class="ps-card"><div class="ps-section">Automatik</div><div class="ps-auto">
-    ${autoBox('Umwälzpumpe', data.autoCirculation)}
-    ${autoBox('Chlor', data.autoChlor)}
-    ${autoBox('pH', data.autoPh)}
-    ${autoBox('Wärmepumpe', data.autoHeatpump)}
+    ${autoBtn('Umwälzpumpe','circulation',!!data.autoCirculationControl)}
+    ${autoBtn('Chlor','chlor',!!data.autoChlorControl)}
+    ${autoBtn('pH','ph',!!data.autoPhControl)}
+    ${autoBtn('Wärmepumpe','heatpump',!!data.autoHeatpumpControl)}
   </div></div>
   <div class="ps-card"><div class="ps-section">Aktoren & Status</div><div class="ps-statusGrid">
-    ${statusBox('Umwälzpumpe',data.pumpOn)}
-    ${statusBox('Chlorinator',data.chlorOn)}
-    ${statusBox('pH-Dosierpumpe',data.phPumpOn)}
-    ${statusBox('Wärmepumpe',data.heatpumpOn)}
+    ${deviceBtn('Umwälzpumpe',data.circulationPumpStateId,!!data.pumpOn)}
+    ${deviceBtn('Chlorinator',data.chlorinatorStateId,!!data.chlorOn)}
+    ${deviceBtn('pH-Dosierpumpe',data.phPumpStateId,!!data.phPumpOn)}
+    ${deviceBtn('Wärmepumpe',data.heatpumpStateId,!!data.heatpumpOn)}
   </div></div>
   <div class="ps-card"><div class="ps-section">Energie & Steuerung</div><div class="ps-quickGrid">
     ${quick('PV-Leistung', `${data.pv} W`)}
     ${quick('Einspeisung', `${data.feedIn} W`)}
     ${quick('Batterie', `${data.battery} %`)}
-    ${quick('WP Freigabe', data.heatReason)}
+    ${quick('WP Freigabe', data.heatDecision)}
     ${quick('Chlor Freigabe', data.chlorDecision)}
     ${quick('pH Prüfung', data.phDecision)}
   </div></div>
@@ -1097,25 +983,21 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Heute dosiert', `${data.phDailyCount}x`)}
     ${quick('Nächste Prüfung', data.phNextCheck)}
     ${quick('Granulat manuell', data.manualGranulateText)}
-    <div class="manual-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></div>
+    <button class="manual-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
   </div></div>
 </div>
 <script>
 (function(){
   window.poolSetState = async function(id,val){
-    try{
-      if(window.vis && window.vis.conn && typeof window.vis.conn.setState === 'function'){ window.vis.conn.setState(id,val); return true; }
-      if(window.parent && window.parent.vis && window.parent.vis.conn && typeof window.parent.vis.conn.setState === 'function'){ window.parent.vis.conn.setState(id,val); return true; }
-      if(window.top && window.top.vis && window.top.vis.conn && typeof window.top.vis.conn.setState === 'function'){ window.top.vis.conn.setState(id,val); return true; }
-    }catch(e){}
+    try{ if(window.vis&&window.vis.conn&&typeof window.vis.conn.setState==='function'){ window.vis.conn.setState(id,val); return true; } }catch(e){}
+    try{ if(window.parent&&window.parent.vis&&window.parent.vis.conn&&typeof window.parent.vis.conn.setState==='function'){ window.parent.vis.conn.setState(id,val); return true; } }catch(e){}
+    try{ if(window.top&&window.top.vis&&window.top.vis.conn&&typeof window.top.vis.conn.setState==='function'){ window.top.vis.conn.setState(id,val); return true; } }catch(e){}
     return false;
   };
-  window.poolPhManualDose = async function(sec){
-    const ns = ${JSON.stringify(data.namespace)};
-    await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30);
-    const ok = await window.poolSetState(ns + '.control.ph.manualStart', true);
-    if(!ok) alert('VIS setState nicht verfügbar');
-  };
+  window.poolToggleControl = async function(key,current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.auto.'+key, !current); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolToggleStandby = async function(current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.standby', !current); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolToggleState = async function(id,current){ const ok=await window.poolSetState(id, !current); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolPhManualDose = async function(sec){ const ns=${JSON.stringify(data.namespace)}; await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30); const ok=await window.poolSetState(ns + '.control.ph.manualStart', true); if(!ok) alert('VIS setState nicht verfügbar'); };
 })();
 </script>`;
   }
@@ -1282,8 +1164,17 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       gridSupplyRounded: Math.round(parseNum(gridSupply) / 100) * 100,
       batteryRounded: Math.round(parseNum(battery)),
       namespace: this.namespace,
+      standbyControl: standbyMode,
+      autoCirculationControl: await this.getControlBool('control.auto.circulation', circulationEnabled),
+      autoChlorControl: await this.getControlBool('control.auto.chlor', chlorEnabledMaster),
+      autoPhControl: await this.getControlBool('control.auto.ph', phEnabledMaster),
+      autoHeatpumpControl: await this.getControlBool('control.auto.heatpump', heatEnabledMaster),
+      circulationPumpStateId: this.config.circulationPumpSocketStateId || '',
+      chlorinatorStateId: this.config.chlorinatorSocketStateId || '',
+      phPumpStateId: this.config.phPumpSocketStateId || '',
+      heatpumpStateId: this.config.heatpumpPowerStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf44'
+      adapterVersion: 'v0.3.15hf45'
     };
 
     const now = Date.now();
