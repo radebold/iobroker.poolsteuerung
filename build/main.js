@@ -783,11 +783,29 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       ${quick('Heute dosiert', `${data.phDailyCount}x`)}
       ${quick('Nächste Prüfung', data.phNextCheck)}
       ${quick('Granulat manuell', data.manualGranulateText)}
-      <div class="quick-card manual-placeholder"><div class="quick-label">Manuelle Dosierung</div><div class="quick-value">Widget hier</div></div>
+      <div class="manual-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})">PH Manuell<small>${esc(data.phManualDoseSec)} s</small></div>
     </div>
   </div>
   </div>
-</div></body></html>`;
+</div>
+<script>
+(function(){
+  window.poolSetState = async function(id,val){
+    try{
+      if(window.vis && window.vis.conn && typeof window.vis.conn.setState === 'function'){ window.vis.conn.setState(id,val); return true; }
+      if(window.parent && window.parent.vis && window.parent.vis.conn && typeof window.parent.vis.conn.setState === 'function'){ window.parent.vis.conn.setState(id,val); return true; }
+      if(window.top && window.top.vis && window.top.vis.conn && typeof window.top.vis.conn.setState === 'function'){ window.top.vis.conn.setState(id,val); return true; }
+    }catch(e){}
+    return false;
+  };
+  window.poolPhManualDose = async function(sec){
+    const ns = ${JSON.stringify(data.namespace)};
+    await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30);
+    const ok = await window.poolSetState(ns + '.control.ph.manualStart', true);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+})();
+</script></body></html>`;
   }
 
   async updateComputedStates() {
@@ -987,7 +1005,25 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
     const autoBox = (name, state) => {
       const cls = state === 'AKTIV' ? 'on-state' : state === 'STANDBY' ? 'standby-state' : 'off-state';
-      return `<div class="ps-sb ${cls}"><div class="ps-sn">${esc(name)}</div></div>`;
+      return `<div class="ps-sb ${cls}"><div class="ps-sn">${esc(name)}</div></div>
+<script>
+(function(){
+  window.poolSetState = async function(id,val){
+    try{
+      if(window.vis && window.vis.conn && typeof window.vis.conn.setState === 'function'){ window.vis.conn.setState(id,val); return true; }
+      if(window.parent && window.parent.vis && window.parent.vis.conn && typeof window.parent.vis.conn.setState === 'function'){ window.parent.vis.conn.setState(id,val); return true; }
+      if(window.top && window.top.vis && window.top.vis.conn && typeof window.top.vis.conn.setState === 'function'){ window.top.vis.conn.setState(id,val); return true; }
+    }catch(e){}
+    return false;
+  };
+  window.poolPhManualDose = async function(sec){
+    const ns = ${JSON.stringify(data.namespace)};
+    await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30);
+    const ok = await window.poolSetState(ns + '.control.ph.manualStart', true);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+})();
+</script>`;
     };
 
     const statusBox = (name, on) => `<div class="ps-sb ${on ? 'on-state' : 'off-state'}"><div class="ps-sn">${esc(name)} · ${on ? 'EIN' : 'AUS'}</div></div>`;
@@ -1085,7 +1121,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Heute dosiert', `${data.phDailyCount}x`)}
     ${quick('Nächste Prüfung', data.phNextCheck)}
     ${quick('Granulat manuell', data.manualGranulateText)}
-    <div class="ps-q manual-placeholder"><div class="ps-ql">Manuelle Dosierung</div><div class="ps-qv">Widget hier</div></div>
+    <div class="manual-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})">PH Manuell<small>${esc(data.phManualDoseSec)} s</small></div>
   </div></div></div>
 </div>`;
   }
@@ -1257,7 +1293,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       batteryRounded: Math.round(parseNum(battery)),
       namespace: this.namespace,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf40'
+      adapterVersion: 'v0.3.15hf41'
     };
 
     const now = Date.now();
