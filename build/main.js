@@ -659,8 +659,8 @@ body{
 :root{--bg:#08111f;--bg2:#10203a;--line:rgba(15,23,42,.08);--text:#0f172a;--muted:#66758a}
 *{box-sizing:border-box}
 body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,var(--bg2),var(--bg));font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:var(--text)}
-.wrap{width:100%;max-width:390px;height:970px;max-height:970px;padding:4px;display:grid;gap:4px;overflow:hidden;margin:0 auto}
-.card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid var(--line);border-radius:15px;padding:6px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
+.wrap{padding:4px;display:grid;gap:5px}
+.card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid var(--line);border-radius:16px;padding:7px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
 .hero{background:radial-gradient(circle at top right, rgba(85,200,255,.24), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
 .header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}
 .title{font-size:16px;font-weight:900}
@@ -673,14 +673,14 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .metrics,.auto-grid,.status-grid,.quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:7px}
 .metric-label{font-size:11px;color:#d9e5f5}.metric-value{font-size:14px;font-weight:900;color:#fff}.metric-sub{font-size:10px;color:#c4d4e8;margin-top:3px}
-.section-title{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px}
-.quick-card,.status-box{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}
-.quick-label,.status-hint{font-size:9px;color:#64748b}
+.section-title{font-size:13px;font-weight:900;color:#0f172a;margin-bottom:4px}
+.quick-card,.status-box{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}
+.quick-label,.status-hint{font-size:10px;color:#64748b}
 .quick-label{font-weight:700;margin-bottom:4px}
-.quick-value{font-size:12px;font-weight:900;color:#0f172a;line-height:1.08}
-.log-card{margin-top:4px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.log-card.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.log-card.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.log-card.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.log-text{font-size:10px;font-weight:700;line-height:1.12;color:#0f172a;word-break:break-word;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.log-meta{margin-top:2px;font-size:9px;color:#64748b}.action-btn{margin-top:4px;width:100%;border:0;border-radius:10px;padding:7px 10px;background:linear-gradient(180deg,#2d7cff,#1655d1);color:#fff;font-size:11px;font-weight:900;box-shadow:0 8px 18px rgba(22,85,209,.28)}
-.status-grid{gap:4px}
-.status-box{padding:5px 6px;min-height:40px;display:flex;flex-direction:column;justify-content:center}
+.quick-value{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
+.log-card{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.log-card.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.log-card.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.log-card.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.log-text{font-size:12px;font-weight:700;line-height:1.3;color:#0f172a;word-break:break-word}.log-meta{margin-top:4px;font-size:10px;color:#64748b}
+.status-grid{gap:5px}
+.status-box{padding:6px 7px;min-height:46px;display:flex;flex-direction:column;justify-content:center}
 .status-box.is-on{background:linear-gradient(180deg,#f7fff8,#eefcf1)}
 .status-box.is-off{background:linear-gradient(180deg,#fff8f7,#fff0ee)}
 .status-box.is-standby{background:linear-gradient(180deg,#f6f8fb,#eef2f7)}
@@ -753,25 +753,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       <div class="log-meta">Letzte Dosierung: ${esc(data.phLastDoseAt)}</div>
     </div>
   </div>
-</div>
-<script>
-(function(){
-  window.poolSetState = async function(id,val){
-    try{
-      if(window.vis && window.vis.conn && typeof window.vis.conn.setState==='function'){ window.vis.conn.setState(id,val); return true; }
-      if(window.parent && window.parent.vis && window.parent.vis.conn && typeof window.parent.vis.conn.setState==='function'){ window.parent.vis.conn.setState(id,val); return true; }
-      if(window.top && window.top.vis && window.top.vis.conn && typeof window.top.vis.conn.setState==='function'){ window.top.vis.conn.setState(id,val); return true; }
-    }catch(e){}
-    return false;
-  };
-  window.poolPhManualDose = async function(sec){
-    const ns = ${'${JSON.stringify(data.namespace)}'};
-    const ok1 = await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec)||30);
-    const ok2 = await window.poolSetState(ns + '.control.ph.manualStart', true);
-    if(!(ok1 || ok2)) alert('VIS setState nicht verfügbar');
-  };
-})();
-</script></body></html>`;
+</div></body></html>`;
   }
 
   async updateComputedStates() {
@@ -979,7 +961,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
     return `<!-- phone-render:${esc(data.updated)} -->
 <style>
-.ps-wrap{background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,#10203a,#08111f);width:100%;max-width:390px;height:970px;max-height:970px;padding:4px;display:grid;gap:6px;overflow:hidden;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
+.ps-wrap{background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,#10203a,#08111f);padding:4px;display:grid;gap:6px;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
 .ps-card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:8px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
 .ps-hero{background:radial-gradient(circle at top right, rgba(85,200,255,.26), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
 .ps-header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}.ps-title{font-size:16px;font-weight:900}.ps-sub{font-size:10px;color:#d2dded;text-align:right}.ps-mode{display:inline-flex;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#67cfff,#6f7bff);font-size:9px;font-weight:900;color:#fff;margin-bottom:4px}
@@ -999,7 +981,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-sb.standby-state .ps-sn{color:#64748b}
 .ps-sh{margin-top:3px}
 .ps-qv{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
-.ps-log{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.ps-log.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.ps-log.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.ps-log.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.ps-logt{font-size:11px;font-weight:700;line-height:1.18;color:#0f172a;word-break:break-word;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.ps-logm{margin-top:2px;font-size:9px;color:#64748b}
+.ps-log{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.ps-log.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.ps-log.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.ps-log.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.ps-logt{font-size:12px;font-weight:700;line-height:1.3;color:#0f172a;word-break:break-word}.ps-logm{margin-top:4px;font-size:10px;color:#64748b}
 </style>
 <div class="ps-wrap">
   <div class="ps-card ps-hero">
@@ -1041,11 +1023,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Letzte Dosis', `${data.phLastDoseDurationSec} s / ${data.phLastDoseMl} ml`)}
     ${quick('Heute dosiert', `${data.phDailyCount}x`)}
     ${quick('Nächste Prüfung', data.phNextCheck)}
-    ${quick('Granulat manuell', data.manualGranulateText)}
   </div><div class="ps-log info-${esc(data.phInfoLevel)}"><div class="ps-ql">Letzte Meldung</div><div class="ps-logt">${esc(data.phInfoText)}</div><div class="ps-logm">Letzte Dosierung: ${esc(data.phLastDoseAt)}</div></div></div>
 </div>`;
   }
-
 
 
 
