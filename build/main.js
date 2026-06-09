@@ -21,6 +21,9 @@ class Poolsteuerung extends utils.Adapter {
   alertLockMemory = {};
   lastCirculationPumpOn = false;
   circulationPumpStartedAt = 0;
+  lastPhPumpOn = false;
+  phManualStartedAt = 0;
+  phManagedActive = false;
 
   constructor(options = {}) {
     super({ ...options, name: 'poolsteuerung' });
@@ -1447,6 +1450,34 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     }
   }
 
+  async handleManualPhPumpStateChange(id, state) {
+    if (!this.config.phPumpSocketStateId || id !== this.config.phPumpSocketStateId || !state) return;
+
+    const current = !!state.val;
+    const prev = !!this.lastPhPumpOn;
+    const ts = Number(state.lc || state.ts || Date.now()) || Date.now();
+    this.lastPhPumpOn = current;
+
+    if (current && !prev) {
+      if (!this.phManagedActive) {
+        this.phManualStartedAt = ts;
+      }
+      return;
+    }
+
+    if (!current && prev) {
+      if (!this.phManagedActive && this.phManualStartedAt) {
+        const durationSec = Math.max(1, Math.round((ts - this.phManualStartedAt) / 1000));
+        await this.setPhDoseHistory(this.phManualStartedAt, durationSec);
+        const newCount = await this.incrementTodayDoseCount(new Date(ts));
+        const msg = `[PH] Manuell dosiert | Laufzeit=${durationSec}s | Tag ${newCount}`;
+        await this.setStateAsync('status.debug.lastPhStartInfo', msg, true);
+        if (this.config.debugMode) this.log.info(msg);
+      }
+      this.phManualStartedAt = 0;
+    }
+  }
+
 
   parseHHMM(value) {
     const m = String(value || '').trim().match(/^(\d{1,2}):(\d{2})$/);
@@ -1592,6 +1623,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     this.phDoseStopAtTsMemory = stopAtTs;
 
     if (this.config.simulateMode) {
+      this.phManagedActive = true;
       await this.setPhStopAtTs(stopAtTs, 'Start Simulationsmodus');
       await this.setPhDoseHistory(Date.now(), sec);
       const msg = `[PH] würde dosieren | Prüfzeit ${context.checkTime || '-'} | pH=${context.phValue ?? '-'} | Laufzeit=${sec}s | Stop um ${new Date(stopAtTs).toLocaleTimeString('de-DE')}`;
@@ -1600,8 +1632,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       return true;
     }
 
+    this.phManagedActive = true;
     const onOk = await this.forceSwitchOnCompat(pumpId);
     if (!onOk) {
+      this.phManagedActive = false;
       this.log.warn('[PH] Dosierpumpe ließ sich nicht sicher einschalten');
       return false;
     }
@@ -2007,6 +2041,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           await this.setPhStopAtTs(0, `PH-AUS bestätigt wegen ${stopReason}`);
           this.phDoseStopAtTsMemory = 0;
           this.lastWrittenPhStopAtTs = 0;
+          this.phManagedActive = false;
           this.log.info(`[PH] Dosierpumpe AUS | Grund ${stopReason}`);
           if ((stopReason === 'Umwälzpumpe AUS' || stopReason === 'Umwälzpumpe nicht erreichbar' || stopReason === 'pH-Dosierpumpe nicht erreichbar') && this.config.alertOnPhDoseAborted) {
             await this.sendAlert('ph_dose_aborted', 'warn', `Poolsteuerung: pH-Dosierung abgebrochen, Grund: ${stopReason}.`);
@@ -2174,6 +2209,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         const initialPumpState = await this.getStateSnapshot(this.config.circulationPumpSocketStateId);
         this.updateCirculationPumpRuntime(!!(initialPumpState && initialPumpState.val), initialPumpState && (initialPumpState.lc || initialPumpState.ts));
       }
+      if (this.config.phPumpSocketStateId) {
+        const initialPhPumpState = await this.getStateSnapshot(this.config.phPumpSocketStateId);
+        this.lastPhPumpOn = !!(initialPhPumpState && initialPhPumpState.val);
+        this.phManualStartedAt = this.lastPhPumpOn ? Number((initialPhPumpState && (initialPhPumpState.lc || initialPhPumpState.ts)) || Date.now()) : 0;
+      }
       await this.updateComputedStates();
       await this.runHeartbeatChecks();
       if (typeof this.applyControlLogic === 'function') {
@@ -2230,7 +2270,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         if (id === `${this.namespace}.control.ph.manualStart` && !!state.val === true) {
           const manualSecState = await this.getStateAsync('control.ph.manualDoseSec');
           const manualSec = Math.max(1, Number(manualSecState && manualSecState.val) || 30);
-          await this.runDosePumpOnce(manualSec, { checkTime: 'MANUELL', phValue: 'manuell' });
+          const ok = await this.runDosePumpOnce(manualSec, { checkTime: 'MANUELL', phValue: 'manuell' });
+          if (ok) {
+            await this.incrementTodayDoseCount(new Date());
+          }
           await this.setStateIfChanged('control.ph.manualStart', false, false);
         }
         await this.applyControlLogic();
@@ -2243,6 +2286,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     if (this.ruleCompareIds && this.ruleCompareIds.includes(id)) {
       await this.applyDependencyRules(id);
     }
+    await this.handleManualPhPumpStateChange(id, state);
     if (this.monitoredIds.includes(id)) {
       this.debug(`State geändert: ${id}`);
       this.queueRender();
