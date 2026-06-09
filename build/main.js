@@ -637,8 +637,8 @@ body{
     const tempPct = Number.isFinite(poolTempNum) ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
     const targetTempNum = parseNum(data.targetTemp);
     const targetPct = Number.isFinite(targetTempNum) ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
-    const autoBtn = (label, key, active) => `<button class="action-btn ${active ? 'is-on' : 'is-off'}" onclick="poolToggleControl('${key}', ${active ? 'true' : 'false'})"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
-    const deviceBtn = (label, id, active) => `<button class="action-btn ${active ? 'is-on' : 'is-off'}" ${id ? `onclick="poolToggleState(${JSON.stringify(id)}, ${active ? 'true' : 'false'})"` : 'disabled'}><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'EIN' : 'AUS'}</span></button>`;
+    const autoBtn = (label, key, active) => `<button type="button" class="action-btn ${active ? 'is-on' : 'is-off'}" onclick="poolToggleControl('${key}', ${active ? 'true' : 'false'})"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
+    const deviceBtn = (label, id, active) => `<button type="button" class="action-btn ${active ? 'is-on' : 'is-off'}" onclick="poolToggleState(${JSON.stringify(id || '')}, ${active ? 'true' : 'false'})"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'EIN' : 'AUS'}</span></button>`;
     const quick = (label, value) => `
       <div class="quick-card">
         <div class="quick-label">${esc(label)}</div>
@@ -656,24 +656,28 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .hero{background:radial-gradient(circle at top right, rgba(85,200,255,.24), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
 .header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}
 .title{font-size:16px;font-weight:900}.ver{font-size:10px;font-weight:800;color:#b9d7ff;margin-left:6px}
-.meta{font-size:10px;color:#d2dded;text-align:right}.mode-btn{display:inline-flex;align-items:center;justify-content:center;padding:4px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(180deg,#334f84,#1b3158);font-size:10px;font-weight:900;color:#fff;cursor:pointer;margin-bottom:4px}
+.meta{font-size:10px;color:#d2dded;text-align:right}.mode-badge{display:inline-flex;align-items:center;justify-content:center;padding:4px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(180deg,#334f84,#1b3158);font-size:10px;font-weight:900;color:#fff;margin-bottom:4px}
 .temp-row{display:flex;align-items:flex-end;gap:5px;margin:6px 0 5px}.temp{font-size:48px;font-weight:900;line-height:.9}.unit{font-size:18px;padding-bottom:6px;color:#d5e5f6}
 .scale{margin:3px 0 7px}.track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.target-mark{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#ffffff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.target-label{position:relative;height:12px;font-size:10px;color:#d2dded}.target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}.scale-labels{display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:#e3edf9}
-.metrics,.quick-grid,.auto-grid,.status-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.metrics,.quick-grid,.auto-grid,.status-grid,.control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .ph-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 .metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:7px}.metric-label{font-size:11px;color:#d9e5f5}.metric-value{font-size:14px;font-weight:900;color:#fff}
 .section-title{font-size:13px;font-weight:900;color:#0f172a;margin-bottom:4px}
 .quick-card{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.quick-label{font-size:10px;color:#64748b;font-weight:700;margin-bottom:4px}.quick-value{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
 .action-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:8px 10px;border-radius:14px;min-height:52px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}
-.action-btn:disabled{opacity:.5;cursor:default}.action-name{font-size:13px;font-weight:800}.action-state{font-size:11px;font-weight:800}
+.action-name{font-size:13px;font-weight:800}.action-state{font-size:11px;font-weight:800}
 .action-btn.is-on .action-name,.action-btn.is-on .action-state{color:#67dd7c}
 .action-btn.is-off .action-name,.action-btn.is-off .action-state{color:#ff8d7b}
 .manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:8px 10px;border-radius:999px;min-height:52px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}
 .manual-btn span{font-size:13px}.manual-btn small{font-size:11px;color:#dbeafe}
+.temp-btn{appearance:none;border:none;cursor:pointer;border-radius:12px;min-height:52px;padding:8px 10px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:18px}
+.temp-center{display:flex;flex-direction:column;justify-content:center;align-items:center;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}
+.temp-center .quick-label{margin-bottom:2px}
+.temp-center .quick-value{font-size:18px}
 </style>
 </head><body><div class="wrap">
   <div class="card hero">
-    <div class="header"><div class="title">Pool Manager <span class="ver">${esc(data.adapterVersion)}</span></div><div class="meta"><button class="mode-btn" onclick="poolToggleStandby(${data.standbyControl ? 'true' : 'false'})">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</button><br>Aktualisiert<br>${esc(data.updated)}</div></div>
+    <div class="header"><div class="title">Pool Manager <span class="ver">${esc(data.adapterVersion)}</span></div><div class="meta"><div class="mode-badge">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div></div>
     <div class="temp-row"><div class="temp">${esc(data.poolTemp)}</div><div class="unit">°C</div></div>
     <div class="scale"><div class="track"><div class="target-mark"></div><div class="dot"></div></div><div class="target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="metrics">
@@ -683,6 +687,13 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       <div class="metric"><div class="metric-label">Soll</div><div class="metric-value">${esc(data.targetTemp)}°C</div></div>
     </div>
   </div>
+
+  <div class="card"><div class="section-title">Schnellzugriff</div><div class="control-grid">
+    <button type="button" class="action-btn ${data.standbyControl ? 'is-on' : 'is-off'}" onclick="poolToggleStandby(${data.standbyControl ? 'true' : 'false'})"><span class="action-name">Standby</span><span class="action-state">${data.standbyControl ? 'AKTIV' : 'AUS'}</span></button>
+    <div class="temp-center"><div class="quick-label">Poolsolltemperatur</div><div class="quick-value">${esc(data.targetTemp)}°C</div></div>
+    <button type="button" class="temp-btn" onclick="poolAdjustSetTemp(-0.5)">− 0,5°</button>
+    <button type="button" class="temp-btn" onclick="poolAdjustSetTemp(0.5)">+ 0,5°</button>
+  </div></div>
 
   <div class="card"><div class="section-title">Automatik</div><div class="auto-grid">
     ${autoBtn('Umwälzpumpe','circulation',!!data.autoCirculationControl)}
@@ -713,7 +724,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Heute dosiert', `${data.phDailyCount}x`)}
     ${quick('Nächste Prüfung', data.phNextCheck)}
     ${quick('Granulat manuell', data.manualGranulateText)}
-    <button class="manual-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
+    <button type="button" class="manual-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
   </div></div>
 </div>
 <script>
@@ -726,8 +737,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   };
   window.poolToggleControl = async function(key,current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.auto.'+key, !current); if(!ok) alert('VIS setState nicht verfügbar'); };
   window.poolToggleStandby = async function(current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.standby', !current); if(!ok) alert('VIS setState nicht verfügbar'); };
-  window.poolToggleState = async function(id,current){ const ok=await window.poolSetState(id, !current); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolToggleState = async function(id,current){ if(!id){ alert('Kein State hinterlegt'); return; } const ok=await window.poolSetState(id, !current); if(!ok) alert('VIS setState nicht verfügbar'); };
   window.poolPhManualDose = async function(sec){ const ns=${JSON.stringify(data.namespace)}; await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30); const ok=await window.poolSetState(ns + '.control.ph.manualStart', true); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolAdjustSetTemp = async function(delta){ const id=${JSON.stringify(data.heatpumpSetTempStateId || '')}; if(!id){ alert('Kein Solltemperatur-State hinterlegt'); return; } const current=Number(${JSON.stringify(data.targetTemp)}.replace(',', '.')); const next=Math.max(10, Math.min(40, Math.round((current + Number(delta))*10)/10)); const ok=await window.poolSetState(id, next); if(!ok) alert('VIS setState nicht verfügbar'); };
 })();
 </script></body></html>`;
   }
@@ -1097,8 +1109,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       chlorinatorStateId: this.config.chlorinatorSocketStateId || '',
       phPumpStateId: this.config.phPumpSocketStateId || '',
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
+      heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf46'
+      adapterVersion: 'v0.3.15hf47'
     };
 
     const now = Date.now();
