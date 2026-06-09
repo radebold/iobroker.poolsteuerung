@@ -634,27 +634,11 @@ body{
     const poolTempNum = parseNum(data.poolTemp);
     const tempScaleMin = 15;
     const tempScaleMax = 32;
-    const tempPct = Number.isFinite(poolTempNum)
-      ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100))
-      : 0;
+    const tempPct = Number.isFinite(poolTempNum) ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
     const targetTempNum = parseNum(data.targetTemp);
-    const targetPct = Number.isFinite(targetTempNum)
-      ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100))
-      : 0;
-
-    const autoBox = (name, state) => {
-      const cls = state === 'AKTIV' ? 'is-on' : state === 'STANDBY' ? 'is-standby' : 'is-off';
-      return `
-      <div class="status-box ${cls}">
-        <div class="status-name">${esc(name)}</div>
-      </div>`;
-    };
-
-    const statusBox = (name, on) => `
-      <div class="status-box ${on ? 'is-on' : 'is-off'}">
-        <div class="status-name">${esc(name)} · ${on ? 'EIN' : 'AUS'}</div>
-      </div>`;
-
+    const targetPct = Number.isFinite(targetTempNum) ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
+    const autoBtn = (label, key, active) => `<button class="action-btn ${active ? 'is-on' : 'is-off'}" onclick="poolToggleControl('${key}', ${active ? 'true' : 'false'})"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
+    const deviceBtn = (label, id, active) => `<button class="action-btn ${active ? 'is-on' : 'is-off'}" ${id ? `onclick="poolToggleState(${JSON.stringify(id)}, ${active ? 'true' : 'false'})"` : 'disabled'}><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'EIN' : 'AUS'}</span></button>`;
     const quick = (label, value) => `
       <div class="quick-card">
         <div class="quick-label">${esc(label)}</div>
@@ -667,143 +651,83 @@ body{
 :root{--bg:#08111f;--bg2:#10203a;--line:rgba(15,23,42,.08);--text:#0f172a;--muted:#66758a}
 *{box-sizing:border-box}
 body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,var(--bg2),var(--bg));font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:var(--text)}
-.wrap{padding:4px;display:grid;gap:5px}
-.card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid var(--line);border-radius:16px;padding:7px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
+.wrap{width:100%;max-width:510px;min-height:970px;margin:0 auto;padding:4px;display:grid;gap:6px}
+.card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid var(--line);border-radius:16px;padding:8px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
 .hero{background:radial-gradient(circle at top right, rgba(85,200,255,.24), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
 .header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}
-.title{font-size:16px;font-weight:900}.ver{font-size:10px;font-weight:800;color:#b9d7ff;margin-left:6px;vertical-align:middle}
-.meta{text-align:right;font-size:10px;color:#d2dded;line-height:1.15}
-.mode-pill{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#67cfff,#6f7bff);color:#fff;font-size:9px;font-weight:900;margin-bottom:4px}
-.temp-row{display:flex;align-items:flex-end;gap:5px;margin:6px 0 5px}
-.temp{font-size:44px;font-weight:900;line-height:.9}
-.unit{font-size:17px;padding-bottom:5px;color:#d5e5f6}
-.scale{margin:3px 0 7px}.track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.target-mark{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#ffffff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%);box-shadow:0 0 0 1px rgba(255,255,255,.15)}.dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #11305b;transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(255,255,255,.28)}.scale-labels{display:flex;justify-content:space-between;font-size:10px;color:#d2dded;margin-top:4px}
-.metrics,.auto-grid,.status-grid,.quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
-.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:7px}
-.metric-label{font-size:11px;color:#d9e5f5}.metric-value{font-size:14px;font-weight:900;color:#fff}.metric-sub{font-size:10px;color:#c4d4e8;margin-top:3px}
+.title{font-size:16px;font-weight:900}.ver{font-size:10px;font-weight:800;color:#b9d7ff;margin-left:6px}
+.meta{font-size:10px;color:#d2dded;text-align:right}.mode-btn{display:inline-flex;align-items:center;justify-content:center;padding:4px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(180deg,#334f84,#1b3158);font-size:10px;font-weight:900;color:#fff;cursor:pointer;margin-bottom:4px}
+.temp-row{display:flex;align-items:flex-end;gap:5px;margin:6px 0 5px}.temp{font-size:48px;font-weight:900;line-height:.9}.unit{font-size:18px;padding-bottom:6px;color:#d5e5f6}
+.scale{margin:3px 0 7px}.track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.target-mark{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#ffffff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.target-label{position:relative;height:12px;font-size:10px;color:#d2dded}.target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}.scale-labels{display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:#e3edf9}
+.metrics,.quick-grid,.auto-grid,.status-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.ph-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:7px}.metric-label{font-size:11px;color:#d9e5f5}.metric-value{font-size:14px;font-weight:900;color:#fff}
 .section-title{font-size:13px;font-weight:900;color:#0f172a;margin-bottom:4px}
-.quick-card,.status-box{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}
-.quick-label,.status-hint{font-size:10px;color:#64748b}
-.quick-label{font-weight:700;margin-bottom:4px}
-.quick-value{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
-.log-card{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.log-card.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.log-card.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.log-card.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.log-text{font-size:12px;font-weight:700;line-height:1.3;color:#0f172a;word-break:break-word}.log-meta{margin-top:4px;font-size:10px;color:#64748b}
-.status-grid{gap:5px}
-.status-box{padding:6px 7px;min-height:46px;display:flex;flex-direction:column;justify-content:center}
-.status-box.is-on{background:linear-gradient(180deg,#f7fff8,#eefcf1)}
-.status-box.is-off{background:linear-gradient(180deg,#fff8f7,#fff0ee)}
-.status-box.is-standby{background:linear-gradient(180deg,#f6f8fb,#eef2f7)}
-.status-name{font-size:14px;font-weight:900;line-height:1.1}
-.status-box.is-on .status-name{color:#179a3b}
-.status-box.is-off .status-name{color:#d6493b}
-.status-box.is-standby .status-name{color:#64748b}
-.status-hint{margin-top:3px}
+.quick-card{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.quick-label{font-size:10px;color:#64748b;font-weight:700;margin-bottom:4px}.quick-value{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
+.action-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:8px 10px;border-radius:14px;min-height:52px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}
+.action-btn:disabled{opacity:.5;cursor:default}.action-name{font-size:13px;font-weight:800}.action-state{font-size:11px;font-weight:800}
+.action-btn.is-on .action-name,.action-btn.is-on .action-state{color:#67dd7c}
+.action-btn.is-off .action-name,.action-btn.is-off .action-state{color:#ff8d7b}
+.manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:8px 10px;border-radius:999px;min-height:52px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}
+.manual-btn span{font-size:13px}.manual-btn small{font-size:11px;color:#dbeafe}
 </style>
-<style>
-.wrap{width:100%;max-width:390px;height:730px;max-height:730px;overflow:hidden;margin:0 auto;gap:3px !important}
-.card{padding:5px !important;border-radius:13px !important}
-.hero{padding:6px !important}
-.header{gap:4px !important}
-.title{font-size:15px !important}.ver{font-size:9px !important;margin-left:5px !important}
-.meta{font-size:9px !important}
-.temp-row{margin:4px 0 4px !important}
-.temp{font-size:43px !important}
-.unit{font-size:16px !important;padding-bottom:3px !important}
-.scale{margin:2px 0 4px !important}
-.scale-labels{font-size:9px !important}
-.metrics,.auto-grid,.status-grid,.quick-grid{gap:3px !important}
-.metric{padding:5px !important;border-radius:11px !important}
-.metric-label{font-size:10px !important}.metric-value{font-size:14px !important}.metric-sub{display:none !important}
-.section-title{font-size:12px !important;margin-bottom:2px !important}
-.quick-card,.status-box{padding:5px !important;border-radius:11px !important}
-.quick-label,.status-hint{font-size:9px !important}
-.quick-value{font-size:12px !important;line-height:1.08 !important}
-.status-box{min-height:34px !important}
-.status-name{font-size:12px !important;line-height:1.03 !important}
-.log-card{margin-top:4px !important;padding:6px !important}
-.log-text{font-size:11px !important;line-height:1.12 !important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.log-meta{font-size:9px !important;margin-top:2px !important}
-.target-wrap{position:relative}
-.target-label{position:absolute;left:${targetPct}%;top:14px;transform:translateX(-50%);font-size:9px;color:#d2dded;white-space:nowrap}
-.manual-placeholder{border:1px dashed rgba(15,23,42,.22) !important;background:linear-gradient(180deg,#f8fbff,#eef3fb) !important}.manual-btn{position:relative !important;display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;text-align:center !important;color:#fff !important;font-weight:800 !important;font-size:12px !important;border-radius:999px !important;border:1px solid rgba(255,255,255,.22) !important;min-height:40px !important;padding:4px 12px !important;cursor:pointer !important;user-select:none !important;overflow:hidden !important;white-space:nowrap !important;background:linear-gradient(180deg,#6d727a 0%,#434850 18%,#23272d 52%,#101216 100%) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.28), inset 0 -5px 12px rgba(0,0,0,.42), 0 4px 10px rgba(0,0,0,.20) !important}.manual-btn::before{content:'' !important;position:absolute !important;left:6px !important;right:6px !important;top:5px !important;height:44% !important;border-radius:999px !important;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,.03)) !important;pointer-events:none !important}.manual-btn::after{content:'' !important;position:absolute !important;inset:0 !important;border-radius:999px !important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06), inset 0 -10px 18px rgba(0,0,0,.18) !important;pointer-events:none !important}.manual-btn:active{transform:translateY(1px) scale(.99) !important}.manual-btn span,.manual-btn small{position:relative !important;z-index:1 !important}.manual-btn small{display:block;font-size:9px !important;font-weight:700 !important;opacity:.92 !important;color:#d7dde8 !important;margin-top:1px !important}.manual-btn{position:relative !important;display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;text-align:center !important;color:#fff !important;font-weight:800 !important;font-size:12px !important;border-radius:999px !important;border:1px solid rgba(255,255,255,.22) !important;min-height:40px !important;padding:4px 12px !important;cursor:pointer !important;user-select:none !important;overflow:hidden !important;white-space:nowrap !important;background:linear-gradient(180deg,#6d727a 0%,#434850 18%,#23272d 52%,#101216 100%) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.28), inset 0 -5px 12px rgba(0,0,0,.42), 0 4px 10px rgba(0,0,0,.20) !important}.manual-btn::before{content:'' !important;position:absolute !important;left:6px !important;right:6px !important;top:5px !important;height:44% !important;border-radius:999px !important;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,.03)) !important;pointer-events:none !important}.manual-btn::after{content:'' !important;position:absolute !important;inset:0 !important;border-radius:999px !important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06), inset 0 -10px 18px rgba(0,0,0,.18) !important;pointer-events:none !important}.manual-btn:active{transform:translateY(1px) scale(.99) !important}.manual-btn span,.manual-btn small{position:relative !important;z-index:1 !important}.manual-btn small{display:block;font-size:9px !important;font-weight:700 !important;opacity:.92 !important;color:#d7dde8 !important;margin-top:1px !important}
-.ps-phGrid{grid-template-columns:repeat(3,minmax(0,1fr)) !important}.ps-phGrid .ps-q{min-height:40px}.ps-phGrid .ps-qv{font-size:11px !important}.ps-phGrid .ps-ql{font-size:9px !important}
-.ph-grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important}.ph-grid .quick-card{min-height:40px}.ph-grid .quick-value{font-size:11px !important}.ph-grid .quick-label{font-size:9px !important}
-</style></head><body><div class="wrap">
+</head><body><div class="wrap">
   <div class="card hero">
-    <div class="header">
-      <div class="title">Pool Manager <span class="ver">${esc(data.adapterVersion)}</span></div>
-      <div class="meta"><div class="mode-pill">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div>
-    </div>
+    <div class="header"><div class="title">Pool Manager <span class="ver">${esc(data.adapterVersion)}</span></div><div class="meta"><button class="mode-btn" onclick="poolToggleStandby(${data.standbyControl ? 'true' : 'false'})">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</button><br>Aktualisiert<br>${esc(data.updated)}</div></div>
     <div class="temp-row"><div class="temp">${esc(data.poolTemp)}</div><div class="unit">°C</div></div>
-    <div class="scale"><div class="target-wrap"><div class="track"><div class="target-mark" title="Soll ${esc(data.targetTemp)} °C"></div><div class="dot"></div></div><div class="target-label">Soll ${esc(data.targetTemp)}°C</div></div><div class="scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
+    <div class="scale"><div class="track"><div class="target-mark"></div><div class="dot"></div></div><div class="target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="metrics">
-      <div class="metric"><div class="metric-label">pH</div><div class="metric-value">${esc(data.ph)}</div><div class="metric-sub">Soll ${esc(data.phSet)}</div></div>
-      <div class="metric"><div class="metric-label">ORP</div><div class="metric-value">${esc(data.orp)}</div><div class="metric-sub">Soll ${esc(data.orpSet)}</div></div>
+      <div class="metric"><div class="metric-label">pH</div><div class="metric-value">${esc(data.ph)}</div></div>
+      <div class="metric"><div class="metric-label">ORP</div><div class="metric-value">${esc(data.orp)}</div></div>
       <div class="metric"><div class="metric-label">Außen</div><div class="metric-value">${esc(data.outsideTemp)}°C</div></div>
       <div class="metric"><div class="metric-label">Soll</div><div class="metric-value">${esc(data.targetTemp)}°C</div></div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="section-title">Automatik</div>
-    <div class="status-grid">
-      ${autoBox('Umwälzpumpe', data.autoCirculation)}
-      ${autoBox('Chlor', data.autoChlor)}
-      ${autoBox('pH', data.autoPh)}
-      ${autoBox('Wärmepumpe', data.autoHeatpump)}
-    </div>
-  </div>
+  <div class="card"><div class="section-title">Automatik</div><div class="auto-grid">
+    ${autoBtn('Umwälzpumpe','circulation',!!data.autoCirculationControl)}
+    ${autoBtn('Chlor','chlor',!!data.autoChlorControl)}
+    ${autoBtn('pH','ph',!!data.autoPhControl)}
+    ${autoBtn('Wärmepumpe','heatpump',!!data.autoHeatpumpControl)}
+  </div></div>
 
-  <div class="card">
-    <div class="section-title">Aktoren & Status</div>
-    <div class="status-grid">
-      ${statusBox('Umwälzpumpe', data.pumpOn)}
-      ${statusBox('Chlorinator', data.chlorOn)}
-      ${statusBox('pH-Dosierpumpe', data.phPumpOn)}
-      ${statusBox('Wärmepumpe', data.heatpumpOn)}
-    </div>
-  </div>
+  <div class="card"><div class="section-title">Aktoren & Status</div><div class="status-grid">
+    ${deviceBtn('Umwälzpumpe',data.circulationPumpStateId,!!data.pumpOn)}
+    ${deviceBtn('Chlorinator',data.chlorinatorStateId,!!data.chlorOn)}
+    ${deviceBtn('pH-Dosierpumpe',data.phPumpStateId,!!data.phPumpOn)}
+    ${deviceBtn('Wärmepumpe',data.heatpumpStateId,!!data.heatpumpOn)}
+  </div></div>
 
-  <div class="card">
-    <div class="section-title">Energie & Steuerung</div>
-    <div class="quick-grid">
-      ${quick('PV-Leistung', `${data.pv} W`)}
-      ${quick('Einspeisung', `${data.feedIn} W`)}
-      ${quick('Batterie', `${data.battery} %`)}
-      ${quick('WP Freigabe', data.heatReason)}
-      ${quick('Chlor Freigabe', data.chlorDecision)}
-      ${quick('pH Prüfung', data.phDecision)}
-    </div>
-  </div>
+  <div class="card"><div class="section-title">Energie & Steuerung</div><div class="quick-grid">
+    ${quick('PV-Leistung', `${data.pv} W`)}
+    ${quick('Einspeisung', `${data.feedIn} W`)}
+    ${quick('Batterie', `${data.battery} %`)}
+    ${quick('WP Freigabe', data.heatDecision)}
+    ${quick('Chlor Freigabe', data.chlorDecision)}
+    ${quick('pH Prüfung', data.phDecision)}
+  </div></div>
 
-  <div class="card">
-    <div class="section-title">pH Info</div>
-    <div class="quick-grid ph-grid">
-      ${quick('Berechnet', `${data.phCalculatedDoseSec} s / ${data.phCalculatedDoseMl} ml`)}
-      ${quick('Letzte Dosis', `${data.phLastDoseDurationSec} s / ${data.phLastDoseMl} ml`)}
-      ${quick('Heute dosiert', `${data.phDailyCount}x`)}
-      ${quick('Nächste Prüfung', data.phNextCheck)}
-      ${quick('Granulat manuell', data.manualGranulateText)}
-      <div class="manual-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></div>
-    </div>
-  </div>
-  </div>
+  <div class="card"><div class="section-title">pH Info</div><div class="quick-grid ph-grid">
+    ${quick('Berechnet', `${data.phCalculatedDoseSec} s / ${data.phCalculatedDoseMl} ml`)}
+    ${quick('Letzte Dosis', `${data.phLastDoseDurationSec} s / ${data.phLastDoseMl} ml`)}
+    ${quick('Heute dosiert', `${data.phDailyCount}x`)}
+    ${quick('Nächste Prüfung', data.phNextCheck)}
+    ${quick('Granulat manuell', data.manualGranulateText)}
+    <button class="manual-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
+  </div></div>
 </div>
 <script>
 (function(){
   window.poolSetState = async function(id,val){
-    try{
-      if(window.vis && window.vis.conn && typeof window.vis.conn.setState === 'function'){ window.vis.conn.setState(id,val); return true; }
-      if(window.parent && window.parent.vis && window.parent.vis.conn && typeof window.parent.vis.conn.setState === 'function'){ window.parent.vis.conn.setState(id,val); return true; }
-      if(window.top && window.top.vis && window.top.vis.conn && typeof window.top.vis.conn.setState === 'function'){ window.top.vis.conn.setState(id,val); return true; }
-    }catch(e){}
+    try{ if(window.vis&&window.vis.conn&&typeof window.vis.conn.setState==='function'){ window.vis.conn.setState(id,val); return true; } }catch(e){}
+    try{ if(window.parent&&window.parent.vis&&window.parent.vis.conn&&typeof window.parent.vis.conn.setState==='function'){ window.parent.vis.conn.setState(id,val); return true; } }catch(e){}
+    try{ if(window.top&&window.top.vis&&window.top.vis.conn&&typeof window.top.vis.conn.setState==='function'){ window.top.vis.conn.setState(id,val); return true; } }catch(e){}
     return false;
   };
-  window.poolPhManualDose = async function(sec){
-    const ns = ${JSON.stringify(data.namespace)};
-    await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30);
-    const ok = await window.poolSetState(ns + '.control.ph.manualStart', true);
-    if(!ok) alert('VIS setState nicht verfügbar');
-  };
+  window.poolToggleControl = async function(key,current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.auto.'+key, !current); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolToggleStandby = async function(current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.standby', !current); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolToggleState = async function(id,current){ const ok=await window.poolSetState(id, !current); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolPhManualDose = async function(sec){ const ns=${JSON.stringify(data.namespace)}; await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30); const ok=await window.poolSetState(ns + '.control.ph.manualStart', true); if(!ok) alert('VIS setState nicht verfügbar'); };
 })();
 </script></body></html>`;
   }
@@ -1174,7 +1098,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       phPumpStateId: this.config.phPumpSocketStateId || '',
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf45'
+      adapterVersion: 'v0.3.15hf46'
     };
 
     const now = Date.now();
