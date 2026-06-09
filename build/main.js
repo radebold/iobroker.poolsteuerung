@@ -689,7 +689,31 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .status-box.is-off .status-name{color:#d6493b}
 .status-box.is-standby .status-name{color:#64748b}
 .status-hint{margin-top:3px}
-</style></head><body><div class="wrap">
+</style>
+<style>
+.ps-wrap{width:100%;max-width:390px;height:730px;max-height:730px;overflow:hidden;margin:0 auto;padding:4px !important;gap:4px !important;box-sizing:border-box}
+.ps-card{padding:7px !important;border-radius:15px !important}
+.ps-header{gap:4px !important}
+.ps-tempRow{margin:4px 0 6px !important;gap:4px !important}
+.ps-temp{font-size:58px !important}
+.ps-unit{font-size:18px !important;padding-bottom:4px !important}
+.ps-scale{margin:2px 0 5px !important}
+.ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{gap:4px !important}
+.ps-metric{padding:6px !important;min-height:64px !important}
+.ps-k{font-size:11px !important;margin-bottom:4px !important}
+.ps-v{font-size:18px !important}
+.ps-ms{font-size:9px !important;margin-top:2px !important}
+.ps-section{font-size:12px !important;margin-bottom:3px !important}
+.ps-sb,.ps-q{padding:6px !important;border-radius:12px !important}
+.ps-sb{min-height:38px !important}
+.ps-sn{font-size:11px !important;line-height:1.02 !important}
+.ps-sh{margin-top:2px !important;font-size:10px !important}
+.ps-qv{font-size:12px !important;line-height:1.08 !important}
+.ps-log{margin-top:4px !important;padding:6px !important}
+.ps-logt{font-size:10.5px !important;line-height:1.1 !important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ps-logm{font-size:9px !important}
+</style>
+</head><body><div class="wrap">
   <div class="card hero">
     <div class="header">
       <div class="title">Pool Manager</div>
@@ -983,6 +1007,30 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-qv{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
 .ps-log{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.ps-log.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.ps-log.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.ps-log.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.ps-logt{font-size:12px;font-weight:700;line-height:1.3;color:#0f172a;word-break:break-word}.ps-logm{margin-top:4px;font-size:10px;color:#64748b}
 </style>
+<style>
+.ps-wrap{width:100%;max-width:390px;height:730px;max-height:730px;overflow:hidden;margin:0 auto;padding:4px !important;gap:4px !important;box-sizing:border-box}
+.ps-card{padding:7px !important;border-radius:15px !important}
+.ps-header{gap:4px !important}
+.ps-tempRow{margin:4px 0 6px !important;gap:4px !important}
+.ps-temp{font-size:58px !important}
+.ps-unit{font-size:18px !important;padding-bottom:4px !important}
+.ps-scale{margin:2px 0 5px !important}
+.ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{gap:4px !important}
+.ps-metric{padding:6px !important;min-height:64px !important}
+.ps-k{font-size:11px !important;margin-bottom:4px !important}
+.ps-v{font-size:18px !important}
+.ps-ms{font-size:9px !important;margin-top:2px !important}
+.ps-section{font-size:12px !important;margin-bottom:3px !important}
+.ps-sb,.ps-q{padding:6px !important;border-radius:12px !important}
+.ps-sb{min-height:38px !important}
+.ps-sn{font-size:11px !important;line-height:1.02 !important}
+.ps-sh{margin-top:2px !important;font-size:10px !important}
+.ps-qv{font-size:12px !important;line-height:1.08 !important}
+.ps-log{margin-top:4px !important;padding:6px !important}
+.ps-logt{font-size:10.5px !important;line-height:1.1 !important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ps-logm{font-size:9px !important}
+</style>
+
 <div class="ps-wrap">
   <div class="ps-card ps-hero">
     <div class="ps-header"><div class="ps-title">Pool Manager</div><div class="ps-sub"><div class="ps-mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div></div>
