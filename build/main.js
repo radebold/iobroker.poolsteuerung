@@ -468,8 +468,8 @@ body{
     radial-gradient(circle at bottom right, rgba(106,124,255,.13), transparent 22%),
     linear-gradient(180deg,var(--bg2),var(--bg));
 }
-.wrap{width:1000px;max-width:1000px;height:730px;max-height:730px;padding:6px;overflow:hidden}
-.layout{display:flex;gap:8px;align-items:flex-start;width:988px;height:718px;max-height:718px;overflow:hidden}
+.wrap{width:100%;max-width:1000px;height:730px;max-height:730px;padding:6px;overflow:hidden;margin:0 auto}
+.layout{display:flex;gap:8px;align-items:flex-start;width:100%;height:718px;max-height:718px;overflow:hidden}
 .col-left{flex:0 0 28%}
 .col-mid{flex:0 0 34%}
 .col-right{flex:1 1 0}
@@ -659,7 +659,7 @@ body{
 :root{--bg:#08111f;--bg2:#10203a;--line:rgba(15,23,42,.08);--text:#0f172a;--muted:#66758a}
 *{box-sizing:border-box}
 body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,var(--bg2),var(--bg));font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:var(--text)}
-.wrap{width:390px;max-width:390px;height:970px;max-height:970px;padding:4px;display:grid;gap:4px;overflow:hidden}
+.wrap{width:100%;max-width:390px;height:970px;max-height:970px;padding:4px;display:grid;gap:4px;overflow:hidden;margin:0 auto}
 .card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid var(--line);border-radius:15px;padding:6px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
 .hero{background:radial-gradient(circle at top right, rgba(85,200,255,.24), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
 .header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}
@@ -810,7 +810,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 <style>
 .ps-root,*{box-sizing:border-box}
 .ps-root{
-  width:1000px;max-width:1000px;height:730px;max-height:730px;overflow:hidden;padding:8px;
+  width:100%;max-width:1000px;height:730px;max-height:730px;overflow:hidden;padding:8px;margin:0 auto;
   color:#0f172a;font-family:Arial,Helvetica,sans-serif;
   background:linear-gradient(180deg,#0b1220 0%,#0f172a 100%);
 }
@@ -818,7 +818,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   display:grid;
   grid-template-columns:276px 340px 360px;
   gap:8px;
-  width:984px;
+  width:100%;
   height:714px;
   overflow:hidden;
 }
@@ -980,7 +980,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
     return `<!-- phone-render:${esc(data.updated)} -->
 <style>
-.ps-wrap{background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,#10203a,#08111f);width:390px;max-width:390px;height:970px;max-height:970px;padding:4px;display:grid;gap:4px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
+.ps-wrap{background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,#10203a,#08111f);width:100%;max-width:390px;height:970px;max-height:970px;padding:4px;display:grid;gap:4px;overflow:hidden;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
 .ps-card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid rgba(15,23,42,.08);border-radius:15px;padding:6px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
 .ps-hero{background:radial-gradient(circle at top right, rgba(85,200,255,.26), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
 .ps-header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}.ps-title{font-size:16px;font-weight:900}.ps-sub{font-size:10px;color:#d2dded;text-align:right}.ps-mode{display:inline-flex;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#67cfff,#6f7bff);font-size:9px;font-weight:900;color:#fff;margin-bottom:4px}
@@ -1042,8 +1042,26 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Letzte Dosis', `${data.phLastDoseDurationSec} s / ${data.phLastDoseMl} ml`)}
     ${quick('Heute dosiert', `${data.phDailyCount}x`)}
     ${quick('Nächste Prüfung', data.phNextCheck)}
-  </div><div class="ps-log info-${esc(data.phInfoLevel)}"><div class="ps-ql">Letzte Meldung</div><div class="ps-logt">${esc(data.phInfoText)}</div><div class="ps-logm">Letzte Dosierung: ${esc(data.phLastDoseAt)}</div></div></div>
-</div>`;
+  </div><button class="ps-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})">Manuell ${esc(data.phManualDoseSec)} s dosieren</button><div class="ps-log info-${esc(data.phInfoLevel)}"><div class="ps-ql">Letzte Meldung</div><div class="ps-logt">${esc(data.phInfoText)}</div><div class="ps-logm">Letzte Dosierung: ${esc(data.phLastDoseAt)}</div></div></div>
+</div>
+<script>
+(function(){
+  window.poolSetState = async function(id,val){
+    try{
+      if(window.vis && window.vis.conn && typeof window.vis.conn.setState==='function'){ window.vis.conn.setState(id,val); return true; }
+      if(window.parent && window.parent.vis && window.parent.vis.conn && typeof window.parent.vis.conn.setState==='function'){ window.parent.vis.conn.setState(id,val); return true; }
+      if(window.top && window.top.vis && window.top.vis.conn && typeof window.top.vis.conn.setState==='function'){ window.top.vis.conn.setState(id,val); return true; }
+    }catch(e){}
+    return false;
+  };
+  window.poolPhManualDose = async function(sec){
+    const ns = ${'${JSON.stringify(data.namespace)}'};
+    const ok1 = await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec)||30);
+    const ok2 = await window.poolSetState(ns + '.control.ph.manualStart', true);
+    if(!(ok1 || ok2)) alert('VIS setState nicht verfügbar');
+  };
+})();
+</script>`;
   }
 
 
