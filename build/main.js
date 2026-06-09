@@ -747,7 +747,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Granulat manuell', data.manualGranulateText)}
       
     </div>
-    <button class="action-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})">Manuell ${esc(data.phManualDoseSec)} s dosieren</button>
     <div class="log-card info-${esc(data.phInfoLevel)}">
       <div class="quick-label">Letzte Meldung</div>
       <div class="log-text">${esc(data.phInfoText)}</div>
@@ -1000,7 +999,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-sb.standby-state .ps-sn{color:#64748b}
 .ps-sh{margin-top:3px}
 .ps-qv{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
-.ps-log{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.ps-log.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.ps-log.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.ps-log.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.ps-logt{font-size:12px;font-weight:700;line-height:1.3;color:#0f172a;word-break:break-word}.ps-logm{margin-top:4px;font-size:10px;color:#64748b}.ps-btn{margin-top:6px;width:100%;border:0;border-radius:12px;padding:10px 12px;background:linear-gradient(180deg,#2d7cff,#1655d1);color:#fff;font-size:13px;font-weight:900;box-shadow:0 8px 18px rgba(22,85,209,.28)}
+.ps-log{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.ps-log.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.ps-log.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.ps-log.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.ps-logt{font-size:11px;font-weight:700;line-height:1.18;color:#0f172a;word-break:break-word;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.ps-logm{margin-top:2px;font-size:9px;color:#64748b}
 </style>
 <div class="ps-wrap">
   <div class="ps-card ps-hero">
@@ -1043,25 +1042,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Heute dosiert', `${data.phDailyCount}x`)}
     ${quick('Nächste Prüfung', data.phNextCheck)}
     ${quick('Granulat manuell', data.manualGranulateText)}
-  </div><button class="ps-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})">Manuell ${esc(data.phManualDoseSec)} s dosieren</button><div class="ps-log info-${esc(data.phInfoLevel)}"><div class="ps-ql">Letzte Meldung</div><div class="ps-logt">${esc(data.phInfoText)}</div><div class="ps-logm">Letzte Dosierung: ${esc(data.phLastDoseAt)}</div></div></div>
-<script>
-(function(){
-  window.poolSetState = async function(id,val){
-    try{
-      if(window.vis && window.vis.conn && typeof window.vis.conn.setState==='function'){ window.vis.conn.setState(id,val); return true; }
-      if(window.parent && window.parent.vis && window.parent.vis.conn && typeof window.parent.vis.conn.setState==='function'){ window.parent.vis.conn.setState(id,val); return true; }
-      if(window.top && window.top.vis && window.top.vis.conn && typeof window.top.vis.conn.setState==='function'){ window.top.vis.conn.setState(id,val); return true; }
-    }catch(e){}
-    return false;
-  };
-  window.poolPhManualDose = async function(sec){
-    const ns = ${'${JSON.stringify(data.namespace)}'};
-    const ok1 = await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec)||30);
-    const ok2 = await window.poolSetState(ns + '.control.ph.manualStart', true);
-    if(!(ok1 || ok2)) alert('VIS setState nicht verfügbar');
-  };
-})();
-</script>
+  </div><div class="ps-log info-${esc(data.phInfoLevel)}"><div class="ps-ql">Letzte Meldung</div><div class="ps-logt">${esc(data.phInfoText)}</div><div class="ps-logm">Letzte Dosierung: ${esc(data.phLastDoseAt)}</div></div></div>
 </div>`;
   }
 
