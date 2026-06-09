@@ -1250,7 +1250,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       batteryRounded: Math.round(parseNum(battery)),
       namespace: this.namespace,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf36'
+      adapterVersion: 'v0.3.15hf38'
     };
 
     const now = Date.now();
@@ -1309,6 +1309,21 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         this.log.warn('VIS Render Fehler: ' + (e && e.stack ? e.stack : e));
       }
     }, 400);
+  }
+
+  queueDelayedRefresh(delayMs = 1800) {
+    setTimeout(async () => {
+      try {
+        this.lastRenderSignature = '';
+        await this.updateComputedStates();
+        if (typeof this.applyControlLogic === 'function') {
+          await this.applyControlLogic();
+        }
+        await this.renderVis();
+      } catch (e) {
+        this.log.warn('VIS Delayed Refresh Fehler: ' + (e && e.stack ? e.stack : e));
+      }
+    }, delayMs);
   }
 
 
@@ -2290,6 +2305,15 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     if (this.monitoredIds.includes(id)) {
       this.debug(`State geändert: ${id}`);
       this.queueRender();
+      const delayedRefreshIds = [
+        this.config.circulationPumpSocketStateId,
+        this.config.chlorinatorSocketStateId,
+        this.config.phPumpSocketStateId,
+        this.config.heatpumpPowerStateId
+      ].filter(Boolean);
+      if (delayedRefreshIds.includes(id)) {
+        this.queueDelayedRefresh(1800);
+      }
     }
   }
 
