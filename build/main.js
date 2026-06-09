@@ -724,7 +724,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .log-meta{font-size:9px !important;margin-top:2px !important}
 .target-wrap{position:relative}
 .target-label{position:absolute;left:${targetPct}%;top:14px;transform:translateX(-50%);font-size:9px;color:#d2dded;white-space:nowrap}
-.manual-placeholder{border:1px dashed rgba(15,23,42,.22) !important;background:linear-gradient(180deg,#f8fbff,#eef3fb) !important}
+.manual-placeholder{border:1px dashed rgba(15,23,42,.22) !important;background:linear-gradient(180deg,#f8fbff,#eef3fb) !important}.manual-btn{position:relative !important;display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;text-align:center !important;color:#fff !important;font-weight:800 !important;font-size:12px !important;border-radius:999px !important;border:1px solid rgba(255,255,255,.22) !important;min-height:40px !important;padding:4px 12px !important;cursor:pointer !important;user-select:none !important;overflow:hidden !important;white-space:nowrap !important;background:linear-gradient(180deg,#6d727a 0%,#434850 18%,#23272d 52%,#101216 100%) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.28), inset 0 -5px 12px rgba(0,0,0,.42), 0 4px 10px rgba(0,0,0,.20) !important}.manual-btn::before{content:'' !important;position:absolute !important;left:6px !important;right:6px !important;top:5px !important;height:44% !important;border-radius:999px !important;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,.03)) !important;pointer-events:none !important}.manual-btn::after{content:'' !important;position:absolute !important;inset:0 !important;border-radius:999px !important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06), inset 0 -10px 18px rgba(0,0,0,.18) !important;pointer-events:none !important}.manual-btn:active{transform:translateY(1px) scale(.99) !important}.manual-btn span,.manual-btn small{position:relative !important;z-index:1 !important}.manual-btn small{display:block;font-size:9px !important;font-weight:700 !important;opacity:.92 !important;color:#d7dde8 !important;margin-top:1px !important}.manual-btn{position:relative !important;display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;text-align:center !important;color:#fff !important;font-weight:800 !important;font-size:12px !important;border-radius:999px !important;border:1px solid rgba(255,255,255,.22) !important;min-height:40px !important;padding:4px 12px !important;cursor:pointer !important;user-select:none !important;overflow:hidden !important;white-space:nowrap !important;background:linear-gradient(180deg,#6d727a 0%,#434850 18%,#23272d 52%,#101216 100%) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.28), inset 0 -5px 12px rgba(0,0,0,.42), 0 4px 10px rgba(0,0,0,.20) !important}.manual-btn::before{content:'' !important;position:absolute !important;left:6px !important;right:6px !important;top:5px !important;height:44% !important;border-radius:999px !important;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,.03)) !important;pointer-events:none !important}.manual-btn::after{content:'' !important;position:absolute !important;inset:0 !important;border-radius:999px !important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06), inset 0 -10px 18px rgba(0,0,0,.18) !important;pointer-events:none !important}.manual-btn:active{transform:translateY(1px) scale(.99) !important}.manual-btn span,.manual-btn small{position:relative !important;z-index:1 !important}.manual-btn small{display:block;font-size:9px !important;font-weight:700 !important;opacity:.92 !important;color:#d7dde8 !important;margin-top:1px !important}
 .ps-phGrid{grid-template-columns:repeat(3,minmax(0,1fr)) !important}.ps-phGrid .ps-q{min-height:40px}.ps-phGrid .ps-qv{font-size:11px !important}.ps-phGrid .ps-ql{font-size:9px !important}
 .ph-grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important}.ph-grid .quick-card{min-height:40px}.ph-grid .quick-value{font-size:11px !important}.ph-grid .quick-label{font-size:9px !important}
 </style></head><body><div class="wrap">
@@ -1005,25 +1005,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
     const autoBox = (name, state) => {
       const cls = state === 'AKTIV' ? 'on-state' : state === 'STANDBY' ? 'standby-state' : 'off-state';
-      return `<div class="ps-sb ${cls}"><div class="ps-sn">${esc(name)}</div></div>
-<script>
-(function(){
-  window.poolSetState = async function(id,val){
-    try{
-      if(window.vis && window.vis.conn && typeof window.vis.conn.setState === 'function'){ window.vis.conn.setState(id,val); return true; }
-      if(window.parent && window.parent.vis && window.parent.vis.conn && typeof window.parent.vis.conn.setState === 'function'){ window.parent.vis.conn.setState(id,val); return true; }
-      if(window.top && window.top.vis && window.top.vis.conn && typeof window.top.vis.conn.setState === 'function'){ window.top.vis.conn.setState(id,val); return true; }
-    }catch(e){}
-    return false;
-  };
-  window.poolPhManualDose = async function(sec){
-    const ns = ${JSON.stringify(data.namespace)};
-    await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30);
-    const ok = await window.poolSetState(ns + '.control.ph.manualStart', true);
-    if(!ok) alert('VIS setState nicht verfügbar');
-  };
-})();
-</script>`;
+      return `<div class="ps-sb ${cls}"><div class="ps-sn">${esc(name)}</div></div>`;
     };
 
     const statusBox = (name, on) => `<div class="ps-sb ${on ? 'on-state' : 'off-state'}"><div class="ps-sn">${esc(name)} · ${on ? 'EIN' : 'AUS'}</div></div>`;
@@ -1051,7 +1033,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-sb.standby-state .ps-sn{color:#64748b}
 .ps-sh{margin-top:3px}
 .ps-qv{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
-.ps-log{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.ps-log.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.ps-log.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.ps-log.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.ps-logt{font-size:12px;font-weight:700;line-height:1.3;color:#0f172a;word-break:break-word}.ps-logm{margin-top:4px;font-size:10px;color:#64748b}
 </style>
 <style>
 .ps-wrap{width:100%;max-width:390px;height:730px;max-height:730px;overflow:hidden;margin:0 auto;gap:3px !important}
@@ -1073,12 +1054,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-sb{min-height:34px !important}
 .ps-sn{font-size:12px !important;line-height:1.03 !important}
 .ps-qv{font-size:12px !important;line-height:1.08 !important}
-.ps-log{margin-top:4px !important;padding:6px !important}
-.ps-logt{font-size:11px !important;line-height:1.12 !important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.ps-logm{font-size:9px !important;margin-top:2px !important}
 .ps-targetWrap{position:relative}
 .ps-targetLabel{position:absolute;left:${targetPct}%;top:14px;transform:translateX(-50%);font-size:9px;color:#d2dded;white-space:nowrap}
-.manual-placeholder{border:1px dashed rgba(15,23,42,.22) !important;background:linear-gradient(180deg,#f8fbff,#eef3fb) !important}
+.manual-placeholder{border:1px dashed rgba(15,23,42,.22) !important;background:linear-gradient(180deg,#f8fbff,#eef3fb) !important}.manual-btn{position:relative !important;display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;text-align:center !important;color:#fff !important;font-weight:800 !important;font-size:12px !important;border-radius:999px !important;border:1px solid rgba(255,255,255,.22) !important;min-height:40px !important;padding:4px 12px !important;cursor:pointer !important;user-select:none !important;overflow:hidden !important;white-space:nowrap !important;background:linear-gradient(180deg,#6d727a 0%,#434850 18%,#23272d 52%,#101216 100%) !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.28), inset 0 -5px 12px rgba(0,0,0,.42), 0 4px 10px rgba(0,0,0,.20) !important}.manual-btn::before{content:'' !important;position:absolute !important;left:6px !important;right:6px !important;top:5px !important;height:44% !important;border-radius:999px !important;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,.03)) !important;pointer-events:none !important}.manual-btn::after{content:'' !important;position:absolute !important;inset:0 !important;border-radius:999px !important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06), inset 0 -10px 18px rgba(0,0,0,.18) !important;pointer-events:none !important}.manual-btn:active{transform:translateY(1px) scale(.99) !important}.manual-btn span,.manual-btn small{position:relative !important;z-index:1 !important}.manual-btn small{display:block;font-size:9px !important;font-weight:700 !important;opacity:.92 !important;color:#d7dde8 !important;margin-top:1px !important}
+.ps-phGrid{grid-template-columns:repeat(3,minmax(0,1fr)) !important}.ps-phGrid .ps-q{min-height:40px}.ps-phGrid .ps-qv{font-size:11px !important}.ps-phGrid .ps-ql{font-size:9px !important}
 </style>
 <div class="ps-wrap">
   <div class="ps-card ps-hero">
@@ -1092,21 +1071,18 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       <div class="ps-metric"><div class="ps-ml">Soll</div><div class="ps-mv">${esc(data.targetTemp)}°C</div></div>
     </div>
   </div>
-
-  <div class="ps-card"><div class="ps-section">Automatik</div><div class="ps-statusGrid">
+  <div class="ps-card"><div class="ps-section">Automatik</div><div class="ps-auto">
     ${autoBox('Umwälzpumpe', data.autoCirculation)}
     ${autoBox('Chlor', data.autoChlor)}
     ${autoBox('pH', data.autoPh)}
     ${autoBox('Wärmepumpe', data.autoHeatpump)}
   </div></div>
-
   <div class="ps-card"><div class="ps-section">Aktoren & Status</div><div class="ps-statusGrid">
     ${statusBox('Umwälzpumpe',data.pumpOn)}
     ${statusBox('Chlorinator',data.chlorOn)}
     ${statusBox('pH-Dosierpumpe',data.phPumpOn)}
     ${statusBox('Wärmepumpe',data.heatpumpOn)}
   </div></div>
-
   <div class="ps-card"><div class="ps-section">Energie & Steuerung</div><div class="ps-quickGrid">
     ${quick('PV-Leistung', `${data.pv} W`)}
     ${quick('Einspeisung', `${data.feedIn} W`)}
@@ -1122,13 +1098,27 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Nächste Prüfung', data.phNextCheck)}
     ${quick('Granulat manuell', data.manualGranulateText)}
     <div class="manual-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></div>
-  </div></div></div>
-</div>`;
+  </div></div>
+</div>
+<script>
+(function(){
+  window.poolSetState = async function(id,val){
+    try{
+      if(window.vis && window.vis.conn && typeof window.vis.conn.setState === 'function'){ window.vis.conn.setState(id,val); return true; }
+      if(window.parent && window.parent.vis && window.parent.vis.conn && typeof window.parent.vis.conn.setState === 'function'){ window.parent.vis.conn.setState(id,val); return true; }
+      if(window.top && window.top.vis && window.top.vis.conn && typeof window.top.vis.conn.setState === 'function'){ window.top.vis.conn.setState(id,val); return true; }
+    }catch(e){}
+    return false;
+  };
+  window.poolPhManualDose = async function(sec){
+    const ns = ${JSON.stringify(data.namespace)};
+    await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30);
+    const ok = await window.poolSetState(ns + '.control.ph.manualStart', true);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+})();
+</script>`;
   }
-
-
-
-
 
   async renderVis() {
     const ph = this.fmt(await this.getNumber(this.config.phStateId, 2), 2);
@@ -1293,7 +1283,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       batteryRounded: Math.round(parseNum(battery)),
       namespace: this.namespace,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf43'
+      adapterVersion: 'v0.3.15hf44'
     };
 
     const now = Date.now();
