@@ -426,25 +426,7 @@ class Poolsteuerung extends utils.Adapter {
       <div class="kv ${extraCls}">
         <div class="kv-label">${esc(label)}</div>
         <div class="kv-value">${esc(value)}</div>
-      <button class="ps-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})">Manuell ${esc(data.phManualDoseSec)} s dosieren</button>
-<script>
-(function(){
-  window.poolSetState = async function(id,val){
-    try{
-      if(window.vis && window.vis.conn && typeof window.vis.conn.setState==='function'){ window.vis.conn.setState(id,val); return true; }
-      if(window.parent && window.parent.vis && window.parent.vis.conn && typeof window.parent.vis.conn.setState==='function'){ window.parent.vis.conn.setState(id,val); return true; }
-      if(window.top && window.top.vis && window.top.vis.conn && typeof window.top.vis.conn.setState==='function'){ window.top.vis.conn.setState(id,val); return true; }
-    }catch(e){}
-    return false;
-  };
-  window.poolPhManualDose = async function(sec){
-    const ns = ${'${JSON.stringify(data.namespace)}'};
-    const ok1 = await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec)||30);
-    const ok2 = await window.poolSetState(ns + '.control.ph.manualStart', true);
-    if(!(ok1 || ok2)) alert('VIS setState nicht verfügbar');
-  };
-})();
-</script></div>`;
+      </div>`;
 
     const status = (name, hint, on) => `
       <div class="status-row ${on ? 'status-on' : 'status-off'}">
@@ -635,25 +617,7 @@ body{
       </div>
     </div>
   </div>
-</div><button class="action-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})">Manuell ${esc(data.phManualDoseSec)} s dosieren</button>
-<script>
-(function(){
-  window.poolSetState = async function(id,val){
-    try{
-      if(window.vis && window.vis.conn && typeof window.vis.conn.setState==='function'){ window.vis.conn.setState(id,val); return true; }
-      if(window.parent && window.parent.vis && window.parent.vis.conn && typeof window.parent.vis.conn.setState==='function'){ window.parent.vis.conn.setState(id,val); return true; }
-      if(window.top && window.top.vis && window.top.vis.conn && typeof window.top.vis.conn.setState==='function'){ window.top.vis.conn.setState(id,val); return true; }
-    }catch(e){}
-    return false;
-  };
-  window.poolPhManualDose = async function(sec){
-    const ns = ${'${JSON.stringify(data.namespace)}'};
-    const ok1 = await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec)||30);
-    const ok2 = await window.poolSetState(ns + '.control.ph.manualStart', true);
-    if(!(ok1 || ok2)) alert('VIS setState nicht verfügbar');
-  };
-})();
-</script></div></body></html>`;
+</div></body></html>`;
   }
 
   buildPhoneHtml(data) {
@@ -714,7 +678,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .quick-label,.status-hint{font-size:9px;color:#64748b}
 .quick-label{font-weight:700;margin-bottom:4px}
 .quick-value{font-size:12px;font-weight:900;color:#0f172a;line-height:1.08}
-.log-card{margin-top:4px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.log-card.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.log-card.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.log-card.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.log-text{font-size:11px;font-weight:700;line-height:1.18;color:#0f172a;word-break:break-word}.log-meta{margin-top:2px;font-size:9px;color:#64748b}.action-btn{margin-top:4px;width:100%;border:0;border-radius:10px;padding:8px 10px;background:linear-gradient(180deg,#2d7cff,#1655d1);color:#fff;font-size:12px;font-weight:900;box-shadow:0 8px 18px rgba(22,85,209,.28)}
+.log-card{margin-top:4px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.log-card.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.log-card.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.log-card.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.log-text{font-size:11px;font-weight:700;line-height:1.18;color:#0f172a;word-break:break-word}.log-meta{margin-top:2px;font-size:9px;color:#64748b}.action-btn{margin-top:4px;width:100%;border:0;border-radius:10px;padding:7px 10px;background:linear-gradient(180deg,#2d7cff,#1655d1);color:#fff;font-size:11px;font-weight:900;box-shadow:0 8px 18px rgba(22,85,209,.28)}
 .status-grid{gap:4px}
 .status-box{padding:5px 6px;min-height:40px;display:flex;flex-direction:column;justify-content:center}
 .status-box.is-on{background:linear-gradient(180deg,#f7fff8,#eefcf1)}
@@ -783,13 +747,32 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Granulat manuell', data.manualGranulateText)}
       
     </div>
+    <button class="action-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})">Manuell ${esc(data.phManualDoseSec)} s dosieren</button>
     <div class="log-card info-${esc(data.phInfoLevel)}">
       <div class="quick-label">Letzte Meldung</div>
       <div class="log-text">${esc(data.phInfoText)}</div>
       <div class="log-meta">Letzte Dosierung: ${esc(data.phLastDoseAt)}</div>
     </div>
   </div>
-</div></body></html>`;
+</div>
+<script>
+(function(){
+  window.poolSetState = async function(id,val){
+    try{
+      if(window.vis && window.vis.conn && typeof window.vis.conn.setState==='function'){ window.vis.conn.setState(id,val); return true; }
+      if(window.parent && window.parent.vis && window.parent.vis.conn && typeof window.parent.vis.conn.setState==='function'){ window.parent.vis.conn.setState(id,val); return true; }
+      if(window.top && window.top.vis && window.top.vis.conn && typeof window.top.vis.conn.setState==='function'){ window.top.vis.conn.setState(id,val); return true; }
+    }catch(e){}
+    return false;
+  };
+  window.poolPhManualDose = async function(sec){
+    const ns = ${'${JSON.stringify(data.namespace)}'};
+    const ok1 = await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec)||30);
+    const ok2 = await window.poolSetState(ns + '.control.ph.manualStart', true);
+    if(!(ok1 || ok2)) alert('VIS setState nicht verfügbar');
+  };
+})();
+</script></body></html>`;
   }
 
   async updateComputedStates() {
