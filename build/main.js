@@ -547,7 +547,7 @@ body{
   <div class="col-left">
     <div class="card hero">
       <div class="head">
-        <div class="title">Pool Manager</div>
+        <div class="title">Pool Manager <span class="ver">${esc(data.adapterVersion)}</span></div>
         <div class="meta">
           <div class="mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>
           Aktualisiert<br>${esc(data.updated)}
@@ -661,7 +661,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid var(--line);border-radius:16px;padding:7px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
 .hero{background:radial-gradient(circle at top right, rgba(85,200,255,.24), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
 .header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}
-.title{font-size:16px;font-weight:900}
+.title{font-size:16px;font-weight:900}.ver{font-size:10px;font-weight:800;color:#b9d7ff;margin-left:6px;vertical-align:middle}
 .meta{text-align:right;font-size:10px;color:#d2dded;line-height:1.15}
 .mode-pill{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#67cfff,#6f7bff);color:#fff;font-size:9px;font-weight:900;margin-bottom:4px}
 .temp-row{display:flex;align-items:flex-end;gap:5px;margin:6px 0 5px}
@@ -693,7 +693,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .card{padding:5px !important;border-radius:13px !important}
 .hero{padding:6px !important}
 .header{gap:4px !important}
-.title{font-size:15px !important}
+.title{font-size:15px !important}.ver{font-size:9px !important;margin-left:5px !important}
 .meta{font-size:9px !important}
 .temp-row{margin:4px 0 4px !important}
 .temp{font-size:43px !important}
@@ -720,7 +720,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 </style></head><body><div class="wrap">
   <div class="card hero">
     <div class="header">
-      <div class="title">Pool Manager</div>
+      <div class="title">Pool Manager <span class="ver">${esc(data.adapterVersion)}</span></div>
       <div class="meta"><div class="mode-pill">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div>
     </div>
     <div class="temp-row"><div class="temp">${esc(data.poolTemp)}</div><div class="unit">°C</div></div>
@@ -888,7 +888,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     <div class="ps-card ps-hero">
       <div class="ps-header">
         <div>
-          <div class="ps-title">Pool Manager</div>
+          <div class="ps-title">Pool Manager <span class="ps-ver">${esc(data.adapterVersion)}</span></div>
         </div>
         <div class="ps-sub">Modus<br>${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}<br>Aktualisiert<br>${esc(data.updated)}</div>
       </div>
@@ -988,7 +988,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-wrap{background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,#10203a,#08111f);padding:4px;display:grid;gap:6px;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
 .ps-card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:8px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
 .ps-hero{background:radial-gradient(circle at top right, rgba(85,200,255,.26), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
-.ps-header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}.ps-title{font-size:16px;font-weight:900}.ps-sub{font-size:10px;color:#d2dded;text-align:right}.ps-mode{display:inline-flex;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#67cfff,#6f7bff);font-size:9px;font-weight:900;color:#fff;margin-bottom:4px}
+.ps-header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}.ps-title{font-size:16px;font-weight:900}.ps-ver{font-size:10px;font-weight:800;color:#b9d7ff;margin-left:6px;vertical-align:middle}.ps-sub{font-size:10px;color:#d2dded;text-align:right}.ps-mode{display:inline-flex;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#67cfff,#6f7bff);font-size:9px;font-weight:900;color:#fff;margin-bottom:4px}
 .ps-tempRow{display:flex;align-items:flex-end;gap:5px;margin:6px 0 5px}.ps-temp{font-size:46px;font-weight:900;line-height:.9}.ps-unit{font-size:18px;padding-bottom:6px;color:#d5e5f6}
 .ps-scale{margin:3px 0 7px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-target{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#ffffff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%);box-shadow:0 0 0 1px rgba(255,255,255,.15)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #11305b;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;font-size:10px;color:#d2dded;margin-top:4px}
 .ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
@@ -1012,7 +1012,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-card{padding:5px !important;border-radius:13px !important}
 .ps-hero{padding:6px !important}
 .ps-header{gap:4px !important}
-.ps-title{font-size:15px !important}
+.ps-title{font-size:15px !important}.ps-ver{font-size:9px !important;margin-left:5px !important}
 .ps-sub{font-size:9px !important}
 .ps-tempRow{margin:4px 0 4px !important}
 .ps-temp{font-size:43px !important}
@@ -1036,7 +1036,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 </style>
 <div class="ps-wrap">
   <div class="ps-card ps-hero">
-    <div class="ps-header"><div class="ps-title">Pool Manager</div><div class="ps-sub"><div class="ps-mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div></div>
+    <div class="ps-header"><div class="ps-title">Pool Manager <span class="ps-ver">${esc(data.adapterVersion)}</span></div><div class="ps-sub"><div class="ps-mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div></div>
     <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
     <div class="ps-scale"><div class="ps-targetWrap"><div class="ps-track"><div class="ps-target" title="Soll ${esc(data.targetTemp)} °C"></div><div class="ps-dot"></div></div><div class="ps-targetLabel">Soll ${esc(data.targetTemp)}°C</div></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="ps-metrics">
@@ -1246,7 +1246,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       gridSupplyRounded: Math.round(parseNum(gridSupply) / 100) * 100,
       batteryRounded: Math.round(parseNum(battery)),
       namespace: this.namespace,
-      phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30')
+      phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
+      adapterVersion: 'v0.3.15hf36'
     };
 
     const now = Date.now();
