@@ -426,7 +426,25 @@ class Poolsteuerung extends utils.Adapter {
       <div class="kv ${extraCls}">
         <div class="kv-label">${esc(label)}</div>
         <div class="kv-value">${esc(value)}</div>
-      </div>`;
+      <button class="ps-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})">Manuell ${esc(data.phManualDoseSec)} s dosieren</button>
+<script>
+(function(){
+  window.poolSetState = async function(id,val){
+    try{
+      if(window.vis && window.vis.conn && typeof window.vis.conn.setState==='function'){ window.vis.conn.setState(id,val); return true; }
+      if(window.parent && window.parent.vis && window.parent.vis.conn && typeof window.parent.vis.conn.setState==='function'){ window.parent.vis.conn.setState(id,val); return true; }
+      if(window.top && window.top.vis && window.top.vis.conn && typeof window.top.vis.conn.setState==='function'){ window.top.vis.conn.setState(id,val); return true; }
+    }catch(e){}
+    return false;
+  };
+  window.poolPhManualDose = async function(sec){
+    const ns = ${'${JSON.stringify(data.namespace)}'};
+    const ok1 = await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec)||30);
+    const ok2 = await window.poolSetState(ns + '.control.ph.manualStart', true);
+    if(!(ok1 || ok2)) alert('VIS setState nicht verfügbar');
+  };
+})();
+</script></div>`;
 
     const status = (name, hint, on) => `
       <div class="status-row ${on ? 'status-on' : 'status-off'}">
@@ -617,7 +635,25 @@ body{
       </div>
     </div>
   </div>
-</div></div></body></html>`;
+</div><button class="action-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})">Manuell ${esc(data.phManualDoseSec)} s dosieren</button>
+<script>
+(function(){
+  window.poolSetState = async function(id,val){
+    try{
+      if(window.vis && window.vis.conn && typeof window.vis.conn.setState==='function'){ window.vis.conn.setState(id,val); return true; }
+      if(window.parent && window.parent.vis && window.parent.vis.conn && typeof window.parent.vis.conn.setState==='function'){ window.parent.vis.conn.setState(id,val); return true; }
+      if(window.top && window.top.vis && window.top.vis.conn && typeof window.top.vis.conn.setState==='function'){ window.top.vis.conn.setState(id,val); return true; }
+    }catch(e){}
+    return false;
+  };
+  window.poolPhManualDose = async function(sec){
+    const ns = ${'${JSON.stringify(data.namespace)}'};
+    const ok1 = await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec)||30);
+    const ok2 = await window.poolSetState(ns + '.control.ph.manualStart', true);
+    if(!(ok1 || ok2)) alert('VIS setState nicht verfügbar');
+  };
+})();
+</script></div></body></html>`;
   }
 
   buildPhoneHtml(data) {
@@ -678,7 +714,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .quick-label,.status-hint{font-size:10px;color:#64748b}
 .quick-label{font-weight:700;margin-bottom:4px}
 .quick-value{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
-.log-card{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.log-card.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.log-card.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.log-card.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.log-text{font-size:12px;font-weight:700;line-height:1.3;color:#0f172a;word-break:break-word}.log-meta{margin-top:4px;font-size:10px;color:#64748b}
+.log-card{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.log-card.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.log-card.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.log-card.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.log-text{font-size:12px;font-weight:700;line-height:1.3;color:#0f172a;word-break:break-word}.log-meta{margin-top:4px;font-size:10px;color:#64748b}.action-btn{margin-top:6px;width:100%;border:0;border-radius:12px;padding:10px 12px;background:linear-gradient(180deg,#2d7cff,#1655d1);color:#fff;font-size:13px;font-weight:900;box-shadow:0 8px 18px rgba(22,85,209,.28)}
 .status-grid{gap:5px}
 .status-box{padding:6px 7px;min-height:46px;display:flex;flex-direction:column;justify-content:center}
 .status-box.is-on{background:linear-gradient(180deg,#f7fff8,#eefcf1)}
@@ -745,7 +781,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       ${quick('Heute dosiert', `${data.phDailyCount}x`)}
       ${quick('Nächste Prüfung', data.phNextCheck)}
     ${quick('Granulat manuell', data.manualGranulateText)}
-      ${quick('Granulat manuell', data.manualGranulateText)}
+      
     </div>
     <div class="log-card info-${esc(data.phInfoLevel)}">
       <div class="quick-label">Letzte Meldung</div>
@@ -979,7 +1015,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-sb.standby-state .ps-sn{color:#64748b}
 .ps-sh{margin-top:3px}
 .ps-qv{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
-.ps-log{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.ps-log.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.ps-log.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.ps-log.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.ps-logt{font-size:12px;font-weight:700;line-height:1.3;color:#0f172a;word-break:break-word}.ps-logm{margin-top:4px;font-size:10px;color:#64748b}
+.ps-log{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.ps-log.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.ps-log.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.ps-log.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.ps-logt{font-size:12px;font-weight:700;line-height:1.3;color:#0f172a;word-break:break-word}.ps-logm{margin-top:4px;font-size:10px;color:#64748b}.ps-btn{margin-top:6px;width:100%;border:0;border-radius:12px;padding:10px 12px;background:linear-gradient(180deg,#2d7cff,#1655d1);color:#fff;font-size:13px;font-weight:900;box-shadow:0 8px 18px rgba(22,85,209,.28)}
 </style>
 <div class="ps-wrap">
   <div class="ps-card ps-hero">
@@ -1186,7 +1222,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       pvRounded: Math.round(parseNum(pv) / 100) * 100,
       feedInRounded: Math.round(parseNum(feedIn) / 100) * 100,
       gridSupplyRounded: Math.round(parseNum(gridSupply) / 100) * 100,
-      batteryRounded: Math.round(parseNum(battery))
+      batteryRounded: Math.round(parseNum(battery)),
+      namespace: this.namespace,
+      phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30')
     };
 
     const now = Date.now();
@@ -2103,6 +2141,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.ensureControlState('control.auto.chlor', this.config.enableChlorControl !== false);
       await this.ensureControlState('control.auto.ph', this.config.enablePhControl !== false);
       await this.ensureControlState('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
+      await this.ensureState('control.ph.manualDoseSec', 'number', 'value.interval', 30, true);
+      await this.ensureState('control.ph.manualStart', 'boolean', 'button', false, true);
       await this.syncControlStates();
       await this.setStateAsync('info.connection', true, true);
       await this.subscribeConfiguredStates();
@@ -2163,6 +2203,12 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           await this.setStateIfChanged('control.auto.chlor', false, false);
           await this.setStateIfChanged('control.auto.ph', false, false);
           await this.setStateIfChanged('control.auto.heatpump', false, false);
+        }
+        if (id === `${this.namespace}.control.ph.manualStart` && !!state.val === true) {
+          const manualSecState = await this.getStateAsync('control.ph.manualDoseSec');
+          const manualSec = Math.max(1, Number(manualSecState && manualSecState.val) || 30);
+          await this.runDosePumpOnce(manualSec, { checkTime: 'MANUELL', phValue: 'manuell' });
+          await this.setStateIfChanged('control.ph.manualStart', false, false);
         }
         await this.applyControlLogic();
         await this.renderVis();
