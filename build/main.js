@@ -637,14 +637,12 @@ body{
       return `
       <div class="status-box ${cls}">
         <div class="status-name">${esc(name)}</div>
-        <div class="status-hint">${esc(state)}</div>
       </div>`;
     };
 
-    const statusBox = (name, hint, on) => `
+    const statusBox = (name, on) => `
       <div class="status-box ${on ? 'is-on' : 'is-off'}">
-        <div class="status-name">${esc(name)}</div>
-        <div class="status-hint">${esc(hint)} · ${on ? 'EIN' : 'AUS'}</div>
+        <div class="status-name">${esc(name)} · ${on ? 'EIN' : 'AUS'}</div>
       </div>`;
 
     const quick = (label, value) => `
@@ -691,41 +689,45 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .status-hint{margin-top:3px}
 </style>
 <style>
-.ps-wrap{width:100%;max-width:390px;height:730px;max-height:730px;overflow:hidden;margin:0 auto;padding:4px !important;gap:4px !important;box-sizing:border-box}
-.ps-card{padding:7px !important;border-radius:15px !important}
-.ps-header{gap:4px !important}
-.ps-tempRow{margin:4px 0 6px !important;gap:4px !important}
-.ps-temp{font-size:58px !important}
-.ps-unit{font-size:18px !important;padding-bottom:4px !important}
-.ps-scale{margin:2px 0 5px !important}
-.ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{gap:4px !important}
-.ps-metric{padding:6px !important;min-height:64px !important}
-.ps-k{font-size:11px !important;margin-bottom:4px !important}
-.ps-v{font-size:18px !important}
-.ps-ms{font-size:9px !important;margin-top:2px !important}
-.ps-section{font-size:12px !important;margin-bottom:3px !important}
-.ps-sb,.ps-q{padding:6px !important;border-radius:12px !important}
-.ps-sb{min-height:38px !important}
-.ps-sn{font-size:11px !important;line-height:1.02 !important}
-.ps-sh{margin-top:2px !important;font-size:10px !important}
-.ps-qv{font-size:12px !important;line-height:1.08 !important}
-.ps-log{margin-top:4px !important;padding:6px !important}
-.ps-logt{font-size:10.5px !important;line-height:1.1 !important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.ps-logm{font-size:9px !important}
-</style>
-</head><body><div class="wrap">
+.wrap{width:100%;max-width:390px;height:730px;max-height:730px;overflow:hidden;margin:0 auto;gap:4px !important}
+.card{padding:6px !important;border-radius:14px !important}
+.hero{padding:7px !important}
+.header{gap:4px !important}
+.title{font-size:15px !important}
+.meta{font-size:9px !important}
+.temp-row{margin:4px 0 4px !important}
+.temp{font-size:42px !important}
+.unit{font-size:16px !important;padding-bottom:4px !important}
+.scale{margin:2px 0 4px !important}
+.scale-labels{font-size:9px !important}
+.metrics,.auto-grid,.status-grid,.quick-grid{gap:4px !important}
+.metric{padding:6px !important;border-radius:12px !important}
+.metric-label{font-size:10px !important}.metric-value{font-size:13px !important}.metric-sub{display:none !important}
+.section-title{font-size:12px !important;margin-bottom:3px !important}
+.quick-card,.status-box{padding:6px !important;border-radius:12px !important}
+.quick-label,.status-hint{font-size:9px !important}
+.quick-value{font-size:12px !important;line-height:1.08 !important}
+.status-box{min-height:38px !important}
+.status-name{font-size:11.5px !important;line-height:1.02 !important}
+.log-card{margin-top:4px !important;padding:6px !important}
+.log-text{font-size:10px !important;line-height:1.1 !important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.log-meta{font-size:8px !important;margin-top:2px !important}
+.target-wrap{position:relative}
+.target-label{position:absolute;left:${targetPct}%;top:14px;transform:translateX(-50%);font-size:9px;color:#d2dded;white-space:nowrap}
+.manual-placeholder{border:1px dashed rgba(15,23,42,.22) !important;background:linear-gradient(180deg,#f8fbff,#eef3fb) !important}
+</style></head><body><div class="wrap">
   <div class="card hero">
     <div class="header">
       <div class="title">Pool Manager</div>
       <div class="meta"><div class="mode-pill">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div>
     </div>
     <div class="temp-row"><div class="temp">${esc(data.poolTemp)}</div><div class="unit">°C</div></div>
-    <div class="scale"><div class="track"><div class="target-mark" title="Soll ${esc(data.targetTemp)} °C"></div><div class="dot"></div></div><div class="scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
+    <div class="scale"><div class="target-wrap"><div class="track"><div class="target-mark" title="Soll ${esc(data.targetTemp)} °C"></div><div class="dot"></div></div><div class="target-label">Soll ${esc(data.targetTemp)}°C</div></div><div class="scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="metrics">
       <div class="metric"><div class="metric-label">pH</div><div class="metric-value">${esc(data.ph)}</div><div class="metric-sub">Soll ${esc(data.phSet)}</div></div>
       <div class="metric"><div class="metric-label">ORP</div><div class="metric-value">${esc(data.orp)}</div><div class="metric-sub">Soll ${esc(data.orpSet)}</div></div>
-      <div class="metric"><div class="metric-label">Außen</div><div class="metric-value">${esc(data.outsideTemp)}°C</div><div class="metric-sub">Außen</div></div>
-      <div class="metric"><div class="metric-label">Soll</div><div class="metric-value">${esc(data.targetTemp)}°C</div><div class="metric-sub">Soll</div></div>
+      <div class="metric"><div class="metric-label">Außen</div><div class="metric-value">${esc(data.outsideTemp)}°C</div></div>
+      <div class="metric"><div class="metric-label">Soll</div><div class="metric-value">${esc(data.targetTemp)}°C</div></div>
     </div>
   </div>
 
@@ -769,6 +771,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       ${quick('Heute dosiert', `${data.phDailyCount}x`)}
       ${quick('Nächste Prüfung', data.phNextCheck)}
     ${quick('Granulat manuell', data.manualGranulateText)}
+    <div class="ps-q manual-placeholder"><div class="ps-ql">Manuelle Dosierung</div><div class="ps-qv">Widget hier</div></div>
+    ${quick('Granulat manuell', data.manualGranulateText)}
+      <div class="quick-card manual-placeholder"><div class="quick-label">Manuelle Dosierung</div><div class="quick-value">Widget hier</div></div>
       
     </div>
     <div class="log-card info-${esc(data.phInfoLevel)}">
@@ -977,10 +982,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
     const autoBox = (name, state) => {
       const cls = state === 'AKTIV' ? 'on-state' : state === 'STANDBY' ? 'standby-state' : 'off-state';
-      return `<div class="ps-sb ${cls}"><div class="ps-sn">${esc(name)}</div><div class="ps-sh">${esc(state)}</div></div>`;
+      return `<div class="ps-sb ${cls}"><div class="ps-sn">${esc(name)}</div></div>`;
     };
 
-    const statusBox = (name, hint, on) => `<div class="ps-sb ${on ? 'on-state' : 'off-state'}"><div class="ps-sn">${esc(name)}</div><div class="ps-sh">${esc(hint)} · ${on ? 'EIN' : 'AUS'}</div></div>`;
+    const statusBox = (name, on) => `<div class="ps-sb ${on ? 'on-state' : 'off-state'}"><div class="ps-sn">${esc(name)} · ${on ? 'EIN' : 'AUS'}</div></div>`;
     const quick = (l, v) => `<div class="ps-q"><div class="ps-ql">${esc(l)}</div><div class="ps-qv">${esc(v)}</div></div>`;
 
     return `<!-- phone-render:${esc(data.updated)} -->
@@ -1008,39 +1013,42 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-log{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.ps-log.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.ps-log.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.ps-log.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.ps-logt{font-size:12px;font-weight:700;line-height:1.3;color:#0f172a;word-break:break-word}.ps-logm{margin-top:4px;font-size:10px;color:#64748b}
 </style>
 <style>
-.ps-wrap{width:100%;max-width:390px;height:730px;max-height:730px;overflow:hidden;margin:0 auto;padding:4px !important;gap:4px !important;box-sizing:border-box}
-.ps-card{padding:7px !important;border-radius:15px !important}
+.ps-wrap{width:100%;max-width:390px;height:730px;max-height:730px;overflow:hidden;margin:0 auto;gap:4px !important}
+.ps-card{padding:6px !important;border-radius:14px !important}
+.ps-hero{padding:7px !important}
 .ps-header{gap:4px !important}
-.ps-tempRow{margin:4px 0 6px !important;gap:4px !important}
-.ps-temp{font-size:58px !important}
-.ps-unit{font-size:18px !important;padding-bottom:4px !important}
-.ps-scale{margin:2px 0 5px !important}
+.ps-title{font-size:15px !important}
+.ps-sub{font-size:9px !important}
+.ps-tempRow{margin:4px 0 4px !important}
+.ps-temp{font-size:42px !important}
+.ps-unit{font-size:16px !important;padding-bottom:4px !important}
+.ps-scale{margin:2px 0 4px !important}
+.ps-scale-labels{font-size:9px !important}
 .ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{gap:4px !important}
-.ps-metric{padding:6px !important;min-height:64px !important}
-.ps-k{font-size:11px !important;margin-bottom:4px !important}
-.ps-v{font-size:18px !important}
-.ps-ms{font-size:9px !important;margin-top:2px !important}
+.ps-metric{padding:6px !important;border-radius:12px !important}
+.ps-ml{font-size:10px !important}.ps-mv{font-size:13px !important}.ps-ms{display:none !important}
 .ps-section{font-size:12px !important;margin-bottom:3px !important}
 .ps-sb,.ps-q{padding:6px !important;border-radius:12px !important}
 .ps-sb{min-height:38px !important}
-.ps-sn{font-size:11px !important;line-height:1.02 !important}
-.ps-sh{margin-top:2px !important;font-size:10px !important}
+.ps-sn{font-size:11.5px !important;line-height:1.02 !important}
 .ps-qv{font-size:12px !important;line-height:1.08 !important}
 .ps-log{margin-top:4px !important;padding:6px !important}
-.ps-logt{font-size:10.5px !important;line-height:1.1 !important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.ps-logm{font-size:9px !important}
+.ps-logt{font-size:10px !important;line-height:1.1 !important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ps-logm{font-size:8px !important;margin-top:2px !important}
+.ps-targetWrap{position:relative}
+.ps-targetLabel{position:absolute;left:${targetPct}%;top:14px;transform:translateX(-50%);font-size:9px;color:#d2dded;white-space:nowrap}
+.manual-placeholder{border:1px dashed rgba(15,23,42,.22) !important;background:linear-gradient(180deg,#f8fbff,#eef3fb) !important}
 </style>
-
 <div class="ps-wrap">
   <div class="ps-card ps-hero">
     <div class="ps-header"><div class="ps-title">Pool Manager</div><div class="ps-sub"><div class="ps-mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div></div>
     <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
-    <div class="ps-scale"><div class="ps-track"><div class="ps-target" title="Soll ${esc(data.targetTemp)} °C"></div><div class="ps-dot"></div></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
+    <div class="ps-scale"><div class="ps-targetWrap"><div class="ps-track"><div class="ps-target" title="Soll ${esc(data.targetTemp)} °C"></div><div class="ps-dot"></div></div><div class="ps-targetLabel">Soll ${esc(data.targetTemp)}°C</div></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="ps-metrics">
       <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${esc(data.ph)}</div><div class="ps-ms">Soll ${esc(data.phSet)}</div></div>
       <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${esc(data.orp)}</div><div class="ps-ms">Soll ${esc(data.orpSet)}</div></div>
-      <div class="ps-metric"><div class="ps-ml">Außen</div><div class="ps-mv">${esc(data.outsideTemp)}°C</div><div class="ps-ms">Außen</div></div>
-      <div class="ps-metric"><div class="ps-ml">Soll</div><div class="ps-mv">${esc(data.targetTemp)}°C</div><div class="ps-ms">Soll</div></div>
+      <div class="ps-metric"><div class="ps-ml">Außen</div><div class="ps-mv">${esc(data.outsideTemp)}°C</div></div>
+      <div class="ps-metric"><div class="ps-ml">Soll</div><div class="ps-mv">${esc(data.targetTemp)}°C</div></div>
     </div>
   </div>
 
@@ -1052,10 +1060,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   </div></div>
 
   <div class="ps-card"><div class="ps-section">Aktoren & Status</div><div class="ps-statusGrid">
-    ${statusBox('Umwälzpumpe','IST-Zustand',data.pumpOn)}
-    ${statusBox('Chlorinator','ORP-Regelung',data.chlorOn)}
-    ${statusBox('pH-Dosierpumpe','Prüfzeiten',data.phPumpOn)}
-    ${statusBox('Wärmepumpe','PV-Freigabe',data.heatpumpOn)}
+    ${statusBox('Umwälzpumpe',data.pumpOn)}
+    ${statusBox('Chlorinator',data.chlorOn)}
+    ${statusBox('pH-Dosierpumpe',data.phPumpOn)}
+    ${statusBox('Wärmepumpe',data.heatpumpOn)}
   </div></div>
 
   <div class="ps-card"><div class="ps-section">Energie & Steuerung</div><div class="ps-quickGrid">
@@ -1088,7 +1096,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const feedIn = this.fmt(await this.getNumber(this.config.gridFeedInStateId, 0), 0, '0');
     const gridSupply = this.fmt(await this.getNumber(this.config.gridSupplyStateId, 0), 0, '0');
     const battery = this.fmt(await this.getNumber(this.config.batterySocStateId, 0), 0, '0');
-    const targetTemp = this.fmt(parseNum(this.config.heatpumpTargetTemp), 1, '24.0');
+    const targetTempNumFromState = this.config.heatpumpSetTempStateId
+      ? await this.getNumber(this.config.heatpumpSetTempStateId, NaN)
+      : NaN;
+    const targetTemp = this.fmt(Number.isFinite(targetTempNumFromState) ? targetTempNumFromState : parseNum(this.config.heatpumpTargetTemp), 1, '24.0');
     const heatReason = await this.getText('poolsteuerung.0.status.heatpump.lastReason', '--');
     const autoCirculation = await this.getText('poolsteuerung.0.status.auto.circulation', '--');
     const autoChlor = await this.getText('poolsteuerung.0.status.auto.chlor', '--');
