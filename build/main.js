@@ -646,7 +646,8 @@ body{
         <div class="quick-label">${esc(label)}</div>
         <div class="quick-value">${esc(value)}</div>
       </div>`;
-    const metricValue = (value, trend = '→', ok = false) => `<span class="metric-main ${ok ? 'ok' : ''}">${esc(value)}</span><span class="trend ${ok ? 'ok' : ''}">${esc(trend)}</span>`;
+    const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
+    const metricValue = (value, trend = '→', ok = false) => `<span class="metric-main ${ok ? 'ok' : ''}">${esc(value)}</span><span class="trend ${trendClass(trend)} ${ok ? 'ok' : ''}">${esc(trend)}</span>`;
 
     return `<!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
@@ -817,7 +818,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         <span class="ps-action-state">${active ? 'EIN' : 'AUS'}</span>
       </button>`;
     const decisionValue = v => `<div class="ps-v ps-wrap">${esc(v)}</div>`;
-    const metricValue = (value, trend = '→', ok = false) => `<span class="ps-mmain ${ok ? 'ok' : ''}">${esc(value)}</span><span class="ps-trend ${ok ? 'ok' : ''}">${esc(trend)}</span>`;
+    const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
+    const metricValue = (value, trend = '→', ok = false) => `<span class="ps-mmain ${ok ? 'ok' : ''}">${esc(value)}</span><span class="ps-trend ${trendClass(trend)} ${ok ? 'ok' : ''}">${esc(trend)}</span>`;
     return `
 <!-- widget-render:${esc(data.updated)} -->
 <style>
@@ -923,7 +925,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const autoBtn = (label, key, active) => `<button class="ps-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
     const deviceBtn = (label, key, active) => `<button class="ps-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'EIN' : 'AUS'}</span></button>`;
     const quick = (l, v) => `<div class="ps-q"><div class="ps-ql">${esc(l)}</div><div class="ps-qv">${esc(v)}</div></div>`;
-    const metricValue = (value, trend = '→', ok = false) => `<span class="ps-mmain ${ok ? 'ok' : ''}">${esc(value)}</span><span class="ps-trend ${ok ? 'ok' : ''}">${esc(trend)}</span>`;
+    const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
+    const metricValue = (value, trend = '→', ok = false) => `<span class="ps-mmain ${ok ? 'ok' : ''}">${esc(value)}</span><span class="ps-trend ${trendClass(trend)} ${ok ? 'ok' : ''}">${esc(trend)}</span>`;
     return `<!-- phone-render:${esc(data.updated)} -->
 <style>
 .ps-wrap{width:100%;max-width:510px;height:970px;max-height:970px;overflow:hidden;margin:0 auto;display:grid;gap:4px;padding:4px;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,#10203a,#08111f);font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
@@ -933,7 +936,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-tempRow{display:flex;align-items:flex-end;gap:5px;margin:4px 0 4px}.ps-temp{font-size:42px;font-weight:900;line-height:.9}.ps-unit{font-size:16px;padding-bottom:4px;color:#d5e5f6}
 .ps-scale{margin:2px 0 5px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-target{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#fff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}.ps-target-label{position:relative;height:12px;font-size:9px;color:#d2dded}.ps-target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}
 .ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.ps-phGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
-.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.ps-ml{font-size:10px;color:#d9e5f5}.ps-mv{font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center;gap:6px}.ps-ms{display:none}.ps-mmain.ok{color:#67dd7c}.ps-trend{font-size:12px;color:#c9d7ee;line-height:1}.ps-trend.ok{color:#67dd7c}.ps-section{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px}
+.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.ps-ml{font-size:10px;color:#d9e5f5}.ps-mv{font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center;gap:12px}.ps-ms{display:none}.ps-mmain.ok{color:#67dd7c}.ps-trend{font-size:12px;color:#c9d7ee;line-height:1;display:inline-flex;min-width:12px;justify-content:center}.ps-trend.up{color:#ffb36b}.ps-trend.down{color:#7dd3fc}.ps-trend.flat{color:#c9d7ee}.ps-trend.ok{color:#67dd7c}.ps-section{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px}
 .ps-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:7px 9px;border-radius:13px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}.ps-btn:disabled{opacity:.5;cursor:default}.ps-btn-name{font-size:12px;font-weight:800}.ps-btn-state{font-size:9px;font-weight:800}.ps-btn.is-on .ps-btn-name,.ps-btn.is-on .ps-btn-state{color:#67dd7c}.ps-btn.is-off .ps-btn-name,.ps-btn.is-off .ps-btn-state{color:#ff8d7b}
 .ps-q{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.ps-ql{font-size:9px;color:#64748b;font-weight:700;margin-bottom:3px}.ps-qv{font-size:12px;font-weight:900;color:#0f172a;line-height:1.08}
 .manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:7px 9px;border-radius:999px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}.manual-btn span{font-size:13px}.manual-btn small{font-size:10px;color:#dbeafe}
@@ -1222,7 +1225,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf62'
+      adapterVersion: 'v0.3.15hf63'
     };
 
     const now = Date.now();
