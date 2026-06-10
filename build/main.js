@@ -752,14 +752,14 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const ok=await window.poolSetState(ns+'.control.standby', !current);
     if(!ok) alert('VIS setState nicht verfügbar');
   };
-  window.poolToggleState = async function(id,current){
+  window.poolToggleState = async function(key,current){
     const ns=${JSON.stringify(data.namespace)};
     let ctrl='';
-    if(id===${JSON.stringify(data.circulationPumpStateId || '')}) ctrl='.control.device.circulation';
-    else if(id===${JSON.stringify(data.chlorinatorStateId || '')}) ctrl='.control.device.chlorinator';
-    else if(id===${JSON.stringify(data.phPumpStateId || '')}) ctrl='.control.device.phPump';
-    else if(id===${JSON.stringify(data.heatpumpStateId || '')}) ctrl='.control.device.heatpump';
-    if(!ctrl){ alert('Kein State hinterlegt'); return; }
+    if(key==='circulation') ctrl='.control.device.circulation';
+    else if(key==='chlorinator') ctrl='.control.device.chlorinator';
+    else if(key==='phPump') ctrl='.control.device.phPump';
+    else if(key==='heatpump') ctrl='.control.device.heatpump';
+    if(!ctrl){ alert('Kein Control-Key hinterlegt'); return; }
     const ok=await window.poolSetState(ns+ctrl, !current);
     if(!ok) alert('VIS setState nicht verfügbar');
   };
@@ -989,14 +989,14 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   };
   window.poolToggleControl = async function(key,current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.auto.'+key, !current); if(!ok) alert('VIS setState nicht verfügbar'); };
   window.poolToggleStandby = async function(current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.standby', !current); if(!ok) alert('VIS setState nicht verfügbar'); };
-  window.poolToggleState = async function(id,current){
+  window.poolToggleState = async function(key,current){
     const ns=${JSON.stringify(data.namespace)};
     let ctrl='';
-    if(id===${JSON.stringify(data.circulationPumpStateId || '')}) ctrl='.control.device.circulation';
-    else if(id===${JSON.stringify(data.chlorinatorStateId || '')}) ctrl='.control.device.chlorinator';
-    else if(id===${JSON.stringify(data.phPumpStateId || '')}) ctrl='.control.device.phPump';
-    else if(id===${JSON.stringify(data.heatpumpStateId || '')}) ctrl='.control.device.heatpump';
-    if(!ctrl){ alert('Kein State hinterlegt'); return; }
+    if(key==='circulation') ctrl='.control.device.circulation';
+    else if(key==='chlorinator') ctrl='.control.device.chlorinator';
+    else if(key==='phPump') ctrl='.control.device.phPump';
+    else if(key==='heatpump') ctrl='.control.device.heatpump';
+    if(!ctrl){ alert('Kein Control-Key hinterlegt'); return; }
     const ok=await window.poolSetState(ns+ctrl, !current);
     if(!ok) alert('VIS setState nicht verfügbar');
   };
@@ -1178,7 +1178,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf56'
+      adapterVersion: 'v0.3.15hf57'
     };
 
     const now = Date.now();
