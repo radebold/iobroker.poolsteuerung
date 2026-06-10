@@ -1206,7 +1206,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf58'
+      adapterVersion: 'v0.3.15hf59'
     };
 
     const now = Date.now();
@@ -1322,6 +1322,62 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     if (typeof value === 'number') return value !== 0;
     const s = String(value ?? '').trim().toLowerCase();
     return ['true', '1', 'on', 'ein', 'yes', 'ja'].includes(s);
+  }
+
+  getHeatpumpLockState() {
+    if (!this.heatpumpLock) {
+      this.heatpumpLock = { state: null, lastOnTs: 0, lastOffTs: 0 };
+    }
+    return this.heatpumpLock;
+  }
+
+  applyHeatpumpHysteresis(desiredOn, reason, poolTemp, targetTemp, feedIn, threshold) {
+    const lock = this.getHeatpumpLockState();
+    const pvOnThreshold = parseNum(this.config.heatpumpPvOnThresholdW || parseNum(threshold) || 1000);
+    const pvOffThreshold = parseNum(this.config.heatpumpPvOffThresholdW || 800);
+    const tempOnDelta = parseNum(this.config.heatpumpTempOnDeltaC || 0.5);
+
+    const feedNum = parseNum(feedIn);
+    const poolNum = parseNum(poolTemp);
+    const targetNum = parseNum(targetTemp);
+    const currentState = lock.state;
+
+    let nextDesired = desiredOn;
+    let nextReason = reason;
+
+    if (Number.isFinite(feedNum)) {
+      if (currentState === true) {
+        if (feedNum < pvOffThreshold) {
+          nextDesired = false;
+          nextReason = `PV AUS-Hysterese (${feedNum}W < ${pvOffThreshold}W)`;
+        } else {
+          nextDesired = true;
+          nextReason = `PV halten (${feedNum}W >= ${pvOffThreshold}W)`;
+        }
+      } else if (feedNum >= pvOnThreshold) {
+        nextDesired = true;
+        nextReason = `PV EIN-Hysterese (${feedNum}W >= ${pvOnThreshold}W)`;
+      } else {
+        nextDesired = false;
+        nextReason = `PV zu gering (${feedNum}W < ${pvOnThreshold}W)`;
+      }
+    }
+
+    if (Number.isFinite(poolNum) && Number.isFinite(targetNum)) {
+      if (currentState === true) {
+        if (poolNum >= targetNum) {
+          nextDesired = false;
+          nextReason = 'Solltemperatur erreicht';
+        }
+      } else if (poolNum <= targetNum - tempOnDelta) {
+        if (nextDesired) nextReason = `Temperatur unter Soll - ${tempOnDelta.toFixed(1)}°C`;
+      } else {
+        nextDesired = false;
+        nextReason = `Temp-Hysterese (${poolNum.toFixed(1)}°C > ${(targetNum - tempOnDelta).toFixed(1)}°C)`;
+      }
+    }
+
+    return { desiredOn: nextDesired, reason: nextReason };
   }
 
   valuesEqual(a, b) {

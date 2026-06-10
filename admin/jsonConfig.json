@@ -497,6 +497,12 @@
           "type": "number",
           "label": "Solltemperatur",
           "newLine": true
+        },
+        "heatpumpTempOnDeltaC": {
+          "type": "number",
+          "label": "Temperatur-Hysterese EIN (°C unter Soll)",
+          "newLine": true,
+          "help": "Standard 0,5 °C. Beispiel: Soll 28,0 °C => EIN erst bei 27,5 °C oder darunter."
         }
       }
     },
@@ -529,6 +535,18 @@
           "label": "PV-Überschuss Schwellwert (W)",
           "newLine": true,
           "help": "Wenn die Netzeinspeisung größer als dieser Wert ist, darf die Wärmepumpe laufen."
+        },
+        "heatpumpPvOnThresholdW": {
+          "type": "number",
+          "label": "Wärmepumpe EIN ab Netzeinspeisung (W)",
+          "newLine": true,
+          "help": "Standard 1000 W. Ab diesem Wert darf die Wärmepumpe aktiviert werden."
+        },
+        "heatpumpPvOffThresholdW": {
+          "type": "number",
+          "label": "Wärmepumpe AUS unter Netzeinspeisung (W)",
+          "newLine": true,
+          "help": "Standard 800 W. Unter diesem Wert wird die Wärmepumpe wieder deaktiviert."
         }
       }
     },
