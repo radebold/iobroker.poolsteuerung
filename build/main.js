@@ -692,11 +692,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   <div class="card"><div class="section-title">Schnellzugriff</div><div class="control-grid">
     <button type="button" class="action-btn js-standby-btn ${data.standbyControl ? 'is-on' : 'is-off'}" data-current="${data.standbyControl ? '1' : '0'}"><span class="action-name">Standby</span><span class="action-state">${data.standbyControl ? 'AKTIV' : 'AUS'}</span></button>
-    <div class="settemp-row">
-      <div class="temp-center"><div class="quick-label">Poolsolltemperatur</div><div class="quick-value">${esc(data.targetTemp)}°C</div></div>
-      ${data.heatpumpOn ? '<button type="button" class="mini-temp-btn js-settemp-btn" data-delta="-0.5">−</button>' : ''}
-      ${data.heatpumpOn ? '<button type="button" class="mini-temp-btn js-settemp-btn" data-delta="0.5">+</button>' : ''}
-    </div>
+    <div class="temp-center"><div class="quick-label">Poolsolltemperatur</div><div class="quick-value">${esc(data.targetTemp)}°C</div></div>
   </div></div>
 
   <div class="card"><div class="section-title">Automatik</div><div class="auto-grid">
@@ -786,7 +782,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     document.querySelectorAll('.js-device-btn').forEach(el => el.onclick = () => window.poolToggleState(el.dataset.key || '', el.dataset.current === '1'));
     document.querySelectorAll('.js-standby-btn').forEach(el => el.onclick = () => window.poolToggleStandby(el.dataset.current === '1'));
     document.querySelectorAll('.js-manual-dose-btn').forEach(el => el.onclick = () => window.poolPhManualDose(Number(el.dataset.sec || 30)));
-    document.querySelectorAll('.js-settemp-btn').forEach(el => el.onclick = () => window.poolAdjustSetTemp(Number(el.dataset.delta || 0)));
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind); else bind();
 })();
@@ -1206,7 +1201,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf60'
+      adapterVersion: 'v0.3.15hf61'
     };
 
     const now = Date.now();
