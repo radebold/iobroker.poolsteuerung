@@ -640,7 +640,7 @@ body{
     const targetTempNum = parseNum(data.targetTemp);
     const targetPct = Number.isFinite(targetTempNum) ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
     const autoBtn = (label, key, active) => `<button type="button" class="action-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
-    const deviceBtn = (label, id, active) => `<button type="button" class="action-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-id="${esc(String(id || ''))}" data-current="${active ? '1' : '0'}"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'EIN' : 'AUS'}</span></button>`;
+    const deviceBtn = (label, key, active) => `<button type="button" class="action-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'EIN' : 'AUS'}</span></button>`;
     const quick = (label, value) => `
       <div class="quick-card">
         <div class="quick-label">${esc(label)}</div>
@@ -781,7 +781,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   };
   const bind = () => {
     document.querySelectorAll('.js-auto-btn').forEach(el => el.onclick = () => window.poolToggleControl(el.dataset.key, el.dataset.current === '1'));
-    document.querySelectorAll('.js-device-btn').forEach(el => el.onclick = () => window.poolToggleState(el.dataset.id || '', el.dataset.current === '1'));
+    document.querySelectorAll('.js-device-btn').forEach(el => el.onclick = () => window.poolToggleState(el.dataset.key || '', el.dataset.current === '1'));
     document.querySelectorAll('.js-standby-btn').forEach(el => el.onclick = () => window.poolToggleStandby(el.dataset.current === '1'));
     document.querySelectorAll('.js-manual-dose-btn').forEach(el => el.onclick = () => window.poolPhManualDose(Number(el.dataset.sec || 30)));
     document.querySelectorAll('.js-settemp-btn').forEach(el => el.onclick = () => window.poolAdjustSetTemp(Number(el.dataset.delta || 0)));
@@ -813,8 +813,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         <span class="ps-action-name">${esc(label)}</span>
         <span class="ps-action-state">${active ? 'AKTIV' : 'AUS'}</span>
       </button>`;
-    const deviceBtn = (label, stateId, active) => `
-      <button class="ps-action-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-id="${esc(String(stateId || ''))}" data-current="${active ? '1' : '0'}">
+    const deviceBtn = (label, key, active) => `
+      <button class="ps-action-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}">
         <span class="ps-action-name">${esc(label)}</span>
         <span class="ps-action-state">${active ? 'EIN' : 'AUS'}</span>
       </button>`;
@@ -922,7 +922,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const targetTempNum = parseNum(data.targetTemp);
     const targetPct = Number.isFinite(targetTempNum) ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
     const autoBtn = (label, key, active) => `<button class="ps-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
-    const deviceBtn = (label, id, active) => `<button class="ps-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-id="${esc(String(id || ''))}" data-current="${active ? '1' : '0'}"><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'EIN' : 'AUS'}</span></button>`;
+    const deviceBtn = (label, key, active) => `<button class="ps-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'EIN' : 'AUS'}</span></button>`;
     const quick = (l, v) => `<div class="ps-q"><div class="ps-ql">${esc(l)}</div><div class="ps-qv">${esc(v)}</div></div>`;
     return `<!-- phone-render:${esc(data.updated)} -->
 <style>
@@ -1178,7 +1178,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf55'
+      adapterVersion: 'v0.3.15hf56'
     };
 
     const now = Date.now();
