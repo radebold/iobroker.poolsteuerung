@@ -639,8 +639,8 @@ body{
     const tempPct = Number.isFinite(poolTempNum) ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
     const targetTempNum = parseNum(data.targetTemp);
     const targetPct = Number.isFinite(targetTempNum) ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
-    const autoBtn = (label, key, active) => `<button type="button" class="action-btn ${active ? 'is-on' : 'is-off'}" onclick="poolToggleControl('${key}', ${active ? 'true' : 'false'})"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
-    const deviceBtn = (label, id, active) => `<button type="button" class="action-btn ${active ? 'is-on' : 'is-off'}" onclick="poolToggleState(${JSON.stringify(id || '')}, ${active ? 'true' : 'false'})"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'EIN' : 'AUS'}</span></button>`;
+    const autoBtn = (label, key, active) => `<button type="button" class="action-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
+    const deviceBtn = (label, id, active) => `<button type="button" class="action-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-id="${esc(String(id || ''))}" data-current="${active ? '1' : '0'}"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'EIN' : 'AUS'}</span></button>`;
     const quick = (label, value) => `
       <div class="quick-card">
         <div class="quick-label">${esc(label)}</div>
@@ -691,10 +691,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   </div>
 
   <div class="card"><div class="section-title">Schnellzugriff</div><div class="control-grid">
-    <button type="button" class="action-btn ${data.standbyControl ? 'is-on' : 'is-off'}" onclick="poolToggleStandby(${data.standbyControl ? 'true' : 'false'})"><span class="action-name">Standby</span><span class="action-state">${data.standbyControl ? 'AKTIV' : 'AUS'}</span></button>
+    <button type="button" class="action-btn js-standby-btn ${data.standbyControl ? 'is-on' : 'is-off'}" data-current="${data.standbyControl ? '1' : '0'}"><span class="action-name">Standby</span><span class="action-state">${data.standbyControl ? 'AKTIV' : 'AUS'}</span></button>
     <div class="temp-center"><div class="quick-label">Poolsolltemperatur</div><div class="quick-value">${esc(data.targetTemp)}°C</div></div>
-    <button type="button" class="temp-btn" onclick="poolAdjustSetTemp(-0.5)">− 0,5°</button>
-    <button type="button" class="temp-btn" onclick="poolAdjustSetTemp(0.5)">+ 0,5°</button>
+    <button type="button" class="temp-btn js-settemp-btn" data-delta="-0.5">− 0,5°</button>
+    <button type="button" class="temp-btn js-settemp-btn" data-delta="0.5">+ 0,5°</button>
   </div></div>
 
   <div class="card"><div class="section-title">Automatik</div><div class="auto-grid">
@@ -726,22 +726,67 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Heute dosiert', `${data.phDailyCount}x`)}
     ${quick('Nächste Prüfung', data.phNextCheck)}
     ${quick('Granulat manuell', data.manualGranulateText)}
-    <button type="button" class="manual-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
+    <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.phManualDoseSec || 30) || 30}"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
   </div></div>
 </div>
 <script>
 (function(){
+  function getConn(){
+    try{ if(window.vis&&window.vis.conn&&typeof window.vis.conn.setState==='function') return window.vis.conn; }catch(e){}
+    try{ if(window.parent&&window.parent.vis&&window.parent.vis.conn&&typeof window.parent.vis.conn.setState==='function') return window.parent.vis.conn; }catch(e){}
+    try{ if(window.top&&window.top.vis&&window.top.vis.conn&&typeof window.top.vis.conn.setState==='function') return window.top.vis.conn; }catch(e){}
+    return null;
+  }
   window.poolSetState = async function(id,val){
-    try{ if(window.vis&&window.vis.conn&&typeof window.vis.conn.setState==='function'){ window.vis.conn.setState(id,val); return true; } }catch(e){}
-    try{ if(window.parent&&window.parent.vis&&window.parent.vis.conn&&typeof window.parent.vis.conn.setState==='function'){ window.parent.vis.conn.setState(id,val); return true; } }catch(e){}
-    try{ if(window.top&&window.top.vis&&window.top.vis.conn&&typeof window.top.vis.conn.setState==='function'){ window.top.vis.conn.setState(id,val); return true; } }catch(e){}
-    return false;
+    const conn=getConn();
+    if(!conn) return false;
+    try{ conn.setState(id,val); return true; }catch(e){ return false; }
   };
-  window.poolToggleControl = async function(key,current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.auto.'+key, !current); if(!ok) alert('VIS setState nicht verfügbar'); };
-  window.poolToggleStandby = async function(current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.standby', !current); if(!ok) alert('VIS setState nicht verfügbar'); };
-  window.poolToggleState = async function(id,current){ const ns=${JSON.stringify(data.namespace)}; let ctrl=''; if(id===${JSON.stringify(data.circulationPumpStateId || '')}) ctrl='.control.device.circulation'; else if(id===${JSON.stringify(data.chlorinatorStateId || '')}) ctrl='.control.device.chlorinator'; else if(id===${JSON.stringify(data.phPumpStateId || '')}) ctrl='.control.device.phPump'; else if(id===${JSON.stringify(data.heatpumpStateId || '')}) ctrl='.control.device.heatpump'; if(!ctrl){ alert('Kein State hinterlegt'); return; } const ok=await window.poolSetState(ns+ctrl, !current); if(!ok) alert('VIS setState nicht verfügbar'); };
-  window.poolPhManualDose = async function(sec){ const ns=${JSON.stringify(data.namespace)}; await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30); const ok=await window.poolSetState(ns + '.control.ph.manualStart', true); if(!ok) alert('VIS setState nicht verfügbar'); };
-  window.poolAdjustSetTemp = async function(delta){ const ns=${JSON.stringify(data.namespace)}; const hpOn=${data.heatpumpOn ? 'true' : 'false'}; if(!hpOn){ alert('Solltemperatur nur bei laufender Wärmepumpe änderbar'); return; } if(!${JSON.stringify(data.heatpumpSetTempStateId || '')}){ alert('Kein Solltemperatur-State hinterlegt'); return; } const current=Number(${JSON.stringify(data.targetTemp)}.replace(',', '.')); const next=Math.max(10, Math.min(40, Math.round((current + Number(delta))*10)/10)); const ok=await window.poolSetState(ns+'.control.heatpump.setTemp', next); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolToggleControl = async function(key,current){
+    const ns=${JSON.stringify(data.namespace)};
+    const ok=await window.poolSetState(ns+'.control.auto.'+key, !current);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+  window.poolToggleStandby = async function(current){
+    const ns=${JSON.stringify(data.namespace)};
+    const ok=await window.poolSetState(ns+'.control.standby', !current);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+  window.poolToggleState = async function(id,current){
+    const ns=${JSON.stringify(data.namespace)};
+    let ctrl='';
+    if(id===${JSON.stringify(data.circulationPumpStateId || '')}) ctrl='.control.device.circulation';
+    else if(id===${JSON.stringify(data.chlorinatorStateId || '')}) ctrl='.control.device.chlorinator';
+    else if(id===${JSON.stringify(data.phPumpStateId || '')}) ctrl='.control.device.phPump';
+    else if(id===${JSON.stringify(data.heatpumpStateId || '')}) ctrl='.control.device.heatpump';
+    if(!ctrl){ alert('Kein State hinterlegt'); return; }
+    const ok=await window.poolSetState(ns+ctrl, !current);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+  window.poolPhManualDose = async function(sec){
+    const ns=${JSON.stringify(data.namespace)};
+    await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30);
+    const ok=await window.poolSetState(ns + '.control.ph.manualStart', true);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+  window.poolAdjustSetTemp = async function(delta){
+    const ns=${JSON.stringify(data.namespace)};
+    const hpOn=${data.heatpumpOn ? 'true' : 'false'};
+    if(!hpOn){ alert('Solltemperatur nur bei laufender Wärmepumpe änderbar'); return; }
+    if(!${JSON.stringify(data.heatpumpSetTempStateId || '')}){ alert('Kein Solltemperatur-State hinterlegt'); return; }
+    const current=Number(${JSON.stringify(data.targetTemp)}.replace(',', '.'));
+    const next=Math.max(10, Math.min(40, Math.round((current + Number(delta))*10)/10));
+    const ok=await window.poolSetState(ns+'.control.heatpump.setTemp', next);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+  const bind = () => {
+    document.querySelectorAll('.js-auto-btn').forEach(el => el.onclick = () => window.poolToggleControl(el.dataset.key, el.dataset.current === '1'));
+    document.querySelectorAll('.js-device-btn').forEach(el => el.onclick = () => window.poolToggleState(el.dataset.id || '', el.dataset.current === '1'));
+    document.querySelectorAll('.js-standby-btn').forEach(el => el.onclick = () => window.poolToggleStandby(el.dataset.current === '1'));
+    document.querySelectorAll('.js-manual-dose-btn').forEach(el => el.onclick = () => window.poolPhManualDose(Number(el.dataset.sec || 30)));
+    document.querySelectorAll('.js-settemp-btn').forEach(el => el.onclick = () => window.poolAdjustSetTemp(Number(el.dataset.delta || 0)));
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind); else bind();
 })();
 </script></body></html>`;
   }
@@ -764,12 +809,12 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const phClass = badgeClass(data.ph, 7.1, 7.25);
     const orpClass = badgeClass(data.orp, Number(data.orpOnThreshold || 725), Number(data.orpOffThreshold || 750));
     const autoBtn = (label, key, active) => `
-      <button class="ps-action-btn ${active ? 'is-on' : 'is-off'}" onclick="poolToggleControl('${key}', ${active ? 'true' : 'false'})">
+      <button class="ps-action-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}">
         <span class="ps-action-name">${esc(label)}</span>
         <span class="ps-action-state">${active ? 'AKTIV' : 'AUS'}</span>
       </button>`;
     const deviceBtn = (label, stateId, active) => `
-      <button class="ps-action-btn ${active ? 'is-on' : 'is-off'}" ${stateId ? `onclick="poolToggleState(${JSON.stringify(stateId)}, ${active ? 'true' : 'false'})"` : 'disabled'}>
+      <button class="ps-action-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-id="${esc(String(stateId || ''))}" data-current="${active ? '1' : '0'}">
         <span class="ps-action-name">${esc(label)}</span>
         <span class="ps-action-state">${active ? 'EIN' : 'AUS'}</span>
       </button>`;
@@ -793,7 +838,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   <div class="ps-card ps-hero">
     <div class="ps-header">
       <div><div class="ps-title">Pool Manager <span class="ps-ver">${esc(data.adapterVersion)}</span></div></div>
-      <div class="ps-sub"><button class="ps-mode" onclick="poolToggleStandby(${data.standbyControl ? 'true' : 'false'})">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</button><br>Aktualisiert<br>${esc(data.updated)}</div>
+      <div class="ps-sub"><button class="ps-mode js-standby-btn" data-current="${data.standbyControl ? '1' : '0'}">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</button><br>Aktualisiert<br>${esc(data.updated)}</div>
     </div>
     <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
     <div class="ps-scale"><div class="ps-track"><div class="ps-target"></div><div class="ps-dot"></div></div><div class="ps-target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
@@ -866,8 +911,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const tempPct = Number.isFinite(poolTempNum) ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
     const targetTempNum = parseNum(data.targetTemp);
     const targetPct = Number.isFinite(targetTempNum) ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
-    const autoBtn = (label, key, active) => `<button class="ps-btn ${active ? 'is-on' : 'is-off'}" onclick="poolToggleControl('${key}', ${active ? 'true' : 'false'})"><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
-    const deviceBtn = (label, id, active) => `<button class="ps-btn ${active ? 'is-on' : 'is-off'}" ${id ? `onclick="poolToggleState(${JSON.stringify(id)}, ${active ? 'true' : 'false'})"` : 'disabled'}><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'EIN' : 'AUS'}</span></button>`;
+    const autoBtn = (label, key, active) => `<button class="ps-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
+    const deviceBtn = (label, id, active) => `<button class="ps-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-id="${esc(String(id || ''))}" data-current="${active ? '1' : '0'}"><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'EIN' : 'AUS'}</span></button>`;
     const quick = (l, v) => `<div class="ps-q"><div class="ps-ql">${esc(l)}</div><div class="ps-qv">${esc(v)}</div></div>`;
     return `<!-- phone-render:${esc(data.updated)} -->
 <style>
@@ -885,7 +930,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 </style>
 <div class="ps-wrap">
   <div class="ps-card ps-hero">
-    <div class="ps-header"><div class="ps-title">Pool Manager <span class="ps-ver">${esc(data.adapterVersion)}</span></div><div class="ps-sub"><button class="ps-mode" onclick="poolToggleStandby(${data.standbyControl ? 'true' : 'false'})">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</button><br>Aktualisiert<br>${esc(data.updated)}</div></div>
+    <div class="ps-header"><div class="ps-title">Pool Manager <span class="ps-ver">${esc(data.adapterVersion)}</span></div><div class="ps-sub"><button class="ps-mode js-standby-btn" data-current="${data.standbyControl ? '1' : '0'}">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</button><br>Aktualisiert<br>${esc(data.updated)}</div></div>
     <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
     <div class="ps-scale"><div class="ps-track"><div class="ps-target"></div><div class="ps-dot"></div></div><div class="ps-target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="ps-metrics">
@@ -921,7 +966,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Heute dosiert', `${data.phDailyCount}x`)}
     ${quick('Nächste Prüfung', data.phNextCheck)}
     ${quick('Granulat manuell', data.manualGranulateText)}
-    <button class="manual-btn" onclick="poolPhManualDose(${Number(data.phManualDoseSec || 30) || 30})"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
+    <button class="manual-btn js-manual-dose-btn" data-sec="${Number(data.phManualDoseSec || 30) || 30}"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
   </div></div>
 </div>
 <script>
@@ -1123,7 +1168,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf50'
+      adapterVersion: 'v0.3.15hf51'
     };
 
     const now = Date.now();
