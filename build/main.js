@@ -1068,7 +1068,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       chlorDecision = 'Standby aktiv';
     } else if (!chlorEnabledMaster) {
       chlorDesired = chlorOnRaw;
-      chlorDecision = 'Steuerung deaktiviert';
+      chlorDecision = `Steuerung deaktiviert${chlorOnRaw ? ' · manuell EIN' : ' · manuell AUS'}`;
     }
     const orpNum = parseNum(orp);
     const chlorDelaySec = Math.max(0, parseNum(this.config.chlorPumpStartDelaySec || 0));
@@ -1103,7 +1103,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       }
     }
 
-    const chlorOn = pumpOn ? chlorDesired : false;
+    const chlorOn = chlorEnabledMaster ? (pumpOn ? chlorDesired : false) : chlorOnRaw;
     let heatDecision = '';
     const circulationHeartbeatOkDisplay = await this.getHeartbeatOk('status.checks.circulationPump');
     if (!pumpOn) {
@@ -1168,7 +1168,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf52'
+      adapterVersion: 'v0.3.15hf53'
     };
 
     const now = Date.now();
