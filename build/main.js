@@ -307,6 +307,7 @@ class Poolsteuerung extends utils.Adapter {
     if (id === this.config.chlorinatorSocketStateId) mode = this.config.chlorinatorWriteMode || '';
     if (id === this.config.phPumpSocketStateId) mode = this.config.phPumpWriteMode || '';
     if (id === this.config.heatpumpPowerStateId) mode = this.config.heatpumpWriteMode || '';
+    if (id === this.config.heatpumpPowerStateId) mode = this.config.heatpumpWriteMode || '';
 
     const obj = await this.getForeignObjectAsync(id);
     const common = obj && obj.common ? obj.common : {};
@@ -933,7 +934,17 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   };
   window.poolToggleControl = async function(key,current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.auto.'+key, !current); if(!ok) alert('VIS setState nicht verfügbar'); };
   window.poolToggleStandby = async function(current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.standby', !current); if(!ok) alert('VIS setState nicht verfügbar'); };
-  window.poolToggleState = async function(id,current){ const ok=await window.poolSetState(id, !current); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolToggleState = async function(id,current){
+    const ns=${JSON.stringify(data.namespace)};
+    let ctrl='';
+    if(id===${JSON.stringify(data.circulationPumpStateId || '')}) ctrl='.control.device.circulation';
+    else if(id===${JSON.stringify(data.chlorinatorStateId || '')}) ctrl='.control.device.chlorinator';
+    else if(id===${JSON.stringify(data.phPumpStateId || '')}) ctrl='.control.device.phPump';
+    else if(id===${JSON.stringify(data.heatpumpStateId || '')}) ctrl='.control.device.heatpump';
+    if(!ctrl){ alert('Kein State hinterlegt'); return; }
+    const ok=await window.poolSetState(ns+ctrl, !current);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
   window.poolPhManualDose = async function(sec){ const ns=${JSON.stringify(data.namespace)}; await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30); const ok=await window.poolSetState(ns + '.control.ph.manualStart', true); if(!ok) alert('VIS setState nicht verfügbar'); };
 })();
 </script>`;
@@ -1112,7 +1123,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf49'
+      adapterVersion: 'v0.3.15hf50'
     };
 
     const now = Date.now();
