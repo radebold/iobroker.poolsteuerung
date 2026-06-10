@@ -1118,19 +1118,45 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const chlorOn = chlorEnabledMaster ? (pumpOn ? chlorDesired : false) : chlorOnRaw;
     let heatDecision = '';
     const circulationHeartbeatOkDisplay = await this.getHeartbeatOk('status.checks.circulationPump');
-    if (!pumpOn) {
-      heatDecision = 'Umwälzpumpe AUS';
-    } else if (!circulationHeartbeatOkDisplay) {
-      heatDecision = 'Umwälzpumpe nicht erreichbar';
-    } else if (parseNum(feedIn) < threshold) {
-      heatDecision = `PV zu gering (${feedIn}W < ${threshold}W)`;
-    } else if (parseNum(poolTemp) >= parseNum(targetTemp)) {
-      heatDecision = 'Solltemperatur erreicht';
-    } else {
-      heatDecision = `PV OK (${feedIn}W > ${threshold}W)`;
+    const heatpumpOnRaw = await this.getBool(this.config.heatpumpPowerStateId);
+    const heatLock = this.getHeatpumpLockState();
+    if (heatLock.state === null) {
+      heatLock.state = heatpumpOnRaw;
+      if (heatpumpOnRaw) heatLock.lastOnTs = Date.now();
+      else heatLock.lastOffTs = Date.now();
     }
 
-    const heatpumpOn = await this.getBool(this.config.heatpumpPowerStateId);
+    let heatDesired = heatpumpOnRaw;
+    if (!heatEnabledMaster) {
+      heatDesired = heatpumpOnRaw;
+      heatDecision = 'Steuerung deaktiviert';
+    } else if (!pumpOn) {
+      heatDesired = false;
+      heatDecision = 'Umwälzpumpe AUS';
+    } else if (!circulationHeartbeatOkDisplay) {
+      heatDesired = false;
+      heatDecision = 'Umwälzpumpe nicht erreichbar';
+    } else {
+      const hyst = this.applyHeatpumpHysteresis(true, `PV OK (${feedIn}W >= ${threshold}W)`, poolTemp, targetTemp, feedIn, threshold);
+      heatDesired = hyst.desiredOn;
+      heatDecision = hyst.reason;
+    }
+
+    if (this.config.heatpumpPowerStateId && heatDesired !== heatpumpOnRaw) {
+      try {
+        await this.setSwitchStateCompat(this.config.heatpumpPowerStateId, heatDesired);
+      } catch (e) {
+        this.log.warn('Wärmepumpe konnte nicht gesetzt werden: ' + e);
+      }
+    }
+
+    if (heatDesired !== heatLock.state) {
+      heatLock.state = heatDesired;
+      if (heatDesired) heatLock.lastOnTs = Date.now();
+      else heatLock.lastOffTs = Date.now();
+    }
+
+    const heatpumpOn = heatDesired;
 
     const stableData = {
       ph, orp, poolTemp, outsideTemp, pv, feedIn, gridSupply, battery, targetTemp, heatReason, volume, modeActive,
@@ -1180,7 +1206,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15'
+      adapterVersion: 'v0.3.15hf58'
     };
 
     const now = Date.now();
