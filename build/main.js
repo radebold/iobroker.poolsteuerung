@@ -705,10 +705,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   </div></div>
 
   <div class="card"><div class="section-title">Aktoren & Status</div><div class="status-grid">
-    ${deviceBtn('Umwälzpumpe',data.circulationPumpStateId,!!data.pumpOn)}
-    ${deviceBtn('Chlorinator',data.chlorinatorStateId,!!data.chlorOn)}
-    ${deviceBtn('pH-Dosierpumpe',data.phPumpStateId,!!data.phPumpOn)}
-    ${deviceBtn('Wärmepumpe',data.heatpumpStateId,!!data.heatpumpOn)}
+    ${deviceBtn('Umwälzpumpe','circulation',!!data.pumpOn)}
+    ${deviceBtn('Chlorinator','chlorinator',!!data.chlorOn)}
+    ${deviceBtn('pH-Dosierpumpe','phPump',!!data.phPumpOn)}
+    ${deviceBtn('Wärmepumpe','heatpump',!!data.heatpumpOn)}
   </div></div>
 
   <div class="card"><div class="section-title">Energie & Steuerung</div><div class="quick-grid">
@@ -872,10 +872,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   <div class="ps-card">
     <div class="ps-block-title">Aktoren & Status</div>
     <div class="ps-statuswrap">
-      ${deviceBtn('Umwälzpumpe',data.circulationPumpStateId,!!data.pumpOn)}
-      ${deviceBtn('Chlorinator',data.chlorinatorStateId,!!data.chlorOn)}
-      ${deviceBtn('pH-Dosierpumpe',data.phPumpStateId,!!data.phPumpOn)}
-      ${deviceBtn('Wärmepumpe',data.heatpumpStateId,!!data.heatpumpOn)}
+      ${deviceBtn('Umwälzpumpe','circulation',!!data.pumpOn)}
+      ${deviceBtn('Chlorinator','chlorinator',!!data.chlorOn)}
+      ${deviceBtn('pH-Dosierpumpe','phPump',!!data.phPumpOn)}
+      ${deviceBtn('Wärmepumpe','heatpump',!!data.heatpumpOn)}
     </div>
     <div class="ps-list">
       <div class="ps-row"><div class="ps-k">Zeitplan</div><div class="ps-v">${data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV'}</div></div>
@@ -899,7 +899,17 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   };
   window.poolToggleControl = async function(key,current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.auto.'+key, !current); if(!ok) alert('VIS setState nicht verfügbar'); };
   window.poolToggleStandby = async function(current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.standby', !current); if(!ok) alert('VIS setState nicht verfügbar'); };
-  window.poolToggleState = async function(id,current){ const ns=${JSON.stringify(data.namespace)}; let ctrl=''; if(id===${JSON.stringify(data.circulationPumpStateId || '')}) ctrl='.control.device.circulation'; else if(id===${JSON.stringify(data.chlorinatorStateId || '')}) ctrl='.control.device.chlorinator'; else if(id===${JSON.stringify(data.phPumpStateId || '')}) ctrl='.control.device.phPump'; else if(id===${JSON.stringify(data.heatpumpStateId || '')}) ctrl='.control.device.heatpump'; if(!ctrl){ alert('Kein State hinterlegt'); return; } const ok=await window.poolSetState(ns+ctrl, !current); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolToggleState = async function(key,current){
+    const ns=${JSON.stringify(data.namespace)};
+    let ctrl='';
+    if(key==='circulation') ctrl='.control.device.circulation';
+    else if(key==='chlorinator') ctrl='.control.device.chlorinator';
+    else if(key==='phPump') ctrl='.control.device.phPump';
+    else if(key==='heatpump') ctrl='.control.device.heatpump';
+    if(!ctrl){ alert('Kein Control-Key hinterlegt'); return; }
+    const ok=await window.poolSetState(ns+ctrl, !current);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
 })();
 </script>`;
   }
@@ -947,10 +957,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${autoBtn('Wärmepumpe','heatpump',!!data.autoHeatpumpControl)}
   </div></div>
   <div class="ps-card"><div class="ps-section">Aktoren & Status</div><div class="ps-statusGrid">
-    ${deviceBtn('Umwälzpumpe',data.circulationPumpStateId,!!data.pumpOn)}
-    ${deviceBtn('Chlorinator',data.chlorinatorStateId,!!data.chlorOn)}
-    ${deviceBtn('pH-Dosierpumpe',data.phPumpStateId,!!data.phPumpOn)}
-    ${deviceBtn('Wärmepumpe',data.heatpumpStateId,!!data.heatpumpOn)}
+    ${deviceBtn('Umwälzpumpe','circulation',!!data.pumpOn)}
+    ${deviceBtn('Chlorinator','chlorinator',!!data.chlorOn)}
+    ${deviceBtn('pH-Dosierpumpe','phPump',!!data.phPumpOn)}
+    ${deviceBtn('Wärmepumpe','heatpump',!!data.heatpumpOn)}
   </div></div>
   <div class="ps-card"><div class="ps-section">Energie & Steuerung</div><div class="ps-quickGrid">
     ${quick('PV-Leistung', `${data.pv} W`)}
@@ -1047,10 +1057,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const phMlPer01Per10 = this.fmt(parseNum(this.config.phDoseMlPer01Per10m3), 0, '--');
     const volume = this.fmt(this.calcVolume(), 2, '--');
 
-    const circulationEnabled = !standbyMode && this.config.enableCirculationControl !== false;
-    const phEnabledMaster = !standbyMode && this.config.enablePhControl !== false;
-    const heatEnabledMaster = !standbyMode && this.config.enableHeatpumpControl !== false;
-    const chlorEnabledMaster = !standbyMode && this.config.enableChlorControl !== false;
+    const circulationEnabled = !standbyMode && await this.getControlBool('control.auto.circulation', this.config.enableCirculationControl !== false);
+    const phEnabledMaster = !standbyMode && await this.getControlBool('control.auto.ph', this.config.enablePhControl !== false);
+    const heatEnabledMaster = !standbyMode && await this.getControlBool('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
+    const chlorEnabledMaster = !standbyMode && await this.getControlBool('control.auto.chlor', this.config.enableChlorControl !== false);
 
     const pumpOn = await this.getBool(this.config.circulationPumpSocketStateId);
     const pumpScheduleActive = standbyMode ? this.isStandbyPumpActive(new Date()) : (typeof this.isPumpScheduleActive === 'function' ? this.isPumpScheduleActive(new Date()) : false);
@@ -1075,7 +1085,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const pumpOnForSec = this.getPumpOnForSec();
 
     if (!chlorEnabledMaster) {
-      chlorDecision = 'Steuerung deaktiviert';
+      chlorDecision = `Steuerung deaktiviert${chlorOnRaw ? ' · manuell EIN' : ' · manuell AUS'}`;
     } else if (!pumpOn) {
       chlorDesired = false;
       chlorDecision = 'Pumpe AUS';
@@ -1168,7 +1178,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf53'
+      adapterVersion: 'v0.3.15hf55'
     };
 
     const now = Date.now();
@@ -2226,6 +2236,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         }
         if (id === `${this.namespace}.control.device.chlorinator`) {
           await this.setStateIfChanged('control.auto.chlor', false, false);
+          this.log.info(`[VIS] Chlorinator manuell -> ${!!state.val ? 'EIN' : 'AUS'} via ${this.config.chlorinatorSocketStateId || 'kein State'}`);
           await this.setSwitchStateCompat(this.config.chlorinatorSocketStateId, !!state.val);
         }
         if (id === `${this.namespace}.control.device.phPump`) {
