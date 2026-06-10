@@ -1206,7 +1206,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf59'
+      adapterVersion: 'v0.3.15hf60'
     };
 
     const now = Date.now();
@@ -2200,6 +2200,16 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     return !!state.val;
   }
 
+  async enforceManualPrerequisite(deviceName, turningOn) {
+    if (!turningOn) return true;
+    const pumpOn = await this.getBool(this.config.circulationPumpSocketStateId);
+    if (pumpOn) return true;
+    const msg = `${deviceName} manuell blockiert: Umwälzpumpe läuft nicht`;
+    try { await this.setStateAsync('status.debug.lastStartupError', msg, true); } catch {}
+    this.log.info(msg);
+    return false;
+  }
+
 
   async syncControlStates() {
     const standby = await this.getControlBool('control.standby', this.config.standbyModeEnabled === true);
@@ -2320,14 +2330,31 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         }
         if (id === `${this.namespace}.control.device.chlorinator`) {
           await this.setStateIfChanged('control.auto.chlor', false, false);
-          this.log.info(`[VIS] Chlorinator manuell -> ${!!state.val ? 'EIN' : 'AUS'} via ${this.config.chlorinatorSocketStateId || 'kein State'}`);
-          await this.setSwitchStateCompat(this.config.chlorinatorSocketStateId, !!state.val);
+          const allowed = await this.enforceManualPrerequisite('Chlorinator', !!state.val);
+          if (!allowed) {
+            await this.setStateIfChanged('control.device.chlorinator', false, true);
+          } else {
+            this.log.info(`[VIS] Chlorinator manuell -> ${!!state.val ? 'EIN' : 'AUS'} via ${this.config.chlorinatorSocketStateId || 'kein State'}`);
+            await this.setSwitchStateCompat(this.config.chlorinatorSocketStateId, !!state.val);
+          }
         }
         if (id === `${this.namespace}.control.device.phPump`) {
-          await this.setSwitchStateCompat(this.config.phPumpSocketStateId, !!state.val);
+          await this.setStateIfChanged('control.auto.ph', false, false);
+          const allowed = await this.enforceManualPrerequisite('pH-Dosierpumpe', !!state.val);
+          if (!allowed) {
+            await this.setStateIfChanged('control.device.phPump', false, true);
+          } else {
+            await this.setSwitchStateCompat(this.config.phPumpSocketStateId, !!state.val);
+          }
         }
         if (id === `${this.namespace}.control.device.heatpump`) {
-          await this.setSwitchStateCompat(this.config.heatpumpPowerStateId, !!state.val);
+          await this.setStateIfChanged('control.auto.heatpump', false, false);
+          const allowed = await this.enforceManualPrerequisite('Wärmepumpe', !!state.val);
+          if (!allowed) {
+            await this.setStateIfChanged('control.device.heatpump', false, true);
+          } else {
+            await this.setSwitchStateCompat(this.config.heatpumpPowerStateId, !!state.val);
+          }
         }
         if (id === `${this.namespace}.control.heatpump.setTemp`) {
           const hpOn = await this.getBool(this.config.heatpumpPowerStateId);
