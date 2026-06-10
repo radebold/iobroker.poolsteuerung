@@ -692,9 +692,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   <div class="card"><div class="section-title">Schnellzugriff</div><div class="control-grid">
     <button type="button" class="action-btn js-standby-btn ${data.standbyControl ? 'is-on' : 'is-off'}" data-current="${data.standbyControl ? '1' : '0'}"><span class="action-name">Standby</span><span class="action-state">${data.standbyControl ? 'AKTIV' : 'AUS'}</span></button>
-    <div class="temp-center"><div class="quick-label">Poolsolltemperatur</div><div class="quick-value">${esc(data.targetTemp)}°C</div></div>
-    <button type="button" class="temp-btn js-settemp-btn" data-delta="-0.5">− 0,5°</button>
-    <button type="button" class="temp-btn js-settemp-btn" data-delta="0.5">+ 0,5°</button>
+    <div class="settemp-row">
+      <div class="temp-center"><div class="quick-label">Poolsolltemperatur</div><div class="quick-value">${esc(data.targetTemp)}°C</div></div>
+      ${data.heatpumpOn ? '<button type="button" class="mini-temp-btn js-settemp-btn" data-delta="-0.5">−</button>' : ''}
+      ${data.heatpumpOn ? '<button type="button" class="mini-temp-btn js-settemp-btn" data-delta="0.5">+</button>' : ''}
+    </div>
   </div></div>
 
   <div class="card"><div class="section-title">Automatik</div><div class="auto-grid">
@@ -1178,7 +1180,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf57'
+      adapterVersion: 'v0.3.15'
     };
 
     const now = Date.now();
