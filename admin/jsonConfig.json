@@ -794,18 +794,18 @@
         },
         "heatpumpPvOnThresholdW": {
           "type": "number",
-          "label": "Wärmepumpe EIN ab Netzeinspeisung (W)",
+          "label": "Wärmepumpe EIN ab Einspeisung (W)",
           "newLine": false,
-          "help": "Standard 1000 W. Ab diesem Wert darf die Wärmepumpe aktiviert werden.",
+          "help": "Wird dieser Einspeisewert erreicht oder überschritten, darf die Wärmepumpe eingeschaltet werden.",
           "sm": 12,
           "md": 4,
           "lg": 4
         },
         "heatpumpPvOffThresholdW": {
           "type": "number",
-          "label": "Wärmepumpe AUS unter Netzeinspeisung (W)",
+          "label": "Wärmepumpe AUS unter Einspeisung (W)",
           "newLine": false,
-          "help": "Standard 800 W. Unter diesem Wert wird die Wärmepumpe wieder deaktiviert.",
+          "help": "Wird dieser Einspeisewert unterschritten, wird die Wärmepumpe wieder ausgeschaltet.",
           "sm": 12,
           "md": 4,
           "lg": 4
