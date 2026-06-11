@@ -1239,7 +1239,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf69'
+      adapterVersion: 'v0.3.15hf71'
     };
 
     const now = Date.now();
@@ -2366,6 +2366,16 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           await this.setStateIfChanged('control.auto.ph', false, false);
           await this.setStateIfChanged('control.auto.heatpump', false, false);
         }
+        const standbyActiveNow = await this.getControlBool('control.standby', this.config.standbyModeEnabled === true);
+        if (standbyActiveNow && (
+          id === `${this.namespace}.control.auto.circulation` ||
+          id === `${this.namespace}.control.auto.chlor` ||
+          id === `${this.namespace}.control.auto.ph` ||
+          id === `${this.namespace}.control.auto.heatpump`
+        ) && !!state.val === true) {
+          await this.setStateIfChanged(id.replace(`${this.namespace}.`, ''), false, false);
+        }
+
         if (id === `${this.namespace}.control.ph.manualStart` && !!state.val === true) {
           const manualSecState = await this.getStateAsync('control.ph.manualDoseSec');
           const manualSec = Math.max(1, Number(manualSecState && manualSecState.val) || 30);
@@ -2378,6 +2388,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         if (id === `${this.namespace}.control.device.circulation`) {
           await this.setStateIfChanged('control.auto.circulation', false, false);
           await this.setSwitchStateCompat(this.config.circulationPumpSocketStateId, !!state.val);
+          if (!state.val) {
+            await this.setStateIfChanged('control.device.chlorinator', false, true);
+            await this.setStateIfChanged('control.device.phPump', false, true);
+            await this.setStateIfChanged('control.device.heatpump', false, true);
+          }
         }
         if (id === `${this.namespace}.control.device.chlorinator`) {
           await this.setStateIfChanged('control.auto.chlor', false, false);
@@ -2444,6 +2459,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         if (id === this.config.phPumpSocketStateId) await this.setStateIfChanged('control.device.phPump', boolVal, true);
         if (id === this.config.heatpumpPowerStateId) await this.setStateIfChanged('control.device.heatpump', boolVal, true);
         await this.applyControlLogic();
+        await this.syncDeviceControlStates();
         this.queueDelayedRefresh(1800);
       }
     }
