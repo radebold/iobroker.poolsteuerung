@@ -140,12 +140,15 @@
           "lg": 12
         },
         "circulationPumpSocketStateId": {
-          "type": "text",
+          "type": "objectId",
           "label": "Umwälzpumpe",
           "newLine": true,
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "objectTypes": [
+            "state"
+          ]
         },
         "circulationPumpWriteMode": {
           "type": "select",
@@ -255,20 +258,26 @@
           "lg": 12
         },
         "orpStateId": {
-          "type": "text",
+          "type": "objectId",
           "label": "State-ID ORP",
           "newLine": true,
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "objectTypes": [
+            "state"
+          ]
         },
         "chlorinatorSocketStateId": {
-          "type": "text",
+          "type": "objectId",
           "label": "Chlorinator",
           "newLine": false,
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "objectTypes": [
+            "state"
+          ]
         },
         "chlorinatorWriteMode": {
           "type": "select",
@@ -597,28 +606,37 @@
           "lg": 12
         },
         "waterTempStateId": {
-          "type": "text",
+          "type": "objectId",
           "label": "State-ID Wassertemperatur",
           "newLine": true,
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "objectTypes": [
+            "state"
+          ]
         },
         "outsideTempStateId": {
-          "type": "text",
+          "type": "objectId",
           "label": "State-ID Außentemperatur",
           "newLine": false,
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "objectTypes": [
+            "state"
+          ]
         },
         "heatpumpPowerStateId": {
-          "type": "text",
+          "type": "objectId",
           "label": "Wärmepumpe Power",
           "newLine": true,
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "objectTypes": [
+            "state"
+          ]
         },
         "heatpumpHeartbeatStateId": {
           "type": "objectId",
@@ -642,20 +660,26 @@
           "lg": 6
         },
         "heatpumpModeStateId": {
-          "type": "text",
+          "type": "objectId",
           "label": "Wärmepumpe Mode",
           "newLine": false,
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "objectTypes": [
+            "state"
+          ]
         },
         "heatpumpSetTempStateId": {
-          "type": "text",
+          "type": "objectId",
           "label": "Wärmepumpe Solltemperatur",
           "newLine": true,
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "objectTypes": [
+            "state"
+          ]
         },
         "heatpumpTargetTemp": {
           "type": "number",
@@ -698,36 +722,48 @@
           "lg": 12
         },
         "pvPowerStateId": {
-          "type": "text",
+          "type": "objectId",
           "label": "State-ID PV-Leistung",
           "newLine": true,
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "objectTypes": [
+            "state"
+          ]
         },
         "gridFeedInStateId": {
-          "type": "text",
+          "type": "objectId",
           "label": "State-ID Netzeinspeisung",
           "newLine": false,
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "objectTypes": [
+            "state"
+          ]
         },
         "gridSupplyStateId": {
-          "type": "text",
+          "type": "objectId",
           "label": "State-ID Netzbezug",
           "newLine": true,
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "objectTypes": [
+            "state"
+          ]
         },
         "batterySocStateId": {
-          "type": "text",
+          "type": "objectId",
           "label": "State-ID Batterie SoC",
           "newLine": false,
           "sm": 12,
           "md": 6,
-          "lg": 6
+          "lg": 6,
+          "objectTypes": [
+            "state"
+          ]
         },
         "headerSolarThresholds": {
           "type": "header",
