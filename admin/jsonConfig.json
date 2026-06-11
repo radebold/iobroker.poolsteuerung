@@ -100,7 +100,7 @@
         "poolDiameterM": {
           "type": "text",
           "label": "Pooldurchmesser (m)",
-          "newLine": true,
+          "newLine": false,
           "help": "z. B. 4.60 oder 4,60",
           "sm": 12,
           "md": 6,
@@ -118,7 +118,7 @@
         "poolVolumeM3": {
           "type": "text",
           "label": "Poolvolumen (m³)",
-          "newLine": true,
+          "newLine": false,
           "help": "Wird beim Adapterstart / Poll neu berechnet.",
           "disabled": true,
           "sm": 12,
@@ -131,15 +131,26 @@
       "type": "panel",
       "label": "UMWÄLZPUMPE",
       "items": {
+        "headerPump": {
+          "type": "header",
+          "text": "Aktor & Schreibweise",
+          "newLine": true,
+          "sm": 12,
+          "md": 12,
+          "lg": 12
+        },
         "circulationPumpSocketStateId": {
           "type": "text",
           "label": "Umwälzpumpe",
-          "newLine": true
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "circulationPumpWriteMode": {
           "type": "select",
           "label": "Schreibformat Umwälzpumpe",
-          "newLine": true,
+          "newLine": false,
           "options": [
             {
               "label": "false / true",
@@ -150,7 +161,18 @@
               "value": "num01"
             }
           ],
-          "help": "Legt fest, wie der Adapter den Aktor schaltet."
+          "help": "Legt fest, wie der Adapter den Aktor schaltet.",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
+        },
+        "headerHeartbeat": {
+          "type": "header",
+          "text": "Erreichbarkeit",
+          "newLine": true,
+          "sm": 12,
+          "md": 12,
+          "lg": 12
         },
         "circulationPumpHeartbeatStateId": {
           "type": "objectId",
@@ -167,32 +189,55 @@
         "circulationPumpHeartbeatMaxAgeMin": {
           "type": "number",
           "label": "Max. Alter Heartbeat (Minuten)",
+          "newLine": false,
+          "help": "Wenn der Heartbeat älter ist als dieser Wert, wird das Gerät als veraltet markiert. 0 = keine Prüfung.",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
+        },
+        "headerWindows": {
+          "type": "header",
+          "text": "Zeitfenster",
           "newLine": true,
-          "help": "Wenn der Heartbeat älter ist als dieser Wert, wird das Gerät als veraltet markiert. 0 = keine Prüfung."
+          "sm": 12,
+          "md": 12,
+          "lg": 12
         },
         "pumpWindow1Start": {
           "type": "text",
           "label": "Zeitfenster 1 Start",
           "newLine": true,
-          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
+          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv.",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "pumpWindow1End": {
           "type": "text",
           "label": "Zeitfenster 1 Ende",
-          "newLine": true,
-          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
+          "newLine": false,
+          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv.",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "pumpWindow2Start": {
           "type": "text",
           "label": "Zeitfenster 2 Start",
           "newLine": true,
-          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
+          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv.",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "pumpWindow2End": {
           "type": "text",
           "label": "Zeitfenster 2 Ende",
-          "newLine": true,
-          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
+          "newLine": false,
+          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv.",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         }
       },
       "hidden": "data.enableCirculationControl === false"
@@ -201,15 +246,29 @@
       "type": "panel",
       "label": "CHLOR",
       "items": {
+        "headerSensorAct": {
+          "type": "header",
+          "text": "Sensor & Aktor",
+          "newLine": true,
+          "sm": 12,
+          "md": 12,
+          "lg": 12
+        },
         "orpStateId": {
           "type": "text",
           "label": "State-ID ORP",
-          "newLine": true
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "chlorinatorSocketStateId": {
           "type": "text",
           "label": "Chlorinator",
-          "newLine": true
+          "newLine": false,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "chlorinatorWriteMode": {
           "type": "select",
@@ -225,14 +284,28 @@
               "value": "num01"
             }
           ],
-          "help": "Legt fest, wie der Adapter den Aktor schaltet."
+          "help": "Legt fest, wie der Adapter den Aktor schaltet.",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "chlorPumpStartDelaySec": {
           "type": "number",
           "label": "Verzögerung nach Pumpenstart (Sekunden)",
-          "newLine": true,
+          "newLine": false,
           "min": 0,
-          "help": "Der Chlorinator darf erst nach dieser Verzögerung nach dem Einschalten der Umwälzpumpe aktiv werden. 0 = ohne Verzögerung."
+          "help": "Der Chlorinator darf erst nach dieser Verzögerung nach dem Einschalten der Umwälzpumpe aktiv werden. 0 = ohne Verzögerung.",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
+        },
+        "headerChlHb": {
+          "type": "header",
+          "text": "Erreichbarkeit",
+          "newLine": true,
+          "sm": 12,
+          "md": 12,
+          "lg": 12
         },
         "chlorinatorHeartbeatStateId": {
           "type": "objectId",
@@ -249,25 +322,45 @@
         "chlorinatorHeartbeatMaxAgeMin": {
           "type": "number",
           "label": "Max. Alter Heartbeat (Minuten)",
+          "newLine": false,
+          "help": "Wenn der Heartbeat älter ist als dieser Wert, wird der Chlorinator als veraltet markiert. 0 = keine Prüfung.",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
+        },
+        "headerOrp": {
+          "type": "header",
+          "text": "ORP-Grenzen",
           "newLine": true,
-          "help": "Wenn der Heartbeat älter ist als dieser Wert, wird der Chlorinator als veraltet markiert. 0 = keine Prüfung."
+          "sm": 12,
+          "md": 12,
+          "lg": 12
         },
         "orpSetpoint": {
           "type": "number",
           "label": "ORP Sollwert",
-          "newLine": true
+          "newLine": true,
+          "sm": 12,
+          "md": 4,
+          "lg": 4
         },
         "orpOnThreshold": {
           "type": "number",
           "label": "ORP Einschaltgrenze",
-          "newLine": true,
-          "help": "Wenn ORP kleiner oder gleich diesem Wert ist, darf der Chlorinator einschalten."
+          "newLine": false,
+          "help": "Wenn ORP kleiner oder gleich diesem Wert ist, darf der Chlorinator einschalten.",
+          "sm": 12,
+          "md": 4,
+          "lg": 4
         },
         "orpOffThreshold": {
           "type": "number",
           "label": "ORP Ausschaltgrenze",
-          "newLine": true,
-          "help": "Wenn ORP größer als dieser Wert ist, wird der Chlorinator ausgeschaltet."
+          "newLine": false,
+          "help": "Wenn ORP größer als dieser Wert ist, wird der Chlorinator ausgeschaltet.",
+          "sm": 12,
+          "md": 4,
+          "lg": 4
         }
       },
       "hidden": "data.enableChlorControl === false"
@@ -495,20 +588,37 @@
       "type": "panel",
       "label": "WÄRMEPUMPE",
       "items": {
+        "headerTemps": {
+          "type": "header",
+          "text": "Temperaturen & Aktor",
+          "newLine": true,
+          "sm": 12,
+          "md": 12,
+          "lg": 12
+        },
         "waterTempStateId": {
           "type": "text",
           "label": "State-ID Wassertemperatur",
-          "newLine": true
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "outsideTempStateId": {
           "type": "text",
           "label": "State-ID Außentemperatur",
-          "newLine": true
+          "newLine": false,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "heatpumpPowerStateId": {
           "type": "text",
           "label": "Wärmepumpe Power",
-          "newLine": true
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "heatpumpHeartbeatStateId": {
           "type": "objectId",
@@ -516,7 +626,7 @@
           "objectTypes": [
             "state"
           ],
-          "newLine": true,
+          "newLine": false,
           "sm": 12,
           "md": 6,
           "lg": 6,
@@ -526,28 +636,51 @@
           "type": "number",
           "label": "Max. Alter Heartbeat (Minuten)",
           "newLine": true,
-          "help": "Wenn der Heartbeat älter ist als dieser Wert, wird die Wärmepumpe als veraltet markiert. 0 = keine Prüfung."
+          "help": "Wenn der Heartbeat älter ist als dieser Wert, wird die Wärmepumpe als veraltet markiert. 0 = keine Prüfung.",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "heatpumpModeStateId": {
           "type": "text",
           "label": "Wärmepumpe Mode",
-          "newLine": true
+          "newLine": false,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "heatpumpSetTempStateId": {
           "type": "text",
           "label": "Wärmepumpe Solltemperatur",
-          "newLine": true
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "heatpumpTargetTemp": {
           "type": "number",
           "label": "Solltemperatur",
-          "newLine": true
+          "newLine": false,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
+        },
+        "headerHeatCtrl": {
+          "type": "header",
+          "text": "Regelung",
+          "newLine": true,
+          "sm": 12,
+          "md": 12,
+          "lg": 12
         },
         "heatpumpTempOnDeltaC": {
           "type": "number",
           "label": "Temperatur-Hysterese EIN (°C unter Soll)",
           "newLine": true,
-          "help": "Standard 0,5 °C. Beispiel: Soll 28,0 °C => EIN erst bei 27,5 °C oder darunter."
+          "help": "Standard 0,5 °C. Beispiel: Soll 28,0 °C => EIN erst bei 27,5 °C oder darunter.",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         }
       },
       "hidden": "data.enableHeatpumpControl === false"
@@ -556,43 +689,80 @@
       "type": "panel",
       "label": "SOLAR",
       "items": {
+        "headerSolarStates": {
+          "type": "header",
+          "text": "Messwerte",
+          "newLine": true,
+          "sm": 12,
+          "md": 12,
+          "lg": 12
+        },
         "pvPowerStateId": {
           "type": "text",
           "label": "State-ID PV-Leistung",
-          "newLine": true
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "gridFeedInStateId": {
           "type": "text",
           "label": "State-ID Netzeinspeisung",
-          "newLine": true
+          "newLine": false,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "gridSupplyStateId": {
           "type": "text",
           "label": "State-ID Netzbezug",
-          "newLine": true
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "batterySocStateId": {
           "type": "text",
           "label": "State-ID Batterie SoC",
-          "newLine": true
+          "newLine": false,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
+        },
+        "headerSolarThresholds": {
+          "type": "header",
+          "text": "Freigaben & Hysterese",
+          "newLine": true,
+          "sm": 12,
+          "md": 12,
+          "lg": 12
         },
         "heatEnableFeedInThresholdW": {
           "type": "number",
           "label": "PV-Überschuss Schwellwert (W)",
           "newLine": true,
-          "help": "Wenn die Netzeinspeisung größer als dieser Wert ist, darf die Wärmepumpe laufen."
+          "help": "Wenn die Netzeinspeisung größer als dieser Wert ist, darf die Wärmepumpe laufen.",
+          "sm": 12,
+          "md": 4,
+          "lg": 4
         },
         "heatpumpPvOnThresholdW": {
           "type": "number",
           "label": "Wärmepumpe EIN ab Netzeinspeisung (W)",
-          "newLine": true,
-          "help": "Standard 1000 W. Ab diesem Wert darf die Wärmepumpe aktiviert werden."
+          "newLine": false,
+          "help": "Standard 1000 W. Ab diesem Wert darf die Wärmepumpe aktiviert werden.",
+          "sm": 12,
+          "md": 4,
+          "lg": 4
         },
         "heatpumpPvOffThresholdW": {
           "type": "number",
           "label": "Wärmepumpe AUS unter Netzeinspeisung (W)",
-          "newLine": true,
-          "help": "Standard 800 W. Unter diesem Wert wird die Wärmepumpe wieder deaktiviert."
+          "newLine": false,
+          "help": "Standard 800 W. Unter diesem Wert wird die Wärmepumpe wieder deaktiviert.",
+          "sm": 12,
+          "md": 4,
+          "lg": 4
         }
       }
     },
@@ -604,92 +774,143 @@
           "type": "checkbox",
           "label": "Alerts aktiv",
           "newLine": true,
-          "help": "Benachrichtigungen werden nur gesendet, wenn zusätzlich unter ALLGEMEIN der Adapter aktiv ist."
+          "help": "Benachrichtigungen werden nur gesendet, wenn zusätzlich unter ALLGEMEIN der Adapter aktiv ist.",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "alertRepeatLockMin": {
           "type": "number",
           "label": "Wiederholsperre je Meldung (Minuten)",
           "newLine": true,
-          "help": "Verhindert identische Benachrichtigungen in zu kurzen Abständen."
+          "help": "Verhindert identische Benachrichtigungen in zu kurzen Abständen.",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "alertWhatsappEnabled": {
           "type": "checkbox",
           "label": "WhatsApp aktiv",
-          "newLine": true
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "alertWhatsappInstance": {
           "type": "text",
           "label": "WhatsApp Instanz",
           "newLine": true,
-          "help": "Zum Beispiel open-wa.0"
+          "help": "Zum Beispiel open-wa.0",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "alertWhatsappTo": {
           "type": "text",
           "label": "WhatsApp Empfänger",
-          "newLine": true,
-          "help": "Empfänger oder Ziel-ID für den konfigurierten Adapter."
+          "newLine": false,
+          "help": "Empfänger oder Ziel-ID für den konfigurierten Adapter.",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "alertTelegramEnabled": {
           "type": "checkbox",
           "label": "Telegram aktiv",
-          "newLine": true
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "alertTelegramInstance": {
           "type": "text",
           "label": "Telegram Instanz",
           "newLine": true,
-          "help": "Zum Beispiel telegram.0"
+          "help": "Zum Beispiel telegram.0",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "alertTelegramTo": {
           "type": "text",
           "label": "Telegram Empfänger / Chat-ID",
-          "newLine": true
+          "newLine": false,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "alertEmailEnabled": {
           "type": "checkbox",
           "label": "E-Mail aktiv",
-          "newLine": true
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "alertEmailInstance": {
           "type": "text",
           "label": "E-Mail Instanz",
           "newLine": true,
-          "help": "Zum Beispiel email.0"
+          "help": "Zum Beispiel email.0",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "alertEmailTo": {
           "type": "text",
           "label": "E-Mail Empfänger",
-          "newLine": true
+          "newLine": false,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "alertOnPhDoseStarted": {
           "type": "checkbox",
           "label": "Bei pH-Dosierung gestartet",
-          "newLine": true
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "alertOnPhDoseStopped": {
           "type": "checkbox",
           "label": "Bei pH-Dosierung beendet",
-          "newLine": true
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "alertOnPhDoseAborted": {
           "type": "checkbox",
           "label": "Bei pH-Dosierung abgebrochen",
-          "newLine": true
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "alertOnPhDailyLimit": {
           "type": "checkbox",
           "label": "Bei Tageslimit pH-Dosierung",
-          "newLine": true
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "alertOnSensorError": {
           "type": "checkbox",
           "label": "Bei Sensorfehler / ungültigen Werten",
-          "newLine": true
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "alertOnPollError": {
           "type": "checkbox",
           "label": "Bei Adapter- oder Poll-Fehlern",
-          "newLine": true
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         }
       }
     },
