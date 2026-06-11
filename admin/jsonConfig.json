@@ -137,7 +137,8 @@
           "newLine": true,
           "sm": 12,
           "md": 12,
-          "lg": 12
+          "lg": 12,
+          "size": 2
         },
         "circulationPumpSocketStateId": {
           "type": "objectId",
@@ -175,7 +176,8 @@
           "newLine": true,
           "sm": 12,
           "md": 12,
-          "lg": 12
+          "lg": 12,
+          "size": 2
         },
         "circulationPumpHeartbeatStateId": {
           "type": "objectId",
@@ -204,7 +206,8 @@
           "newLine": true,
           "sm": 12,
           "md": 12,
-          "lg": 12
+          "lg": 12,
+          "size": 2
         },
         "pumpWindow1Start": {
           "type": "text",
@@ -255,7 +258,8 @@
           "newLine": true,
           "sm": 12,
           "md": 12,
-          "lg": 12
+          "lg": 12,
+          "size": 2
         },
         "orpStateId": {
           "type": "objectId",
@@ -314,7 +318,8 @@
           "newLine": true,
           "sm": 12,
           "md": 12,
-          "lg": 12
+          "lg": 12,
+          "size": 2
         },
         "chlorinatorHeartbeatStateId": {
           "type": "objectId",
@@ -343,7 +348,8 @@
           "newLine": true,
           "sm": 12,
           "md": 12,
-          "lg": 12
+          "lg": 12,
+          "size": 2
         },
         "orpSetpoint": {
           "type": "number",
@@ -603,7 +609,8 @@
           "newLine": true,
           "sm": 12,
           "md": 12,
-          "lg": 12
+          "lg": 12,
+          "size": 2
         },
         "waterTempStateId": {
           "type": "objectId",
@@ -695,7 +702,8 @@
           "newLine": true,
           "sm": 12,
           "md": 12,
-          "lg": 12
+          "lg": 12,
+          "size": 2
         },
         "heatpumpTempOnDeltaC": {
           "type": "number",
@@ -719,7 +727,8 @@
           "newLine": true,
           "sm": 12,
           "md": 12,
-          "lg": 12
+          "lg": 12,
+          "size": 2
         },
         "pvPowerStateId": {
           "type": "objectId",
@@ -771,7 +780,8 @@
           "newLine": true,
           "sm": 12,
           "md": 12,
-          "lg": 12
+          "lg": 12,
+          "size": 2
         },
         "heatEnableFeedInThresholdW": {
           "type": "number",
