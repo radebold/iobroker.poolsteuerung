@@ -9,79 +9,121 @@
         "adapterEnabled": {
           "type": "checkbox",
           "label": "Adapter aktiv",
-          "newLine": true
+          "newLine": true,
+          "sm": 12,
+          "md": 3,
+          "lg": 3
         },
         "debugMode": {
           "type": "checkbox",
           "label": "Debug-Modus",
-          "newLine": true
+          "newLine": false,
+          "sm": 12,
+          "md": 3,
+          "lg": 3
         },
         "simulateMode": {
           "type": "checkbox",
           "label": "Simulationsmodus",
-          "newLine": true
+          "newLine": false,
+          "sm": 12,
+          "md": 3,
+          "lg": 3
         },
         "standbyModeEnabled": {
           "type": "checkbox",
           "label": "Standby-Modus / Vorsommer-Modus aktiv",
-          "newLine": true
+          "newLine": false,
+          "sm": 12,
+          "md": 3,
+          "lg": 3
+        },
+        "enableCirculationControl": {
+          "type": "checkbox",
+          "label": "Umwälzpumpe aktiv",
+          "newLine": true,
+          "sm": 12,
+          "md": 3,
+          "lg": 3
+        },
+        "enablePhControl": {
+          "type": "checkbox",
+          "label": "PH Steuerung aktiv",
+          "newLine": false,
+          "sm": 12,
+          "md": 3,
+          "lg": 3
+        },
+        "enableHeatpumpControl": {
+          "type": "checkbox",
+          "label": "Wärmepumpensteuerung aktiv",
+          "newLine": false,
+          "sm": 12,
+          "md": 3,
+          "lg": 3
+        },
+        "enableChlorControl": {
+          "type": "checkbox",
+          "label": "Chlorsteuerung aktiv",
+          "newLine": false,
+          "sm": 12,
+          "md": 3,
+          "lg": 3
         },
         "standbyRunTime": {
           "type": "text",
           "label": "Standby-Uhrzeit (HH:MM)",
           "newLine": true,
-          "help": "Täglicher Kurzlauf der Umwälzpumpe, z. B. 12:00"
+          "help": "Täglicher Kurzlauf der Umwälzpumpe, z. B. 12:00",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "standbyPumpDurationSec": {
           "type": "number",
           "label": "Standby-Laufzeit Umwälzpumpe (Sekunden)",
-          "newLine": true,
-          "help": "Standard 30 Sekunden"
+          "newLine": false,
+          "help": "Standard 30 Sekunden",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "pollIntervalMin": {
           "type": "number",
           "label": "Prüfintervall (Minuten)",
           "newLine": true,
-          "help": "Wie oft alle Werte neu gelesen und die HTML-Ausgabe aktualisiert wird."
+          "help": "Wie oft alle Werte neu gelesen und die HTML-Ausgabe aktualisiert wird.",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "poolDiameterM": {
           "type": "text",
           "label": "Pooldurchmesser (m)",
           "newLine": true,
-          "help": "z. B. 4.60 oder 4,60"
+          "help": "z. B. 4.60 oder 4,60",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "poolWaterHeightM": {
           "type": "text",
           "label": "Wasserhöhe (m)",
           "newLine": true,
-          "help": "z. B. 1.10 oder 1,10"
+          "help": "z. B. 1.10 oder 1,10",
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "poolVolumeM3": {
           "type": "text",
           "label": "Poolvolumen (m³)",
           "newLine": true,
           "help": "Wird beim Adapterstart / Poll neu berechnet.",
-          "disabled": true
-        },
-        "enableCirculationControl": {
-          "type": "checkbox",
-          "label": "Umwälzpumpe aktiv",
-          "newLine": true
-        },
-        "enablePhControl": {
-          "type": "checkbox",
-          "label": "PH Steuerung aktiv",
-          "newLine": true
-        },
-        "enableHeatpumpControl": {
-          "type": "checkbox",
-          "label": "Wärmepumpensteuerung aktiv",
-          "newLine": true
-        },
-        "enableChlorControl": {
-          "type": "checkbox",
-          "label": "Chlorsteuerung aktiv",
-          "newLine": true
+          "disabled": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         }
       }
     },
@@ -152,7 +194,8 @@
           "newLine": true,
           "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
         }
-      }
+      },
+      "hidden": "data.enableCirculationControl === false"
     },
     "chlor": {
       "type": "panel",
@@ -226,7 +269,8 @@
           "newLine": true,
           "help": "Wenn ORP größer als dieser Wert ist, wird der Chlorinator ausgeschaltet."
         }
-      }
+      },
+      "hidden": "data.enableChlorControl === false"
     },
     "ph": {
       "type": "panel",
@@ -444,7 +488,8 @@
           "md": 6,
           "lg": 6
         }
-      }
+      },
+      "hidden": "data.enablePhControl === false"
     },
     "heat": {
       "type": "panel",
@@ -504,7 +549,8 @@
           "newLine": true,
           "help": "Standard 0,5 °C. Beispiel: Soll 28,0 °C => EIN erst bei 27,5 °C oder darunter."
         }
-      }
+      },
+      "hidden": "data.enableHeatpumpControl === false"
     },
     "solar": {
       "type": "panel",
