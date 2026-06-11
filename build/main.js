@@ -1239,7 +1239,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf71'
+      adapterVersion: 'v0.3.15hf72'
     };
 
     const now = Date.now();
@@ -1774,12 +1774,22 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           pumpDecision = `Schaltfehler: ${e.message || e}`;
         }
       }
+    } else if (!pumpCurrent && pumpTarget) {
+      if (this.config.simulateMode) {
+        pumpDecision = 'würde EIN (Auto innerhalb aktivem Zeitfenster, Simulationsmodus)';
+      } else if (pumpId) {
+        try {
+          await this.setSwitchStateCompat(pumpId, true);
+          this.suppressOwnPumpLogUntil = Date.now() + 5000;
+          pumpDecision = 'EIN via Auto innerhalb aktivem Zeitfenster';
+        } catch (e) {
+          pumpDecision = `Schaltfehler: ${e.message || e}`;
+        }
+      }
     } else if (pumpCurrent && !pumpTarget) {
       pumpDecision = 'Manueller Override aktiv';
     } else if (pumpCurrent && pumpTarget) {
       pumpDecision = 'EIN (Zeitfenster aktiv)';
-    } else if (!pumpCurrent && pumpTarget) {
-      pumpDecision = 'Manuell AUS trotz Zeitfenster';
     } else {
       pumpDecision = 'AUS (kein Zeitfenster)';
     }
