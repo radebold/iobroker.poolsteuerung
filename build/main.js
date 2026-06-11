@@ -1239,7 +1239,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf70'
+      adapterVersion: 'v0.3.15hf69'
     };
 
     const now = Date.now();
@@ -2360,15 +2360,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     if (!state) return;
     if (id && id.startsWith(`${this.namespace}.control.`)) {
       try {
-        if (id === `${this.namespace}.control.standby`) {
-          if (!!state.val === true) {
-            await this.setStateIfChanged('control.auto.circulation', false, false);
-            await this.setStateIfChanged('control.auto.chlor', false, false);
-            await this.setStateIfChanged('control.auto.ph', false, false);
-            await this.setStateIfChanged('control.auto.heatpump', false, false);
-          } else {
-            await this.setStateIfChanged('control.auto.heatpump', false, false);
-          }
+        if (id === `${this.namespace}.control.standby` && !!state.val === true) {
+          await this.setStateIfChanged('control.auto.circulation', false, false);
+          await this.setStateIfChanged('control.auto.chlor', false, false);
+          await this.setStateIfChanged('control.auto.ph', false, false);
+          await this.setStateIfChanged('control.auto.heatpump', false, false);
         }
         if (id === `${this.namespace}.control.ph.manualStart` && !!state.val === true) {
           const manualSecState = await this.getStateAsync('control.ph.manualDoseSec');
