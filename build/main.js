@@ -1236,7 +1236,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf78'
+      adapterVersion: 'v0.3.15hf79'
     };
 
     const now = Date.now();
@@ -2258,6 +2258,34 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     try { await this.setStateAsync('status.debug.lastStartupError', msg, true); } catch {}
     this.log.info(msg);
     return false;
+  }
+
+  async forceDependentDevicesOff(reason = '') {
+    const suffix = reason ? ` (${reason})` : '';
+    try {
+      if (this.config.chlorinatorSocketStateId && await this.getBool(this.config.chlorinatorSocketStateId)) {
+        await this.setSwitchStateCompat(this.config.chlorinatorSocketStateId, false);
+      }
+    } catch (e) {
+      this.log.warn('Chlorinator AUS fehlgeschlagen' + suffix + ': ' + (e.message || e));
+    }
+    try {
+      if (this.config.phPumpSocketStateId && await this.getBool(this.config.phPumpSocketStateId)) {
+        await this.setSwitchStateCompat(this.config.phPumpSocketStateId, false);
+      }
+    } catch (e) {
+      this.log.warn('pH-Pumpe AUS fehlgeschlagen' + suffix + ': ' + (e.message || e));
+    }
+    try {
+      if (this.config.heatpumpPowerStateId && await this.getBool(this.config.heatpumpPowerStateId)) {
+        await this.setSwitchStateCompat(this.config.heatpumpPowerStateId, false);
+      }
+    } catch (e) {
+      this.log.warn('Wärmepumpe AUS fehlgeschlagen' + suffix + ': ' + (e.message || e));
+    }
+    await this.setStateIfChanged('control.device.chlorinator', false, true);
+    await this.setStateIfChanged('control.device.phPump', false, true);
+    await this.setStateIfChanged('control.device.heatpump', false, true);
   }
 
   async syncDeviceControlStates() {
