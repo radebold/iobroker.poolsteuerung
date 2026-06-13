@@ -1022,10 +1022,14 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       : NaN;
     const targetTemp = this.fmt(Number.isFinite(targetTempNumFromState) ? targetTempNumFromState : parseNum(this.config.heatpumpTargetTemp), 1, '24.0');
     const heatReason = await this.getText('poolsteuerung.0.status.heatpump.lastReason', '--');
-    const autoCirculation = await this.getText('poolsteuerung.0.status.auto.circulation', '--');
-    const autoChlor = await this.getText('poolsteuerung.0.status.auto.chlor', '--');
-    const autoPh = await this.getText('poolsteuerung.0.status.auto.ph', '--');
-    const autoHeatpump = await this.getText('poolsteuerung.0.status.auto.heatpump', '--');
+    const autoCirculationState = await this.getControlBool('control.auto.circulation', this.config.enableCirculationControl !== false);
+    const autoChlorState = await this.getControlBool('control.auto.chlor', this.config.enableChlorControl !== false);
+    const autoPhState = await this.getControlBool('control.auto.ph', this.config.enablePhControl !== false);
+    const autoHeatpumpState = await this.getControlBool('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
+    const autoCirculation = autoCirculationState ? 'AKTIV' : 'AUS';
+    const autoChlor = autoChlorState ? 'AKTIV' : 'AUS';
+    const autoPh = autoPhState ? 'AKTIV' : 'AUS';
+    const autoHeatpump = autoHeatpumpState ? 'AKTIV' : 'AUS';
     const standbyMode = await this.getControlBool('control.standby', this.config.standbyModeEnabled === true);
     const modeActive = standbyMode ? 'standby' : 'normal';
     const standbyNext = standbyMode ? this.getNextStandbyRun(new Date()) : null;
@@ -1096,7 +1100,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         chlorDesired = false;
         chlorDecision = 'Manuell blockiert: Pumpe AUS';
       } else {
-        chlorDecision = `Steuerung deaktiviert${chlorOnRaw ? ' · manuell EIN' : ' · manuell AUS'}`;
+        chlorDecision = chlorOnRaw ? 'Manuell EIN (Auto AUS)' : 'Steuerung deaktiviert · manuell AUS';
       }
     } else if (!pumpOn) {
       chlorDesired = false;
@@ -1143,7 +1147,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         heatDecision = 'Manuell blockiert: Umwälzpumpe AUS';
       } else {
         heatDesired = heatpumpOnRaw;
-        heatDecision = heatpumpOnRaw ? 'Steuerung deaktiviert · manuell EIN' : 'Steuerung deaktiviert · manuell AUS';
+        heatDecision = heatpumpOnRaw ? 'Manuell EIN (Auto AUS)' : 'Steuerung deaktiviert · manuell AUS';
       }
     } else if (!circulationHeartbeatOkDisplay) {
       heatDesired = false;
@@ -1236,7 +1240,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf79'
+      adapterVersion: 'v0.3.15hf81'
     };
 
     const now = Date.now();
@@ -1293,6 +1297,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.updateComputedStates();
         if (typeof this.applyControlLogic === 'function') {
           await this.applyControlLogic();
+          await this.syncControlStates();
+          await this.syncDeviceControlStates();
         }
         await this.renderVis();
       } catch (e) {
@@ -1308,6 +1314,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         await this.updateComputedStates();
         if (typeof this.applyControlLogic === 'function') {
           await this.applyControlLogic();
+          await this.syncControlStates();
+          await this.syncDeviceControlStates();
         }
         await this.renderVis();
       } catch (e) {
@@ -1785,7 +1793,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         }
       }
     } else if (pumpCurrent && !pumpTarget) {
-      pumpDecision = 'Manueller Override aktiv';
+      pumpDecision = circulationEnabled ? 'EIN außerhalb Zeitfenster' : 'Manueller Override aktiv';
     } else if (pumpCurrent && pumpTarget) {
       pumpDecision = 'EIN (Zeitfenster aktiv)';
     } else {
@@ -2288,6 +2296,15 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     await this.setStateIfChanged('control.device.heatpump', false, true);
   }
 
+  async resetManualBlockers(reason = '') {
+    const suffix = reason ? ` (${reason})` : '';
+    try { await this.setStateIfChanged('control.device.circulation', false, true); } catch (e) { this.log.warn('Reset control.device.circulation fehlgeschlagen' + suffix + ': ' + (e.message || e)); }
+    try { await this.setStateIfChanged('control.device.chlorinator', false, true); } catch (e) { this.log.warn('Reset control.device.chlorinator fehlgeschlagen' + suffix + ': ' + (e.message || e)); }
+    try { await this.setStateIfChanged('control.device.phPump', false, true); } catch (e) { this.log.warn('Reset control.device.phPump fehlgeschlagen' + suffix + ': ' + (e.message || e)); }
+    try { await this.setStateIfChanged('control.device.heatpump', false, true); } catch (e) { this.log.warn('Reset control.device.heatpump fehlgeschlagen' + suffix + ': ' + (e.message || e)); }
+    try { await this.setStateIfChanged('control.ph.manualStart', false, true); } catch {}
+  }
+
   async syncDeviceControlStates() {
     try { await this.setStateIfChanged('control.device.circulation', await this.getBool(this.config.circulationPumpSocketStateId), true); } catch {}
     try { await this.setStateIfChanged('control.device.chlorinator', await this.getBool(this.config.chlorinatorSocketStateId), true); } catch {}
@@ -2298,20 +2315,25 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async syncControlStates() {
     const standby = await this.getControlBool('control.standby', this.config.standbyModeEnabled === true);
-    if (!standby) return;
-    const autoIds = [
-      'control.auto.circulation',
-      'control.auto.chlor',
-      'control.auto.ph',
-      'control.auto.heatpump'
-    ];
-    for (const id of autoIds) {
-      try {
-        await this.setStateIfChanged(id, false, true);
-      } catch (e) {
-        this.log.warn(`Control-State ${id} konnte nicht synchronisiert werden: ${e.message || e}`);
+    if (standby) {
+      const autoIds = [
+        'control.auto.circulation',
+        'control.auto.chlor',
+        'control.auto.ph',
+        'control.auto.heatpump'
+      ];
+      for (const id of autoIds) {
+        try {
+          await this.setStateIfChanged(id, false, true);
+        } catch (e) {
+          this.log.warn(`Control-State ${id} konnte nicht synchronisiert werden: ${e.message || e}`);
+        }
       }
     }
+    try { await this.setStateAsync('status.auto.circulation', (await this.getControlBool('control.auto.circulation', this.config.enableCirculationControl !== false)) ? 'AKTIV' : 'AUS', true); } catch {}
+    try { await this.setStateAsync('status.auto.chlor', (await this.getControlBool('control.auto.chlor', this.config.enableChlorControl !== false)) ? 'AKTIV' : 'AUS', true); } catch {}
+    try { await this.setStateAsync('status.auto.ph', (await this.getControlBool('control.auto.ph', this.config.enablePhControl !== false)) ? 'AKTIV' : 'AUS', true); } catch {}
+    try { await this.setStateAsync('status.auto.heatpump', (await this.getControlBool('control.auto.heatpump', this.config.enableHeatpumpControl !== false)) ? 'AKTIV' : 'AUS', true); } catch {}
   }
 
   async onReady() {
@@ -2332,8 +2354,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.ensureState('control.device.phPump', 'boolean', 'switch', false, true);
       await this.ensureState('control.device.heatpump', 'boolean', 'switch', false, true);
       await this.ensureState('control.heatpump.setTemp', 'number', 'level.temperature', 0, true);
+      await this.resetManualBlockers('Adapterstart');
       await this.syncControlStates();
-      await this.syncDeviceControlStates();
       await this.syncDeviceControlStates();
       await this.setStateAsync('info.connection', true, true);
       await this.subscribeConfiguredStates();
@@ -2341,6 +2363,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       try { this.subscribeStates('control.device.*'); } catch {}
       try { this.subscribeStates('control.heatpump.*'); } catch {}
       try { this.subscribeStates('control.ph.*'); } catch {}
+      await this.applyControlLogic();
+      await this.syncControlStates();
+      await this.syncDeviceControlStates();
       if (this.config.circulationPumpSocketStateId) {
         const initialPumpState = await this.getStateSnapshot(this.config.circulationPumpSocketStateId);
         this.updateCirculationPumpRuntime(!!(initialPumpState && initialPumpState.val), initialPumpState && (initialPumpState.lc || initialPumpState.ts));
@@ -2431,6 +2456,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
             if (standbyActiveNow) {
               await this.setStateIfChanged('control.standby', false, false);
             }
+            await this.resetManualBlockers(`Auto ${key} EIN`);
             await this.applyControlLogic();
           } else {
             if (key === 'chlor') await this.setStateIfChanged('control.device.chlorinator', false, true);
@@ -2438,6 +2464,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
             if (key === 'heatpump') await this.setStateIfChanged('control.device.heatpump', false, true);
             await this.applyControlLogic();
           }
+          await this.syncControlStates();
           await this.syncDeviceControlStates();
           await this.renderVis();
           return;
@@ -2459,7 +2486,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
         if (id === `${this.namespace}.control.device.circulation`) {
           if (standbyActiveNow) {
-            await this.setStateIfChanged('control.device.circulation', false, true);
+            await this.resetManualBlockers('Standby blockiert manuell');
           } else {
             await this.setStateIfChanged('control.auto.circulation', false, false);
             await this.setSwitchStateCompat(this.config.circulationPumpSocketStateId, !!state.val);
@@ -2475,7 +2502,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
         if (id === `${this.namespace}.control.device.chlorinator`) {
           if (standbyActiveNow) {
-            await this.setStateIfChanged('control.device.chlorinator', false, true);
+            await this.resetManualBlockers('Standby blockiert manuell');
           } else {
             await this.setStateIfChanged('control.auto.chlor', false, false);
             const allowed = await this.enforceManualPrerequisite('Chlorinator', !!state.val);
@@ -2493,7 +2520,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
         if (id === `${this.namespace}.control.device.phPump`) {
           if (standbyActiveNow) {
-            await this.setStateIfChanged('control.device.phPump', false, true);
+            await this.resetManualBlockers('Standby blockiert manuell');
           } else {
             await this.setStateIfChanged('control.auto.ph', false, false);
             const allowed = await this.enforceManualPrerequisite('pH-Dosierpumpe', !!state.val);
@@ -2511,7 +2538,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
         if (id === `${this.namespace}.control.device.heatpump`) {
           if (standbyActiveNow) {
-            await this.setStateIfChanged('control.device.heatpump', false, true);
+            await this.resetManualBlockers('Standby blockiert manuell');
           } else {
             await this.setStateIfChanged('control.auto.heatpump', false, false);
             const allowed = await this.enforceManualPrerequisite('Wärmepumpe', !!state.val);
@@ -2542,6 +2569,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         }
 
         await this.applyControlLogic();
+        await this.syncControlStates();
         await this.syncDeviceControlStates();
         await this.renderVis();
       } catch (e) {
@@ -2569,6 +2597,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         if (id === this.config.phPumpSocketStateId) await this.setStateIfChanged('control.device.phPump', boolVal, true);
         if (id === this.config.heatpumpPowerStateId) await this.setStateIfChanged('control.device.heatpump', boolVal, true);
         await this.applyControlLogic();
+        await this.syncControlStates();
         await this.syncDeviceControlStates();
         this.queueDelayedRefresh(1800);
       }
