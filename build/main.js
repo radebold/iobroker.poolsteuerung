@@ -276,12 +276,18 @@ class Poolsteuerung extends utils.Adapter {
 
     for (const [label, stateId, maxAgeMin, targetId] of checks) {
       await this.ensureState(targetId, 'string', 'text', '', false);
+      const prevState = await this.getStateAsync(targetId);
+      const prevText = String((prevState && prevState.val) || '').trim();
       const result = await this.evaluateHeartbeat(label, stateId, maxAgeMin);
       await this.setStateIfChanged(targetId, result.text, true);
-      if (stateId && (Number(maxAgeMin) || 0) > 0) {
-        if (result.severity === 'error') this.log.warn(`[CHECK] ${result.text}`);
-        else if (result.severity === 'warn') this.log.warn(`[CHECK] ${result.text}`);
-        else this.log.info(`[CHECK] ${result.text}`);
+
+      const changed = prevText !== result.text;
+      if (stateId && (Number(maxAgeMin) || 0) > 0 && changed) {
+        if (result.severity === 'error' || result.severity === 'warn') {
+          this.log.warn(`[CHECK] ${result.text}`);
+        } else if (this.config.debugMode) {
+          this.log.info(`[CHECK] ${result.text}`);
+        }
       }
     }
   }
@@ -299,8 +305,27 @@ class Poolsteuerung extends utils.Adapter {
     }
   }
 
+  getTasmotaZigbeeWriteTarget(id) {
+    const m = String(id || '').match(/^(.*)\.ZbReceived_(0x[0-9A-Fa-f]+)_Power$/);
+    if (!m) return null;
+    return {
+      cmdId: `${m[1]}.ZbSend`,
+      device: m[2]
+    };
+  }
+
   async setSwitchStateCompat(id, on) {
     if (!id) return;
+
+    const zbTarget = this.getTasmotaZigbeeWriteTarget(id);
+    if (zbTarget) {
+      const payload = JSON.stringify({
+        Device: zbTarget.device,
+        Send: { Power: on ? 1 : 0 }
+      });
+      await this.setForeignStateAsync(zbTarget.cmdId, payload, false);
+      return;
+    }
 
     let mode = '';
     if (id === this.config.circulationPumpSocketStateId) mode = this.config.circulationPumpWriteMode || '';
@@ -335,12 +360,14 @@ class Poolsteuerung extends utils.Adapter {
 
   async forceSwitchOnCompat(id) {
     if (!id) return false;
-    const attempts = [
-      async () => this.setSwitchStateCompat(id, true),
-      async () => this.setForeignStateAsync(id, true, false),
-      async () => this.setForeignStateAsync(id, 1, false),
-      async () => this.setForeignStateAsync(id, '1', false),
-    ];
+    const attempts = this.getTasmotaZigbeeWriteTarget(id)
+      ? [async () => this.setSwitchStateCompat(id, true)]
+      : [
+          async () => this.setSwitchStateCompat(id, true),
+          async () => this.setForeignStateAsync(id, true, false),
+          async () => this.setForeignStateAsync(id, 1, false),
+          async () => this.setForeignStateAsync(id, '1', false),
+        ];
     for (const attempt of attempts) {
       try { await attempt(); } catch {}
       try {
@@ -354,12 +381,14 @@ class Poolsteuerung extends utils.Adapter {
 
   async forceSwitchOffCompat(id) {
     if (!id) return false;
-    const attempts = [
-      async () => this.setSwitchStateCompat(id, false),
-      async () => this.setForeignStateAsync(id, false, false),
-      async () => this.setForeignStateAsync(id, 0, false),
-      async () => this.setForeignStateAsync(id, '0', false),
-    ];
+    const attempts = this.getTasmotaZigbeeWriteTarget(id)
+      ? [async () => this.setSwitchStateCompat(id, false)]
+      : [
+          async () => this.setSwitchStateCompat(id, false),
+          async () => this.setForeignStateAsync(id, false, false),
+          async () => this.setForeignStateAsync(id, 0, false),
+          async () => this.setForeignStateAsync(id, '0', false),
+        ];
     for (const attempt of attempts) {
       try { await attempt(); } catch {}
       try {
@@ -1240,7 +1269,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf82'
+      adapterVersion: 'v0.3.15hf83'
     };
 
     const now = Date.now();
@@ -1670,8 +1699,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     await this.ensureState('status.debug.lastPhStartInfo', 'string', 'text', '', false);
 
     const circulationOn = circulationId ? await this.getBool(circulationId) : false;
-    const circulationHeartbeatOk = await this.getHeartbeatOk('status.checks.circulationPump');
-    const phPumpHeartbeatOk = await this.getHeartbeatOk('status.checks.phPump');
+    const isManualStart = context && context.manual === true;
+    const circulationHeartbeatOk = isManualStart ? true : await this.getHeartbeatOk('status.checks.circulationPump');
+    const phPumpHeartbeatOk = isManualStart ? true : await this.getHeartbeatOk('status.checks.phPump');
     if (!circulationOn) {
       await this.setPhStopAtTs(0, 'Start abgebrochen: Umwälzpumpe AUS');
       if (this.config.debugMode) this.log.info('[PH] Dosierung nicht gestartet: Umwälzpumpe AUS');
