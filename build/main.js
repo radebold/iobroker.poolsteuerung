@@ -24,6 +24,7 @@ class Poolsteuerung extends utils.Adapter {
   lastPhPumpOn = false;
   phManualStartedAt = 0;
   phManagedActive = false;
+  trendCache = { ts: 0, data: null };
 
   constructor(options = {}) {
     super({ ...options, name: 'poolsteuerung' });
@@ -1203,12 +1204,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
     const heatpumpOn = heatDesired;
 
-    const trendPrev = this.lastMetricSnapshot || {};
-    const phTrend = this.getTrendSymbol(ph, trendPrev.ph, 0.01);
-    const orpTrend = this.getTrendSymbol(orp, trendPrev.orp, 1);
-    const poolTempTrend = this.getTrendSymbol(poolTemp, trendPrev.poolTemp, 0.1);
-    const outsideTempTrend = this.getTrendSymbol(outsideTemp, trendPrev.outsideTemp, 0.1);
-    this.lastMetricSnapshot = { ph, orp, poolTemp, outsideTemp };
+    const historyTrends = await this.getHistoryTrends();
+    const phTrend = historyTrends.phTrend || '→';
+    const orpTrend = historyTrends.orpTrend || '→';
+    const poolTempTrend = historyTrends.poolTempTrend || '→';
+    const outsideTempTrend = historyTrends.outsideTempTrend || '→';
 
     const phNumStable = parseNum(ph);
     const orpNumStable = parseNum(orp);
@@ -1269,7 +1269,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf84'
+      adapterVersion: 'v0.3.15hf85'
     };
 
     const now = Date.now();
@@ -2286,6 +2286,89 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     if (c > p + epsilon) return '↑';
     if (c < p - epsilon) return '↓';
     return '→';
+  }
+
+  avgFromHistoryValues(values) {
+    const nums = (Array.isArray(values) ? values : [])
+      .map(v => parseNum(v && v.val !== undefined ? v.val : v))
+      .filter(v => Number.isFinite(v));
+    if (!nums.length) return null;
+    return nums.reduce((a, b) => a + b, 0) / nums.length;
+  }
+
+  async fetchHistoryValues(stateId, startTs, endTs) {
+    const instance = String(this.config.trendHistoryInstance || 'history.0').trim() || 'history.0';
+    if (!stateId || !instance) return [];
+    try {
+      const res = await this.sendToAsync(instance, 'getHistory', {
+        id: stateId,
+        options: {
+          start: startTs,
+          end: endTs,
+          aggregate: 'none',
+          count: 500,
+          ignoreNull: true
+        }
+      });
+      if (Array.isArray(res)) return res;
+      if (res && Array.isArray(res.result)) return res.result;
+      return [];
+    } catch (e) {
+      if (this.config.debugMode) this.log.debug(`[TREND] History für ${stateId} fehlgeschlagen: ${e.message || e}`);
+      return [];
+    }
+  }
+
+  async getHistoryTrendArrow(stateId, tolerance, nowTs = Date.now()) {
+    const windowMin = Math.max(10, Number(this.config.trendWindowMin) || 60);
+    const smoothMin = Math.max(1, Number(this.config.trendSmoothMin) || 5);
+    const endRecent = nowTs;
+    const startRecent = endRecent - smoothMin * 60000;
+    const endPast = nowTs - (windowMin - smoothMin) * 60000;
+    const startPast = nowTs - windowMin * 60000;
+
+    const [recentValues, pastValues] = await Promise.all([
+      this.fetchHistoryValues(stateId, startRecent, endRecent),
+      this.fetchHistoryValues(stateId, startPast, endPast)
+    ]);
+
+    const recentAvg = this.avgFromHistoryValues(recentValues);
+    const pastAvg = this.avgFromHistoryValues(pastValues);
+
+    if (!Number.isFinite(recentAvg) || !Number.isFinite(pastAvg)) return '→';
+    const delta = recentAvg - pastAvg;
+    const eps = Number(tolerance) || 0;
+    if (delta > eps) return '↑';
+    if (delta < -eps) return '↓';
+    return '→';
+  }
+
+  async getHistoryTrends() {
+    const now = Date.now();
+    if (this.trendCache && this.trendCache.data && (now - this.trendCache.ts) < 120000) {
+      return this.trendCache.data;
+    }
+    const trends = {
+      phTrend: '→',
+      orpTrend: '→',
+      poolTempTrend: '→',
+      outsideTempTrend: '→'
+    };
+    const tolPh = parseNum(this.config.trendTolerancePh || 0.03) || 0.03;
+    const tolOrp = parseNum(this.config.trendToleranceOrp || 15) || 15;
+    const tolTemp = parseNum(this.config.trendToleranceTemp || 0.3) || 0.3;
+
+    try {
+      trends.phTrend = await this.getHistoryTrendArrow(this.config.phStateId, tolPh, now);
+      trends.orpTrend = await this.getHistoryTrendArrow(this.config.orpStateId, tolOrp, now);
+      trends.poolTempTrend = await this.getHistoryTrendArrow(this.config.waterTempStateId, tolTemp, now);
+      trends.outsideTempTrend = await this.getHistoryTrendArrow(this.config.outsideTempStateId, tolTemp, now);
+    } catch (e) {
+      if (this.config.debugMode) this.log.debug('[TREND] Berechnung fehlgeschlagen: ' + (e.message || e));
+    }
+
+    this.trendCache = { ts: now, data: trends };
+    return trends;
   }
 
   async enforceManualPrerequisite(deviceName, turningOn) {

@@ -97,6 +97,65 @@
           "md": 6,
           "lg": 6
         },
+        "trendHeader": {
+          "type": "header",
+          "text": "Trend aus History",
+          "size": 2
+        },
+        "trendHistoryInstance": {
+          "type": "text",
+          "label": "History-Instanz",
+          "help": "Standard history.0. Wird für die 1h-Tendenz verwendet.",
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
+        },
+        "trendWindowMin": {
+          "type": "number",
+          "label": "Trendfenster (Minuten)",
+          "help": "Standard 60 Minuten.",
+          "newLine": false,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
+        },
+        "trendSmoothMin": {
+          "type": "number",
+          "label": "Glättung (Minuten)",
+          "help": "Standard 5 Minuten. Vergleicht Mittelwert der letzten x Minuten mit dem Fenster vor 60 Minuten.",
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
+        },
+        "trendTolerancePh": {
+          "type": "text",
+          "label": "Toleranz pH",
+          "help": "Standard 0.03",
+          "newLine": false,
+          "sm": 12,
+          "md": 2,
+          "lg": 2
+        },
+        "trendToleranceOrp": {
+          "type": "number",
+          "label": "Toleranz ORP",
+          "help": "Standard 15",
+          "newLine": false,
+          "sm": 12,
+          "md": 2,
+          "lg": 2
+        },
+        "trendToleranceTemp": {
+          "type": "text",
+          "label": "Toleranz Temperatur",
+          "help": "Standard 0.3 °C",
+          "newLine": false,
+          "sm": 12,
+          "md": 2,
+          "lg": 2
+        },
         "poolDiameterM": {
           "type": "text",
           "label": "Pooldurchmesser (m)",
