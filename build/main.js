@@ -479,10 +479,14 @@ class Poolsteuerung extends utils.Adapter {
         <div class="pill ${on ? 'on' : 'off'}">${on ? 'EIN' : 'AUS'}</div>
       </div>`;
 
-    const metric = (label, value, sub = '', badge = null, accent = '') => `
+    const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
+    const metric = (label, value, sub = '', badge = null, accent = '', trend = '', trendOk = false) => `
       <div class="metric ${accent}">
         <div class="metric-label">${esc(label)}</div>
-        <div class="metric-value">${esc(value)}</div>
+        <div class="metric-value">
+          <span class="metric-main ${trendOk ? 'ok' : ''}">${esc(value)}</span>
+          ${trend ? `<span class="metric-trend ${trendClass(trend)} ${trendOk ? 'ok' : ''}">${esc(trend)}</span>` : ''}
+        </div>
         ${sub ? `<div class="metric-sub">${esc(sub)}</div>` : ''}
         ${badge ? `<div class="badge ${badge.cls}">${badge.txt}</div>` : ''}
       </div>`;
@@ -545,7 +549,10 @@ body{
 .metric.warn{background:linear-gradient(180deg,rgba(255,145,96,.12),rgba(255,255,255,.05))}
 .metric-target{background:linear-gradient(180deg,rgba(86,217,120,.10),rgba(255,255,255,.05))}
 .metric-label{font-size:12px;color:#c8d4e6;font-weight:800;margin-bottom:6px}
-.metric-value{font-size:17px;font-weight:900;line-height:1.05}
+.metric-value{font-size:17px;font-weight:900;line-height:1.05;display:flex;align-items:center;gap:8px}
+.metric-main.ok{color:#67dd7c}
+.metric-trend{display:inline-flex;min-width:18px;justify-content:center;font-size:20px;font-weight:900;line-height:1;margin-left:10px}
+.metric-trend.up{color:#ffb36b}.metric-trend.down{color:#7dd3fc}.metric-trend.flat{color:#d5e4f8}.metric-trend.ok{color:#67dd7c}
 .metric-sub{font-size:10px;color:#aebed5;margin-top:4px}
 .badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;margin-top:8px;font-size:11px;font-weight:900}
 .badge.ok{background:rgba(64,196,99,.18);color:#9ff5b3}
@@ -604,9 +611,9 @@ body{
         <div class="scale-row"><span>15 °C</span><span>Aktuell: ${esc(data.poolTemp)} °C</span><span>32 °C</span></div>
       </div>
       <div class="metrics">
-        ${metric('pH', data.ph, `Soll ${data.phSet}`, phBadge, 'warn')}
-        ${metric('ORP', data.orp, `Soll ${data.orpSet}`, orpBadge, 'warn')}
-        ${metric('Außen', `${data.outsideTemp}°C`, 'Außen', null, 'cool')}
+        ${metric('pH', data.ph, `Soll ${data.phSet}`, phBadge, 'warn', data.phTrend || '→', !!data.phInRange)}
+        ${metric('ORP', data.orp, `Soll ${data.orpSet}`, orpBadge, 'warn', data.orpTrend || '→', !!data.orpInRange)}
+        ${metric('Außen', `${data.outsideTemp}°C`, 'Außen', null, 'cool', data.outsideTempTrend || '→', false)}
         ${metric('Solltemp', `${data.targetTemp}°C`, 'Soll', null, 'metric-target')}
       </div>
     </div>
@@ -1269,7 +1276,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf85'
+      adapterVersion: 'v0.3.15hf86'
     };
 
     const now = Date.now();
