@@ -1298,7 +1298,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf87'
+      adapterVersion: 'v0.3.15hf88'
     };
 
     const now = Date.now();
@@ -1432,11 +1432,13 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const pvOnThreshold = parseNum(this.config.heatpumpPvOnThresholdW || parseNum(threshold) || 1000);
     const pvOffThreshold = parseNum(this.config.heatpumpPvOffThresholdW || 800);
     const tempOnDelta = parseNum(this.config.heatpumpTempOnDeltaC || 0.5);
+    const minSwitchSec = Math.max(30, parseNum(this.config.heatpumpMinSwitchSec || 180) || 180);
 
     const feedNum = parseNum(feedIn);
     const poolNum = parseNum(poolTemp);
     const targetNum = parseNum(targetTemp);
     const currentState = lock.state;
+    const nowTs = Date.now();
 
     let nextDesired = desiredOn;
     let nextReason = reason;
@@ -1471,6 +1473,15 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         nextDesired = false;
         nextReason = `Temp-Hysterese (${poolNum.toFixed(1)}°C > ${(targetNum - tempOnDelta).toFixed(1)}°C)`;
       }
+    }
+
+    if (currentState === true && nextDesired === false && lock.lastOnTs && (nowTs - lock.lastOnTs) < minSwitchSec * 1000) {
+      nextDesired = true;
+      nextReason = `Mindestlaufzeit aktiv (${Math.ceil((minSwitchSec*1000 - (nowTs - lock.lastOnTs))/1000)}s Rest)`;
+    }
+    if (currentState === false && nextDesired === true && lock.lastOffTs && (nowTs - lock.lastOffTs) < minSwitchSec * 1000) {
+      nextDesired = false;
+      nextReason = `Mindestpause aktiv (${Math.ceil((minSwitchSec*1000 - (nowTs - lock.lastOffTs))/1000)}s Rest)`;
     }
 
     return { desiredOn: nextDesired, reason: nextReason };
@@ -2605,15 +2616,14 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
               await this.setStateIfChanged('control.standby', false, false);
             }
             await this.resetManualBlockers(`Auto ${key} EIN`);
-            await this.applyControlLogic();
           } else {
             if (key === 'chlor') await this.setStateIfChanged('control.device.chlorinator', false, true);
             if (key === 'ph') await this.setStateIfChanged('control.device.phPump', false, true);
             if (key === 'heatpump') await this.setStateIfChanged('control.device.heatpump', false, true);
-            await this.applyControlLogic();
           }
+          await this.applyControlLogic();
           await this.syncControlStates();
-          await this.syncDeviceControlStates();
+          this.queueDelayedRefresh(1500);
           await this.renderVis();
           return;
         }
@@ -2628,7 +2638,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           await this.setStateIfChanged('control.ph.manualStart', false, false);
           await this.applyControlLogic();
           await this.syncControlStates();
-          await this.syncDeviceControlStates();
           this.queueDelayedRefresh(1200);
           await this.renderVis();
           return;
@@ -2645,9 +2654,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
               await this.forceDependentDevicesOff('Umwälzpumpe AUS');
             }
           }
-          await this.applyControlLogic();
           await this.syncControlStates();
-          await this.syncDeviceControlStates();
           this.queueDelayedRefresh(1200);
           await this.renderVis();
           return;
