@@ -819,16 +819,41 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 </div>
 <script>
 (function(){
+  function getVisApi(){
+    try{ if(window.vis) return window.vis; }catch(e){}
+    try{ if(window.parent&&window.parent.vis) return window.parent.vis; }catch(e){}
+    try{ if(window.top&&window.top.vis) return window.top.vis; }catch(e){}
+    return null;
+  }
   function getConn(){
-    try{ if(window.vis&&window.vis.conn&&typeof window.vis.conn.setState==='function') return window.vis.conn; }catch(e){}
-    try{ if(window.parent&&window.parent.vis&&window.parent.vis.conn&&typeof window.parent.vis.conn.setState==='function') return window.parent.vis.conn; }catch(e){}
-    try{ if(window.top&&window.top.vis&&window.top.vis.conn&&typeof window.top.vis.conn.setState==='function') return window.top.vis.conn; }catch(e){}
+    try{ const v=getVisApi(); if(v&&v.conn&&typeof v.conn.setState==='function') return v.conn; }catch(e){}
     return null;
   }
   window.poolSetState = async function(id,val){
+    const v=getVisApi();
     const conn=getConn();
+    try{
+      if(v && typeof v.setValue === 'function'){
+        const r=v.setValue(id,val);
+        if(r && typeof r.then==='function'){ await r; }
+        return true;
+      }
+    }catch(e){}
     if(!conn) return false;
-    try{ conn.setState(id,val); return true; }catch(e){ return false; }
+    const attempts = [
+      () => conn.setState(id,val),
+      () => conn.setState(id,val,false),
+      () => conn.setState(id,val,()=>{}),
+      () => conn.setState(id,val,false,()=>{})
+    ];
+    for(const fn of attempts){
+      try{
+        const r=fn();
+        if(r && typeof r.then==='function'){ await r; }
+        return true;
+      }catch(e){}
+    }
+    return false;
   };
   window.poolToggleControl = async function(key,current){
     const ns=${JSON.stringify(data.namespace)};
@@ -867,11 +892,23 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const ok=await window.poolSetState(ns+'.control.heatpump.setTemp', next);
     if(!ok) alert('VIS setState nicht verfügbar');
   };
+  const bindOne = (selector, handler) => {
+    document.querySelectorAll(selector).forEach(el => {
+      const run = (ev) => {
+        try{ if(ev){ ev.preventDefault(); ev.stopPropagation(); } }catch(e){}
+        handler(el);
+        return false;
+      };
+      el.onclick = run;
+      try{ el.addEventListener('touchend', run, {passive:false}); }catch(e){}
+      try{ el.style.cursor = 'pointer'; }catch(e){}
+    });
+  };
   const bind = () => {
-    document.querySelectorAll('.js-auto-btn').forEach(el => el.onclick = () => window.poolToggleControl(el.dataset.key, el.dataset.current === '1'));
-    document.querySelectorAll('.js-device-btn').forEach(el => el.onclick = () => window.poolToggleState(el.dataset.key || '', el.dataset.current === '1'));
-    document.querySelectorAll('.js-standby-btn').forEach(el => el.onclick = () => window.poolToggleStandby(el.dataset.current === '1'));
-    document.querySelectorAll('.js-manual-dose-btn').forEach(el => el.onclick = () => window.poolPhManualDose(Number(el.dataset.sec || 30)));
+    bindOne('.js-auto-btn', el => window.poolToggleControl(el.dataset.key, el.dataset.current === '1'));
+    bindOne('.js-device-btn', el => window.poolToggleState(el.dataset.key || '', el.dataset.current === '1'));
+    bindOne('.js-standby-btn', el => window.poolToggleStandby(el.dataset.current === '1'));
+    bindOne('.js-manual-dose-btn', el => window.poolPhManualDose(Number(el.dataset.sec || 30)));
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind); else bind();
 })();
@@ -1327,7 +1364,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf90'
+      adapterVersion: 'v0.3.15hf91'
     };
 
     const now = Date.now();
