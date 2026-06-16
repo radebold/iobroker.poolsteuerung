@@ -361,14 +361,25 @@ class Poolsteuerung extends utils.Adapter {
 
   async forceSwitchOnCompat(id) {
     if (!id) return false;
-    const attempts = this.getTasmotaZigbeeWriteTarget(id)
-      ? [async () => this.setSwitchStateCompat(id, true)]
-      : [
-          async () => this.setSwitchStateCompat(id, true),
-          async () => this.setForeignStateAsync(id, true, false),
-          async () => this.setForeignStateAsync(id, 1, false),
-          async () => this.setForeignStateAsync(id, '1', false),
-        ];
+    const zbTarget = this.getTasmotaZigbeeWriteTarget(id);
+    if (zbTarget) {
+      try { await this.setSwitchStateCompat(id, true); } catch {}
+      for (const waitMs of [400, 700, 1000, 1500]) {
+        try {
+          await new Promise(resolve => setTimeout(resolve, waitMs));
+          const current = await this.getBool(id);
+          if (current) return true;
+        } catch {}
+      }
+      return true;
+    }
+
+    const attempts = [
+      async () => this.setSwitchStateCompat(id, true),
+      async () => this.setForeignStateAsync(id, true, false),
+      async () => this.setForeignStateAsync(id, 1, false),
+      async () => this.setForeignStateAsync(id, '1', false),
+    ];
     for (const attempt of attempts) {
       try { await attempt(); } catch {}
       try {
@@ -382,14 +393,25 @@ class Poolsteuerung extends utils.Adapter {
 
   async forceSwitchOffCompat(id) {
     if (!id) return false;
-    const attempts = this.getTasmotaZigbeeWriteTarget(id)
-      ? [async () => this.setSwitchStateCompat(id, false)]
-      : [
-          async () => this.setSwitchStateCompat(id, false),
-          async () => this.setForeignStateAsync(id, false, false),
-          async () => this.setForeignStateAsync(id, 0, false),
-          async () => this.setForeignStateAsync(id, '0', false),
-        ];
+    const zbTarget = this.getTasmotaZigbeeWriteTarget(id);
+    if (zbTarget) {
+      try { await this.setSwitchStateCompat(id, false); } catch {}
+      for (const waitMs of [400, 700, 1000, 1500]) {
+        try {
+          await new Promise(resolve => setTimeout(resolve, waitMs));
+          const current = await this.getBool(id);
+          if (!current) return true;
+        } catch {}
+      }
+      return true;
+    }
+
+    const attempts = [
+      async () => this.setSwitchStateCompat(id, false),
+      async () => this.setForeignStateAsync(id, false, false),
+      async () => this.setForeignStateAsync(id, 0, false),
+      async () => this.setForeignStateAsync(id, '0', false),
+    ];
     for (const attempt of attempts) {
       try { await attempt(); } catch {}
       try {
@@ -1276,7 +1298,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf86'
+      adapterVersion: 'v0.3.15hf87'
     };
 
     const now = Date.now();
@@ -2548,6 +2570,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         const standbyActiveNow = await this.getControlBool('control.standby', this.config.standbyModeEnabled === true);
 
         if (id === `${this.namespace}.control.standby`) {
+          await this.resetManualBlockers('Standby gewechselt');
           if (!!state.val === true) {
             await this.setStateIfChanged('control.auto.circulation', false, false);
             await this.setStateIfChanged('control.auto.chlor', false, false);
@@ -2564,6 +2587,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           await this.applyControlLogic();
           await this.syncControlStates();
           await this.syncDeviceControlStates();
+          this.queueDelayedRefresh(1800);
           await this.renderVis();
           return;
         }
@@ -2639,7 +2663,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
               await this.setStateIfChanged('control.device.chlorinator', false, true);
             } else {
               const ok = !!state.val ? await this.forceSwitchOnCompat(this.config.chlorinatorSocketStateId) : await this.forceSwitchOffCompat(this.config.chlorinatorSocketStateId);
-              await this.setStateIfChanged('control.device.chlorinator', !!ok && !!state.val, true);
+              await this.setStateIfChanged('control.device.chlorinator', !!state.val, true);
             }
           }
           await this.applyControlLogic();
@@ -2660,7 +2684,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
               await this.setStateIfChanged('control.device.phPump', false, true);
             } else {
               const ok = !!state.val ? await this.forceSwitchOnCompat(this.config.phPumpSocketStateId) : await this.forceSwitchOffCompat(this.config.phPumpSocketStateId);
-              await this.setStateIfChanged('control.device.phPump', !!ok && !!state.val, true);
+              await this.setStateIfChanged('control.device.phPump', !!state.val, true);
             }
           }
           await this.applyControlLogic();
@@ -2681,7 +2705,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
               await this.setStateIfChanged('control.device.heatpump', false, true);
             } else {
               const ok = !!state.val ? await this.forceSwitchOnCompat(this.config.heatpumpPowerStateId) : await this.forceSwitchOffCompat(this.config.heatpumpPowerStateId);
-              await this.setStateIfChanged('control.device.heatpump', !!ok && !!state.val, true);
+              await this.setStateIfChanged('control.device.heatpump', !!state.val, true);
             }
           }
           await this.applyControlLogic();
