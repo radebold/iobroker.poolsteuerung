@@ -11,6 +11,8 @@ function esc(s) {
 
 class Poolsteuerung extends utils.Adapter {
 
+  lastTabletHtml = '';
+  lastPhoneHtml = '';
   lastTabletWidget = '';
   lastPhoneWidget = '';
   lastSlowUpdate = 0;
@@ -1321,7 +1323,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       phInRange,
       orpInRange,
       phTimes: standbyMode ? '-' : (this.config.phCheckTimes || '-'),
-      standbyNext: standbyNext ? standbyNext.toLocaleString('de-DE') : '-',
+      standbyNext: standbyNext ? `${standbyNext.toLocaleDateString('de-DE')}, ${String(standbyNext.getHours()).padStart(2,'0')}:${String(standbyNext.getMinutes()).padStart(2,'0')}` : '-',
       pumpDecision,
       phDecision,
       phDailyCount,
@@ -1364,21 +1366,23 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf91'
+      adapterVersion: 'v0.3.15hf92'
     };
 
     const now = Date.now();
     const signature = JSON.stringify(stableData);
 
-    if (signature === this.lastRenderSignature && now - this.lastRenderAt < 60000) {
+    if (signature === this.lastRenderSignature && now - this.lastRenderAt < 300000) {
       return;
     }
 
     this.lastRenderSignature = signature;
     this.lastRenderAt = now;
 
+    const renderStamp = new Date();
+    const updatedText = `${renderStamp.toLocaleDateString('de-DE')}, ${String(renderStamp.getHours()).padStart(2,'0')}:${String(renderStamp.getMinutes()).padStart(2,'0')}`;
     const data = {
-      updated: new Date().toLocaleString('de-DE'),
+      updated: updatedText,
       ...stableData,
     };
 
@@ -1391,18 +1395,24 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
     await this.ensureState('vis.widgetPhone', 'string', 'html', '', false);
-    await this.setStateAsync('vis.htmlTablet', tablet, true);
-    await this.setStateAsync('vis.htmlPhone', phone, true);
+    if (tablet !== this.lastTabletHtml) {
+      await this.setStateIfChanged('vis.htmlTablet', tablet, true);
+      this.lastTabletHtml = tablet;
+    }
+    if (phone !== this.lastPhoneHtml) {
+      await this.setStateIfChanged('vis.htmlPhone', phone, true);
+      this.lastPhoneHtml = phone;
+    }
     if (tabletWidget !== this.lastTabletWidget) {
-      await this.setStateAsync('vis.widgetTablet', tabletWidget, true);
+      await this.setStateIfChanged('vis.widgetTablet', tabletWidget, true);
       this.lastTabletWidget = tabletWidget;
     }
     if (phoneWidget !== this.lastPhoneWidget) {
-      await this.setStateAsync('vis.widgetPhone', phoneWidget, true);
+      await this.setStateIfChanged('vis.widgetPhone', phoneWidget, true);
       this.lastPhoneWidget = phoneWidget;
     }
     await this.ensureState('status.debug.lastVisUpdate', 'string', 'text', '', false);
-    await this.setStateAsync('status.debug.lastVisUpdate', data.updated, true);
+    await this.setStateIfChanged('status.debug.lastVisUpdate', data.updated, true);
     await this.ensureState('status.debug.lastDecision', 'string', 'text', '', false);
     await this.setStateAsync('status.debug.lastDecision', `WP: ${data.heatpumpOn ? 'EIN' : 'AUS'} | ${data.heatDecision} || Chlor: ${data.chlorOn ? 'EIN' : 'AUS'} | ${data.chlorDecision}`, true);
 
@@ -1430,7 +1440,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       } catch (e) {
         if (!this.isDbClosedError(e)) this.log.warn('VIS Render Fehler: ' + (e && e.stack ? e.stack : e));
       }
-    }, 400));
+    }, 1200));
   }
 
   queueDelayedRefresh(delayMs = 1800) {
@@ -1439,7 +1449,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       this.pendingTimeouts.delete(handle);
       if (this.isShuttingDown) return;
       try {
-        this.lastRenderSignature = '';
         await this.updateComputedStates();
         if (typeof this.applyControlLogic === 'function') {
           await this.applyControlLogic();
