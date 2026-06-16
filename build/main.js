@@ -35,6 +35,8 @@ class Poolsteuerung extends utils.Adapter {
     this.phDoseStopAtTsMemory = 0;
     this.phLastDoseTsMemory = 0;
     this.phLastDoseDurationSecMemory = 0;
+    this.isShuttingDown = false;
+    this.pendingTimeouts = new Set();
     this.on('ready', this.onReady.bind(this));
     this.on('stateChange', this.onStateChange.bind(this));
     this.on('unload', this.onUnload.bind(this));
@@ -42,6 +44,21 @@ class Poolsteuerung extends utils.Adapter {
 
   debug(msg) {
     if (this.config.debugMode) this.log.debug('[DEBUG] ' + msg);
+  }
+
+  trackTimeout(handle) {
+    this.pendingTimeouts.add(handle);
+    return handle;
+  }
+
+  clearTrackedTimeout(handle) {
+    try { clearTimeout(handle); } catch {}
+    this.pendingTimeouts.delete(handle);
+  }
+
+  isDbClosedError(e) {
+    const msg = String((e && (e.message || e.stack || e)) || '');
+    return msg.includes('DB closed') || msg.includes('Connection is closed') || msg.includes('connection is closed');
   }
 
   async ensureState(id, type, role, def, write = false) {
@@ -307,12 +324,15 @@ class Poolsteuerung extends utils.Adapter {
   }
 
   getTasmotaZigbeeWriteTarget(id) {
-    const m = String(id || '').match(/^(.*)\.ZbReceived_(0x[0-9A-Fa-f]+)_Power$/);
-    if (!m) return null;
-    return {
-      cmdId: `${m[1]}.ZbSend`,
-      device: m[2]
-    };
+    const s = String(id || '');
+    const m = s.match(/^(.*)\.ZbReceived_(0x[0-9A-Fa-f]+)_Power$/);
+    if (m) {
+      return {
+        cmdId: `${m[1]}.ZbSend`,
+        device: m[2]
+      };
+    }
+    return null;
   }
 
   async setSwitchStateCompat(id, on) {
@@ -1298,7 +1318,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf88'
+      adapterVersion: 'v0.3.15hf89'
     };
 
     const now = Date.now();
@@ -1343,16 +1363,18 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   }
 
   queueRender() {
-    if (this.renderQueued) return;
+    if (this.renderQueued || this.isShuttingDown) return;
     this.renderQueued = true;
-    setTimeout(async () => {
+    const handle = this.trackTimeout(setTimeout(async () => {
+      this.pendingTimeouts.delete(handle);
       this.renderQueued = false;
+      if (this.isShuttingDown) return;
       try {
         await this.setStateIfChanged('control.device.circulation', await this.getBool(this.config.circulationPumpSocketStateId), true);
-      await this.setStateIfChanged('control.device.chlorinator', await this.getBool(this.config.chlorinatorSocketStateId), true);
-      await this.setStateIfChanged('control.device.phPump', await this.getBool(this.config.phPumpSocketStateId), true);
-      await this.setStateIfChanged('control.device.heatpump', await this.getBool(this.config.heatpumpPowerStateId), true);
-      await this.updateComputedStates();
+        await this.setStateIfChanged('control.device.chlorinator', await this.getBool(this.config.chlorinatorSocketStateId), true);
+        await this.setStateIfChanged('control.device.phPump', await this.getBool(this.config.phPumpSocketStateId), true);
+        await this.setStateIfChanged('control.device.heatpump', await this.getBool(this.config.heatpumpPowerStateId), true);
+        await this.updateComputedStates();
         if (typeof this.applyControlLogic === 'function') {
           await this.applyControlLogic();
           await this.syncControlStates();
@@ -1360,13 +1382,16 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         }
         await this.renderVis();
       } catch (e) {
-        this.log.warn('VIS Render Fehler: ' + (e && e.stack ? e.stack : e));
+        if (!this.isDbClosedError(e)) this.log.warn('VIS Render Fehler: ' + (e && e.stack ? e.stack : e));
       }
-    }, 400);
+    }, 400));
   }
 
   queueDelayedRefresh(delayMs = 1800) {
-    setTimeout(async () => {
+    if (this.isShuttingDown) return;
+    const handle = this.trackTimeout(setTimeout(async () => {
+      this.pendingTimeouts.delete(handle);
+      if (this.isShuttingDown) return;
       try {
         this.lastRenderSignature = '';
         await this.updateComputedStates();
@@ -1377,9 +1402,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         }
         await this.renderVis();
       } catch (e) {
-        this.log.warn('VIS Delayed Refresh Fehler: ' + (e && e.stack ? e.stack : e));
+        if (!this.isDbClosedError(e)) this.log.warn('VIS Delayed Refresh Fehler: ' + (e && e.stack ? e.stack : e));
       }
-    }, delayMs);
+    }, delayMs));
   }
 
 
@@ -1790,11 +1815,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.sendAlert('ph_dose_started', 'info', `Poolsteuerung: pH-Dosierung gestartet | pH ${context.phValue ?? '-'} | Laufzeit ${sec}s`);
     }
 
-    const stopLater = async () => { await this.enforcePhStopIfDue(); };
-    setTimeout(stopLater, sec * 1000);
-    setTimeout(stopLater, sec * 1000 + 1500);
-    setTimeout(stopLater, sec * 1000 + 4000);
-    setTimeout(stopLater, sec * 1000 + 8000);
+    const stopLater = async () => { if (!this.isShuttingDown) await this.enforcePhStopIfDue(); };
+    this.trackTimeout(setTimeout(stopLater, sec * 1000));
+    this.trackTimeout(setTimeout(stopLater, sec * 1000 + 1500));
+    this.trackTimeout(setTimeout(stopLater, sec * 1000 + 4000));
+    this.trackTimeout(setTimeout(stopLater, sec * 1000 + 8000));
 
     return true;
   }
@@ -2777,8 +2802,13 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onUnload(callback) {
     try {
+      this.isShuttingDown = true;
       if (this.timer) clearInterval(this.timer);
-      await this.setStateAsync('info.connection', false, true);
+      for (const h of Array.from(this.pendingTimeouts)) {
+        try { clearTimeout(h); } catch {}
+      }
+      this.pendingTimeouts.clear();
+      try { await this.setStateAsync('info.connection', false, true); } catch {}
       callback();
     } catch {
       callback();
