@@ -25,6 +25,7 @@ class Poolsteuerung extends utils.Adapter {
   phManualStartedAt = 0;
   phManagedActive = false;
   trendCache = { ts: 0, data: null };
+  controlTransitionUntil = 0;
 
   constructor(options = {}) {
     super({ ...options, name: 'poolsteuerung' });
@@ -54,6 +55,14 @@ class Poolsteuerung extends utils.Adapter {
   clearTrackedTimeout(handle) {
     try { clearTimeout(handle); } catch {}
     this.pendingTimeouts.delete(handle);
+  }
+
+  beginControlTransition(ms = 3500) {
+    this.controlTransitionUntil = Date.now() + Math.max(500, Number(ms) || 3500);
+  }
+
+  isControlTransitionActive() {
+    return Date.now() < (Number(this.controlTransitionUntil) || 0);
   }
 
   isDbClosedError(e) {
@@ -1318,7 +1327,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf89'
+      adapterVersion: 'v0.3.15hf90'
     };
 
     const now = Date.now();
@@ -2533,14 +2542,13 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.ensureState('control.device.heatpump', 'boolean', 'switch', false, true);
       await this.ensureState('control.heatpump.setTemp', 'number', 'level.temperature', 0, true);
       await this.resetManualBlockers('Adapterstart');
-      await this.syncControlStates();
-      await this.syncDeviceControlStates();
       await this.setStateAsync('info.connection', true, true);
       await this.subscribeConfiguredStates();
       try { this.subscribeStates('control.*'); } catch {}
       try { this.subscribeStates('control.device.*'); } catch {}
       try { this.subscribeStates('control.heatpump.*'); } catch {}
       try { this.subscribeStates('control.ph.*'); } catch {}
+      this.beginControlTransition(4000);
       await this.applyControlLogic();
       await this.syncControlStates();
       await this.syncDeviceControlStates();
@@ -2555,9 +2563,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       }
       await this.updateComputedStates();
       await this.runHeartbeatChecks();
-      if (typeof this.applyControlLogic === 'function') {
-        await this.applyControlLogic();
-      }
       await this.applyDependencyRules();
       await this.renderVis();
       await this.logStartupSummary();
@@ -2565,7 +2570,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       if (this.phStopWatcher) clearInterval(this.phStopWatcher);
     this.phStopWatcher = setInterval(async () => {
       await this.enforcePhStopIfDue();
-      if (this.config.standbyModeEnabled === true && typeof this.applyControlLogic === 'function') {
+      if (this.config.standbyModeEnabled === true && typeof this.applyControlLogic === 'function' && !this.isControlTransitionActive()) {
         await this.applyControlLogic();
       }
     }, 1000);
@@ -2606,6 +2611,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         const standbyActiveNow = await this.getControlBool('control.standby', this.config.standbyModeEnabled === true);
 
         if (id === `${this.namespace}.control.standby`) {
+          this.beginControlTransition(3500);
           await this.resetManualBlockers('Standby gewechselt');
           if (!!state.val === true) {
             await this.setStateIfChanged('control.auto.circulation', false, false);
@@ -2635,6 +2641,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           `${this.namespace}.control.auto.heatpump`
         ];
         if (autoIds.includes(id)) {
+          this.beginControlTransition(3500);
           const key = id.replace(`${this.namespace}.control.auto.`, '');
           if (!!state.val === true) {
             if (standbyActiveNow) {
@@ -2654,6 +2661,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         }
 
         if (id === `${this.namespace}.control.ph.manualStart` && !!state.val === true) {
+          this.beginControlTransition(3500);
           const manualSecState = await this.getStateAsync('control.ph.manualDoseSec');
           const manualSec = Math.max(1, Number(manualSecState && manualSecState.val) || 30);
           const ok = await this.runDosePumpOnce(manualSec, { checkTime: 'MANUELL', phValue: 'manuell', manual: true });
@@ -2669,6 +2677,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         }
 
         if (id === `${this.namespace}.control.device.circulation`) {
+          this.beginControlTransition(3500);
           if (standbyActiveNow) {
             await this.resetManualBlockers('Standby blockiert manuell');
           } else {
@@ -2686,6 +2695,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         }
 
         if (id === `${this.namespace}.control.device.chlorinator`) {
+          this.beginControlTransition(3500);
           if (standbyActiveNow) {
             await this.resetManualBlockers('Standby blockiert manuell');
           } else {
@@ -2707,6 +2717,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         }
 
         if (id === `${this.namespace}.control.device.phPump`) {
+          this.beginControlTransition(3500);
           if (standbyActiveNow) {
             await this.resetManualBlockers('Standby blockiert manuell');
           } else {
@@ -2728,6 +2739,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         }
 
         if (id === `${this.namespace}.control.device.heatpump`) {
+          this.beginControlTransition(3500);
           if (standbyActiveNow) {
             await this.resetManualBlockers('Standby blockiert manuell');
           } else {
@@ -2749,6 +2761,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         }
 
         if (id === `${this.namespace}.control.heatpump.setTemp`) {
+          this.beginControlTransition(3500);
           const hpOn = await this.getBool(this.config.heatpumpPowerStateId);
           if (!hpOn) {
             await this.setStateAsync('status.debug.lastStartupError', 'Solltemperatur nur bei laufender Wärmepumpe änderbar', true);
@@ -2792,10 +2805,12 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         if (id === this.config.chlorinatorSocketStateId) await this.setStateIfChanged('control.device.chlorinator', boolVal, true);
         if (id === this.config.phPumpSocketStateId) await this.setStateIfChanged('control.device.phPump', boolVal, true);
         if (id === this.config.heatpumpPowerStateId) await this.setStateIfChanged('control.device.heatpump', boolVal, true);
-        await this.applyControlLogic();
-        await this.syncControlStates();
-        await this.syncDeviceControlStates();
-        this.queueDelayedRefresh(1800);
+        if (!this.isControlTransitionActive()) {
+          await this.applyControlLogic();
+          await this.syncControlStates();
+          await this.syncDeviceControlStates();
+        }
+        this.queueDelayedRefresh(this.isControlTransitionActive() ? 2600 : 1800);
       }
     }
   }
