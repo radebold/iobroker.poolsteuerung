@@ -481,6 +481,24 @@ class Poolsteuerung extends utils.Adapter {
     }
   }
 
+  getDerivedHeatpumpAuxStateIds() {
+    const powerId = String(this.config.heatpumpPowerStateId || '').trim();
+    const match = powerId.match(/^(.*\.)(\d+)$/);
+    if (!match) return { speedId: '', modeId: '' };
+    return {
+      speedId: `${match[1]}104`,
+      modeId: `${match[1]}105`,
+    };
+  }
+
+  formatHeatpumpMode(value) {
+    const txt = String(value ?? '').trim();
+    if (!txt || txt === '--') return '--';
+    const m = txt.match(/^([^()]+)\(([^)]+)\)$/);
+    if (m) return `${m[1].trim()} (${m[2].trim()})`;
+    return txt;
+  }
+
   fmt(n, digits = 1, fallback = '--') {
     return n === null || n === undefined || !Number.isFinite(n) ? fallback : n.toFixed(digits);
   }
@@ -732,6 +750,8 @@ body{
         ${mini('Pumpe ml/min', `${data.phFlowMlMin}`, 'info')}
         ${mini('ml je 0,1 / 10m³', `${data.phMlPer01Per10}`, 'info')}
         ${mini('Poolvolumen', `${data.volume} m³`, 'highlight')}
+        ${mini('WP Lüfter', String(data.heatpumpFanPercent ?? '--'), 'info')}
+        ${mini('WP Modus', data.heatpumpMode || '--', 'highlight')}
         ${mini('Granulat manuell', data.manualGranulateText, 'highlight')}
       </div>
     </div>
@@ -823,6 +843,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Einspeisung', `${data.feedIn} W`)}
     ${quick('Batterie', `${data.battery} %`)}
     ${quick('WP Freigabe', data.heatDecision)}
+    ${quick('WP Lüfter', String(data.heatpumpFanPercent ?? '--'))}
+    ${quick('WP Modus', data.heatpumpMode || '--')}
     ${quick('Chlor Freigabe', data.chlorDecision)}
     ${quick('pH Prüfung', data.phDecision)}
   </div></div>
@@ -1329,6 +1351,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const phInRange = Number.isFinite(phNumStable) && phNumStable >= 7.1 && phNumStable <= 7.25;
     const orpInRange = Number.isFinite(orpNumStable) && orpNumStable >= parseNum(orpOnThreshold) && orpNumStable <= parseNum(orpOffThreshold);
 
+    const heatpumpAuxIds = this.getDerivedHeatpumpAuxStateIds();
+    const heatpumpFanPercent = await this.getText(heatpumpAuxIds.speedId, '--');
+    const heatpumpMode = this.formatHeatpumpMode(await this.getText(heatpumpAuxIds.modeId, '--'));
+
     const stableData = {
       ph, orp, poolTemp, outsideTemp, pv, feedIn, gridSupply, battery, targetTemp, heatReason, volume, modeActive,
       autoCirculation, autoChlor, autoPh, autoHeatpump,
@@ -1382,8 +1408,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       phPumpStateId: this.config.phPumpSocketStateId || '',
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
+      heatpumpFanPercent,
+      heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf93'
+      adapterVersion: 'v0.3.15hf94'
     };
 
     const now = Date.now();
@@ -2604,6 +2632,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.ensureState('control.device.heatpump', 'boolean', 'switch', false, true);
       await this.ensureState('control.heatpump.setTemp', 'number', 'level.temperature', 0, true);
       await this.resetManualBlockers('Adapterstart');
+      await this.forceDependentDevicesOff('Adapterstart Recovery');
       await this.setStateAsync('info.connection', true, true);
       await this.subscribeConfiguredStates();
       try { this.subscribeStates('control.*'); } catch {}
