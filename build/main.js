@@ -72,6 +72,23 @@ class Poolsteuerung extends utils.Adapter {
     return msg.includes('DB closed') || msg.includes('Connection is closed') || msg.includes('connection is closed');
   }
 
+  async forceImmediateRender() {
+    if (this.isShuttingDown) return;
+    try {
+      await this.updateComputedStates();
+      if (typeof this.applyControlLogic === 'function') {
+        await this.applyControlLogic();
+        await this.syncControlStates();
+        await this.syncDeviceControlStates();
+      }
+      this.lastRenderSignature = '';
+      this.lastRenderAt = 0;
+      await this.renderVis();
+    } catch (e) {
+      if (!this.isDbClosedError(e)) this.log.warn('VIS Sofort-Render Fehler: ' + (e && e.stack ? e.stack : e));
+    }
+  }
+
   async ensureState(id, type, role, def, write = false) {
     await this.setObjectNotExistsAsync(id, {
       type: 'state',
@@ -1366,7 +1383,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpStateId: this.config.heatpumpPowerStateId || '',
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf92'
+      adapterVersion: 'v0.3.15hf93'
     };
 
     const now = Date.now();
@@ -1431,16 +1448,13 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         await this.setStateIfChanged('control.device.phPump', await this.getBool(this.config.phPumpSocketStateId), true);
         await this.setStateIfChanged('control.device.heatpump', await this.getBool(this.config.heatpumpPowerStateId), true);
         await this.updateComputedStates();
-        if (typeof this.applyControlLogic === 'function') {
-          await this.applyControlLogic();
-          await this.syncControlStates();
-          await this.syncDeviceControlStates();
-        }
+        await this.syncControlStates();
+        await this.syncDeviceControlStates();
         await this.renderVis();
       } catch (e) {
         if (!this.isDbClosedError(e)) this.log.warn('VIS Render Fehler: ' + (e && e.stack ? e.stack : e));
       }
-    }, 1200));
+    }, 1800));
   }
 
   queueDelayedRefresh(delayMs = 1800) {
@@ -1452,9 +1466,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         await this.updateComputedStates();
         if (typeof this.applyControlLogic === 'function') {
           await this.applyControlLogic();
-          await this.syncControlStates();
-          await this.syncDeviceControlStates();
         }
+        await this.syncControlStates();
+        await this.syncDeviceControlStates();
+        this.lastRenderSignature = '';
+        this.lastRenderAt = 0;
         await this.renderVis();
       } catch (e) {
         if (!this.isDbClosedError(e)) this.log.warn('VIS Delayed Refresh Fehler: ' + (e && e.stack ? e.stack : e));
@@ -2672,11 +2688,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
               }
             } catch {}
           }
-          await this.applyControlLogic();
-          await this.syncControlStates();
-          await this.syncDeviceControlStates();
+          await this.forceImmediateRender();
           this.queueDelayedRefresh(1800);
-          await this.renderVis();
           return;
         }
 
@@ -2699,10 +2712,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
             if (key === 'ph') await this.setStateIfChanged('control.device.phPump', false, true);
             if (key === 'heatpump') await this.setStateIfChanged('control.device.heatpump', false, true);
           }
-          await this.applyControlLogic();
-          await this.syncControlStates();
+          await this.forceImmediateRender();
           this.queueDelayedRefresh(1500);
-          await this.renderVis();
           return;
         }
 
@@ -2716,9 +2727,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           }
           await this.setStateIfChanged('control.ph.manualStart', false, false);
           await this.applyControlLogic();
-          await this.syncControlStates();
+          await this.forceImmediateRender();
           this.queueDelayedRefresh(1200);
-          await this.renderVis();
           return;
         }
 
@@ -2734,9 +2744,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
               await this.forceDependentDevicesOff('Umwälzpumpe AUS');
             }
           }
-          await this.syncControlStates();
+          await this.forceImmediateRender();
           this.queueDelayedRefresh(1200);
-          await this.renderVis();
           return;
         }
 
