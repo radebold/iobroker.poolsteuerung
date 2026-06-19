@@ -758,6 +758,12 @@ body{
         ${kv('pH Zeiten', data.phTimes)}
         ${kv('Standby nächster Lauf', data.standbyNext)}
         ${kv('Letzte Dosierung', `${data.phLastDoseDurationSec} s`)}
+        ${kv('Auto/WB Status', data.wallboxChargingStatus, 'energy')}
+        ${kv('Auto/WB Stecker', data.wallboxPlugStatus, 'energy')}
+        ${kv('Auto/WB Leistung', `${data.wallboxPowerKw} kW`, 'energy')}
+        ${kv('Auto/WB SoC', `${data.wallboxSoc} % / ${data.wallboxTargetSoc} %`, 'energy')}
+        ${kv('Auto/WB Restzeit', data.wallboxTimeToFull, 'energy')}
+        ${kv('Auto/WB Reichweite', `${data.wallboxRangeKm} km`, 'energy')}
       </div>
     </div>
   </div>
@@ -770,6 +776,7 @@ body{
         ${status('Chlorinator', 'ORP-Regelung', data.chlorOn)}
         ${status('pH-Dosierpumpe', 'Prüfzeiten', data.phPumpOn)}
         ${status('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
+        ${status('Auto / Wallbox', data.wallboxPlugStatus, !!data.wallboxCharging)}
       </div>
     </div>
     <div class="card">
@@ -820,7 +827,7 @@ body{
 :root{--bg:#08111f;--bg2:#10203a;--line:rgba(15,23,42,.08);--text:#0f172a;--muted:#66758a}
 *{box-sizing:border-box}
 body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,var(--bg2),var(--bg));font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:var(--text)}
-.wrap{width:100%;max-width:510px;height:970px;max-height:970px;overflow:hidden;margin:0 auto;padding:4px;display:grid;gap:4px}
+.wrap{width:100%;max-width:510px;height:1090px;max-height:1090px;overflow:hidden;margin:0 auto;padding:4px;display:grid;gap:4px}
 .card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid var(--line);border-radius:15px;padding:6px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
 .hero{background:radial-gradient(circle at top right, rgba(85,200,255,.24), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
 .header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}
@@ -885,6 +892,16 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('WP Modus', data.heatpumpMode || '--')}
     ${quick('Chlor Freigabe', data.chlorDecision)}
     ${quick('pH Prüfung', data.phDecision)}
+  </div></div>
+
+  <div class="card"><div class="section-title">Auto & Wallbox</div><div class="quick-grid">
+    ${quick('Status', data.wallboxChargingStatus)}
+    ${quick('Stecker', data.wallboxPlugStatus)}
+    ${quick('Leistung', `${data.wallboxPowerKw} kW`)}
+    ${quick('SoC', `${data.wallboxSoc} %`)}
+    ${quick('Ziel', `${data.wallboxTargetSoc} %`)}
+    ${quick('Restzeit', data.wallboxTimeToFull)}
+    ${quick('Reichweite', `${data.wallboxRangeKm} km`)}
   </div></div>
 
   <div class="card"><div class="section-title">pH Info</div><div class="quick-grid ph-grid">
@@ -1137,7 +1154,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const batteryBar = `<div class="ps-bbar"><div class="ps-bfill" style="width:${batteryPct}%"></div></div>`;
     return `<!-- phone-render:${esc(data.updated)} -->
 <style>
-.ps-wrap{width:100%;max-width:510px;height:970px;max-height:970px;overflow:hidden;margin:0 auto;display:grid;gap:4px;padding:4px;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,#10203a,#08111f);font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
+.ps-wrap{width:100%;max-width:510px;height:1090px;max-height:1090px;overflow:hidden;margin:0 auto;display:grid;gap:4px;padding:4px;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,#10203a,#08111f);font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
 .ps-card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid rgba(15,23,42,.08);border-radius:15px;padding:6px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
 .ps-hero{background:radial-gradient(circle at top right, rgba(85,200,255,.26), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
 .ps-header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}.ps-title{font-size:15px;font-weight:900}.ps-ver{font-size:9px;font-weight:800;color:#b9d7ff;margin-left:6px}.ps-sub{font-size:9px;color:#d2dded;text-align:right}.ps-mode{display:inline-flex;align-items:center;justify-content:center;padding:3px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(180deg,#334f84,#1b3158);font-weight:800;font-size:10px;color:#fff;cursor:pointer}
@@ -1180,6 +1197,15 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('WP Freigabe', data.heatDecision)}
     ${quick('Chlor Freigabe', data.chlorDecision)}
     ${quick('pH Prüfung', data.phDecision)}
+  </div></div>
+  <div class="ps-card"><div class="ps-section">Auto & Wallbox</div><div class="ps-quickGrid">
+    ${quick('Status', data.wallboxChargingStatus)}
+    ${quick('Stecker', data.wallboxPlugStatus)}
+    ${quick('Leistung', `${data.wallboxPowerKw} kW`)}
+    ${quick('SoC', `${data.wallboxSoc} %`)}
+    ${quick('Ziel', `${data.wallboxTargetSoc} %`)}
+    ${quick('Restzeit', data.wallboxTimeToFull)}
+    ${quick('Reichweite', `${data.wallboxRangeKm} km`)}
   </div></div>
   <div class="ps-card"><div class="ps-section">pH Info</div><div class="ps-quickGrid ps-phGrid">
     ${quick('Berechnet', `${data.phCalculatedDoseSec} s / ${data.phCalculatedDoseMl} ml`)}
@@ -1225,6 +1251,22 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const feedIn = this.fmt(await this.getNumber(this.config.gridFeedInStateId, 0), 0, '0');
     const gridSupply = this.fmt(await this.getNumber(this.config.gridSupplyStateId, 0), 0, '0');
     const battery = this.fmt(await this.getNumber(this.config.batterySocStateId, 0), 0, '0');
+    const wallboxBase = 'vw-connect.0.WVGZZZE23TE055069';
+    const wallboxChargingStatusRaw = await this.getText(`${wallboxBase}.statustibber.chargingStatus`, await this.getText(`${wallboxBase}.statustibber.capabilities.charging_status`, '--'));
+    const wallboxPlugStatusRaw = await this.getText(`${wallboxBase}.statustibber.plugStatus`, await this.getText(`${wallboxBase}.statustibber.capabilities.connector_status`, '--'));
+    const wallboxSocNum = await this.getNumber(`${wallboxBase}.statustibber.soc`, await this.getNumber(`${wallboxBase}.statustibber.capabilities.storage_stateOfCharge`, NaN));
+    const wallboxTargetSocNum = await this.getNumber(`${wallboxBase}.statustibber.targetSoc`, await this.getNumber(`${wallboxBase}.statustibber.capabilities.storage_targetStateOfCharge`, NaN));
+    const wallboxTimeFullNum = await this.getNumber(`${wallboxBase}.statustibber.capabilities.charging_timeToFullyCharged`, NaN);
+    const wallboxRangeKmNum = await this.getNumber(`${wallboxBase}.statustibber.rangeKm`, NaN);
+    const wallboxPowerKwNum = await this.getNumber(`${wallboxBase}.statuseudata.battery_state_report.charge_power`, NaN);
+    const wallboxCharging = ['charging','CHARGE_STATE_CHARGING_HV_BATTERY'].includes(String(wallboxChargingStatusRaw || '').trim()) || (Number.isFinite(wallboxPowerKwNum) && wallboxPowerKwNum > 0);
+    const wallboxChargingStatus = wallboxCharging ? 'LÄDT' : (String(wallboxChargingStatusRaw || '--').toLowerCase() === 'idle' ? 'BEREIT' : String(wallboxChargingStatusRaw || '--'));
+    const wallboxPlugStatus = String(wallboxPlugStatusRaw || '--').toLowerCase() === 'connected' ? 'Verbunden' : (String(wallboxPlugStatusRaw || '--').toLowerCase() === 'disconnected' ? 'Getrennt' : String(wallboxPlugStatusRaw || '--'));
+    const wallboxSoc = this.fmt(wallboxSocNum, 0, '--');
+    const wallboxTargetSoc = this.fmt(wallboxTargetSocNum, 0, '--');
+    const wallboxRangeKm = this.fmt(wallboxRangeKmNum, 0, '--');
+    const wallboxPowerKw = this.fmt(wallboxPowerKwNum, 1, '--');
+    const wallboxTimeToFull = Number.isFinite(wallboxTimeFullNum) ? `${Math.floor(wallboxTimeFullNum)}h ${String(Math.round((wallboxTimeFullNum % 1) * 60)).padStart(2,'0')}m` : '--';
     const targetTempNumFromState = this.config.heatpumpSetTempStateId
       ? await this.getNumber(this.config.heatpumpSetTempStateId, NaN)
       : NaN;
@@ -1450,6 +1492,14 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       feedInRounded: Math.round(parseNum(feedIn) / 100) * 100,
       gridSupplyRounded: Math.round(parseNum(gridSupply) / 100) * 100,
       batteryRounded: Math.round(parseNum(battery)),
+      wallboxCharging,
+      wallboxChargingStatus,
+      wallboxPlugStatus,
+      wallboxSoc,
+      wallboxTargetSoc,
+      wallboxRangeKm,
+      wallboxPowerKw,
+      wallboxTimeToFull,
       namespace: this.namespace,
       standbyControl: standbyMode,
       autoCirculationControl: await this.getControlBool('control.auto.circulation', circulationEnabled),
@@ -1464,7 +1514,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf98'
+      adapterVersion: 'v0.3.15hf99'
     };
 
     const now = Date.now();
