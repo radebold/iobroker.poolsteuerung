@@ -737,6 +737,17 @@ body{
         ${metric('Solltemp', `${data.targetTemp}°C`, 'Soll', null, 'metric-target')}
       </div>
     </div>
+    <div class="card">
+      <div class="section energy">Auto & Wallbox</div>
+      <div class="mini-list">
+        ${mini('Status', data.wallboxChargingStatus, data.wallboxCharging ? 'highlight' : 'info')}
+        ${mini('Stecker', data.wallboxPlugStatus, 'info')}
+        ${mini('Leistung', `${data.wallboxPowerKw} kW`, 'highlight')}
+        ${mini('SoC', `${data.wallboxSoc} % / ${data.wallboxTargetSoc} %`, 'highlight')}
+        ${mini('Restzeit', data.wallboxTimeToFull, 'info')}
+        ${mini('Reichweite', `${data.wallboxRangeKm} km`, 'info')}
+      </div>
+    </div>
   </div>
 
   <div class="col-mid">
@@ -758,12 +769,6 @@ body{
         ${kv('pH Zeiten', data.phTimes)}
         ${kv('Standby nächster Lauf', data.standbyNext)}
         ${kv('Letzte Dosierung', `${data.phLastDoseDurationSec} s`)}
-        ${kv('Auto/WB Status', data.wallboxChargingStatus, 'energy')}
-        ${kv('Auto/WB Stecker', data.wallboxPlugStatus, 'energy')}
-        ${kv('Auto/WB Leistung', `${data.wallboxPowerKw} kW`, 'energy')}
-        ${kv('Auto/WB SoC', `${data.wallboxSoc} % / ${data.wallboxTargetSoc} %`, 'energy')}
-        ${kv('Auto/WB Restzeit', data.wallboxTimeToFull, 'energy')}
-        ${kv('Auto/WB Reichweite', `${data.wallboxRangeKm} km`, 'energy')}
       </div>
     </div>
   </div>
@@ -776,7 +781,6 @@ body{
         ${status('Chlorinator', 'ORP-Regelung', data.chlorOn)}
         ${status('pH-Dosierpumpe', 'Prüfzeiten', data.phPumpOn)}
         ${status('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
-        ${status('Auto / Wallbox', data.wallboxPlugStatus, !!data.wallboxCharging)}
       </div>
     </div>
     <div class="card">
@@ -892,16 +896,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('WP Modus', data.heatpumpMode || '--')}
     ${quick('Chlor Freigabe', data.chlorDecision)}
     ${quick('pH Prüfung', data.phDecision)}
-  </div></div>
-
-  <div class="card"><div class="section-title">Auto & Wallbox</div><div class="quick-grid">
-    ${quick('Status', data.wallboxChargingStatus)}
-    ${quick('Stecker', data.wallboxPlugStatus)}
-    ${quick('Leistung', `${data.wallboxPowerKw} kW`)}
-    ${quick('SoC', `${data.wallboxSoc} %`)}
-    ${quick('Ziel', `${data.wallboxTargetSoc} %`)}
-    ${quick('Restzeit', data.wallboxTimeToFull)}
-    ${quick('Reichweite', `${data.wallboxRangeKm} km`)}
   </div></div>
 
   <div class="card"><div class="section-title">pH Info</div><div class="quick-grid ph-grid">
@@ -1198,15 +1192,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Chlor Freigabe', data.chlorDecision)}
     ${quick('pH Prüfung', data.phDecision)}
   </div></div>
-  <div class="ps-card"><div class="ps-section">Auto & Wallbox</div><div class="ps-quickGrid">
-    ${quick('Status', data.wallboxChargingStatus)}
-    ${quick('Stecker', data.wallboxPlugStatus)}
-    ${quick('Leistung', `${data.wallboxPowerKw} kW`)}
-    ${quick('SoC', `${data.wallboxSoc} %`)}
-    ${quick('Ziel', `${data.wallboxTargetSoc} %`)}
-    ${quick('Restzeit', data.wallboxTimeToFull)}
-    ${quick('Reichweite', `${data.wallboxRangeKm} km`)}
-  </div></div>
   <div class="ps-card"><div class="ps-section">pH Info</div><div class="ps-quickGrid ps-phGrid">
     ${quick('Berechnet', `${data.phCalculatedDoseSec} s / ${data.phCalculatedDoseMl} ml`)}
     ${quick('Letzte Dosis', `${data.phLastDoseDurationSec} s / ${data.phLastDoseMl} ml`)}
@@ -1251,16 +1236,16 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const feedIn = this.fmt(await this.getNumber(this.config.gridFeedInStateId, 0), 0, '0');
     const gridSupply = this.fmt(await this.getNumber(this.config.gridSupplyStateId, 0), 0, '0');
     const battery = this.fmt(await this.getNumber(this.config.batterySocStateId, 0), 0, '0');
-    const wallboxBase = 'vw-connect.0.WVGZZZE23TE055069';
-    const wallboxChargingStatusRaw = await this.getText(`${wallboxBase}.statustibber.chargingStatus`, await this.getText(`${wallboxBase}.statustibber.capabilities.charging_status`, '--'));
-    const wallboxPlugStatusRaw = await this.getText(`${wallboxBase}.statustibber.plugStatus`, await this.getText(`${wallboxBase}.statustibber.capabilities.connector_status`, '--'));
-    const wallboxSocNum = await this.getNumber(`${wallboxBase}.statustibber.soc`, await this.getNumber(`${wallboxBase}.statustibber.capabilities.storage_stateOfCharge`, NaN));
-    const wallboxTargetSocNum = await this.getNumber(`${wallboxBase}.statustibber.targetSoc`, await this.getNumber(`${wallboxBase}.statustibber.capabilities.storage_targetStateOfCharge`, NaN));
-    const wallboxTimeFullNum = await this.getNumber(`${wallboxBase}.statustibber.capabilities.charging_timeToFullyCharged`, NaN);
-    const wallboxRangeKmNum = await this.getNumber(`${wallboxBase}.statustibber.rangeKm`, NaN);
-    const wallboxPowerKwNum = await this.getNumber(`${wallboxBase}.statuseudata.battery_state_report.charge_power`, NaN);
-    const wallboxCharging = ['charging','CHARGE_STATE_CHARGING_HV_BATTERY'].includes(String(wallboxChargingStatusRaw || '').trim()) || (Number.isFinite(wallboxPowerKwNum) && wallboxPowerKwNum > 0);
-    const wallboxChargingStatus = wallboxCharging ? 'LÄDT' : (String(wallboxChargingStatusRaw || '--').toLowerCase() === 'idle' ? 'BEREIT' : String(wallboxChargingStatusRaw || '--'));
+    const wallboxChargingStatusRaw = await this.getText(this.config.wallboxChargingStatusStateId, '--');
+    const wallboxPlugStatusRaw = await this.getText(this.config.wallboxPlugStatusStateId, '--');
+    const wallboxSocNum = await this.getNumber(this.config.wallboxSocStateId, NaN);
+    const wallboxTargetSocNum = await this.getNumber(this.config.wallboxTargetSocStateId, NaN);
+    const wallboxTimeFullNum = await this.getNumber(this.config.wallboxTimeToFullStateId, NaN);
+    const wallboxRangeKmNum = await this.getNumber(this.config.wallboxRangeKmStateId, NaN);
+    const wallboxPowerKwNum = await this.getNumber(this.config.wallboxPowerKwStateId, NaN);
+    const wallboxChargingRawText = String(wallboxChargingStatusRaw || '').trim().toLowerCase();
+    const wallboxCharging = ['charging','laden','lädt','charge_state_charging_hv_battery'].includes(wallboxChargingRawText) || (Number.isFinite(wallboxPowerKwNum) && wallboxPowerKwNum > 0);
+    const wallboxChargingStatus = wallboxCharging ? 'LÄDT' : (wallboxChargingRawText === 'idle' ? 'BEREIT' : String(wallboxChargingStatusRaw || '--'));
     const wallboxPlugStatus = String(wallboxPlugStatusRaw || '--').toLowerCase() === 'connected' ? 'Verbunden' : (String(wallboxPlugStatusRaw || '--').toLowerCase() === 'disconnected' ? 'Getrennt' : String(wallboxPlugStatusRaw || '--'));
     const wallboxSoc = this.fmt(wallboxSocNum, 0, '--');
     const wallboxTargetSoc = this.fmt(wallboxTargetSocNum, 0, '--');
@@ -1514,7 +1499,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf99'
+      adapterVersion: 'v0.3.15hf100'
     };
 
     const now = Date.now();

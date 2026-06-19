@@ -772,6 +772,87 @@
           "sm": 12,
           "md": 6,
           "lg": 6
+        },
+        "headerWallbox": {
+          "type": "header",
+          "text": "Auto & Wallbox"
+        },
+        "wallboxChargingStatusStateId": {
+          "type": "objectId",
+          "label": "State-ID Ladestatus",
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
+          "objectTypes": [
+            "state"
+          ]
+        },
+        "wallboxPlugStatusStateId": {
+          "type": "objectId",
+          "label": "State-ID Steckerstatus",
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
+          "objectTypes": [
+            "state"
+          ]
+        },
+        "wallboxPowerKwStateId": {
+          "type": "objectId",
+          "label": "State-ID Ladeleistung (kW)",
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
+          "objectTypes": [
+            "state"
+          ]
+        },
+        "wallboxSocStateId": {
+          "type": "objectId",
+          "label": "State-ID Auto-SoC (%)",
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
+          "objectTypes": [
+            "state"
+          ]
+        },
+        "wallboxTargetSocStateId": {
+          "type": "objectId",
+          "label": "State-ID Ziel-SoC (%)",
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
+          "objectTypes": [
+            "state"
+          ]
+        },
+        "wallboxTimeToFullStateId": {
+          "type": "objectId",
+          "label": "State-ID Restzeit bis voll (h)",
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
+          "objectTypes": [
+            "state"
+          ]
+        },
+        "wallboxRangeKmStateId": {
+          "type": "objectId",
+          "label": "State-ID Reichweite (km)",
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
+          "objectTypes": [
+            "state"
+          ]
         }
       },
       "hidden": "data.enableHeatpumpControl === false"
