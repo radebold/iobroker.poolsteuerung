@@ -363,6 +363,38 @@ class Poolsteuerung extends utils.Adapter {
     return null;
   }
 
+  isSingleWriteDevice(id) {
+    const s = String(id || '');
+    return s.startsWith('tuya.') || s === String(this.config.heatpumpPowerStateId || '');
+  }
+
+  async waitForBoolState(id, expected, waits = [500, 1000, 1500, 2500]) {
+    for (const waitMs of waits) {
+      try {
+        await new Promise(resolve => setTimeout(resolve, waitMs));
+        const current = await this.getBool(id);
+        if (current === expected) return true;
+      } catch {}
+    }
+    return false;
+  }
+
+  resetHeatpumpLocks(reason = '') {
+    const suffix = reason ? ` (${reason})` : '';
+    this.heatpumpLock = { state: null, lastOnTs: 0, lastOffTs: 0 };
+    this.debug('Heatpump-Locks zurückgesetzt' + suffix);
+  }
+
+  clearPendingRenderTimeouts(reason = '') {
+    const suffix = reason ? ` (${reason})` : '';
+    for (const h of Array.from(this.pendingTimeouts)) {
+      try { clearTimeout(h); } catch {}
+      this.pendingTimeouts.delete(h);
+    }
+    this.renderQueued = false;
+    this.debug('Pending-Timeouts gelöscht' + suffix);
+  }
+
   async setSwitchStateCompat(id, on) {
     if (!id) return;
 
@@ -412,13 +444,13 @@ class Poolsteuerung extends utils.Adapter {
     const zbTarget = this.getTasmotaZigbeeWriteTarget(id);
     if (zbTarget) {
       try { await this.setSwitchStateCompat(id, true); } catch {}
-      for (const waitMs of [400, 700, 1000, 1500]) {
-        try {
-          await new Promise(resolve => setTimeout(resolve, waitMs));
-          const current = await this.getBool(id);
-          if (current) return true;
-        } catch {}
-      }
+      await this.waitForBoolState(id, true, [400, 700, 1000, 1500]);
+      return true;
+    }
+
+    if (this.isSingleWriteDevice(id)) {
+      try { await this.setSwitchStateCompat(id, true); } catch {}
+      await this.waitForBoolState(id, true, [500, 1000, 1500, 2500, 3500]);
       return true;
     }
 
@@ -444,13 +476,13 @@ class Poolsteuerung extends utils.Adapter {
     const zbTarget = this.getTasmotaZigbeeWriteTarget(id);
     if (zbTarget) {
       try { await this.setSwitchStateCompat(id, false); } catch {}
-      for (const waitMs of [400, 700, 1000, 1500]) {
-        try {
-          await new Promise(resolve => setTimeout(resolve, waitMs));
-          const current = await this.getBool(id);
-          if (!current) return true;
-        } catch {}
-      }
+      await this.waitForBoolState(id, false, [400, 700, 1000, 1500]);
+      return true;
+    }
+
+    if (this.isSingleWriteDevice(id)) {
+      try { await this.setSwitchStateCompat(id, false); } catch {}
+      await this.waitForBoolState(id, false, [500, 1000, 1500, 2500, 3500]);
       return true;
     }
 
@@ -1334,6 +1366,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatDecision = hyst.reason;
     }
 
+    if (this.isControlTransitionActive() && heatLock.state !== null) {
+      heatDesired = heatLock.state;
+      heatDecision = `Schaltsperre aktiv`;
+    }
+
     if (this.config.heatpumpPowerStateId && heatDesired !== heatpumpOnRaw) {
       try {
         await (heatDesired ? this.forceSwitchOnCompat(this.config.heatpumpPowerStateId) : this.forceSwitchOffCompat(this.config.heatpumpPowerStateId));
@@ -1346,6 +1383,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatLock.state = heatDesired;
       if (heatDesired) heatLock.lastOnTs = Date.now();
       else heatLock.lastOffTs = Date.now();
+    } else {
+      heatLock.state = heatpumpOnRaw;
     }
 
     const heatpumpOn = heatDesired;
@@ -1425,7 +1464,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf97'
+      adapterVersion: 'v0.3.15hf98'
     };
 
     const now = Date.now();
@@ -1570,7 +1609,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const pvOnThreshold = parseNum(this.config.heatpumpPvOnThresholdW || parseNum(threshold) || 1000);
     const pvOffThreshold = parseNum(this.config.heatpumpPvOffThresholdW || 800);
     const tempOnDelta = parseNum(this.config.heatpumpTempOnDeltaC || 0.5);
-    const minSwitchSec = Math.max(30, parseNum(this.config.heatpumpMinSwitchSec || 180) || 180);
+    const minSwitchSec = Math.max(120, parseNum(this.config.heatpumpMinSwitchSec || 300) || 300);
 
     const feedNum = parseNum(feedIn);
     const poolNum = parseNum(poolTemp);
@@ -2649,7 +2688,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.ensureState('control.device.phPump', 'boolean', 'switch', false, true);
       await this.ensureState('control.device.heatpump', 'boolean', 'switch', false, true);
       await this.ensureState('control.heatpump.setTemp', 'number', 'level.temperature', 0, true);
+      await this.ensureState('control.heatpump.resetLock', 'boolean', 'button', false, true);
       await this.resetManualBlockers('Adapterstart');
+      this.clearPendingRenderTimeouts('Adapterstart');
+      this.resetHeatpumpLocks('Adapterstart');
       await this.forceDependentDevicesOff('Adapterstart Recovery');
       await this.setStateAsync('info.connection', true, true);
       await this.subscribeConfiguredStates();
@@ -2761,6 +2803,16 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           }
           await this.forceImmediateRender();
           this.queueDelayedRefresh(1500);
+          return;
+        }
+
+        if (id === `${this.namespace}.control.heatpump.resetLock` && !!state.val === true) {
+          this.beginControlTransition(1500);
+          this.clearPendingRenderTimeouts('WP Reset');
+          this.resetHeatpumpLocks('manueller Reset');
+          await this.setStateIfChanged('control.heatpump.resetLock', false, false);
+          await this.forceImmediateRender();
+          this.queueDelayedRefresh(1000);
           return;
         }
 
