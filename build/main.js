@@ -1101,6 +1101,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const quick = (l, v, trend = '', barHtml = '') => `<div class="ps-q"><div class="ps-ql">${esc(l)}</div><div class="ps-qvr"><div class="ps-qv">${esc(v)}</div>${trend ? `<div class="ps-qtrend ${trendClass(trend)}">${esc(trend)}</div>` : ''}</div>${barHtml || ''}</div>`;
     const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
     const metricValue = (value, trend = '→', ok = false) => `<span class="ps-mmain ${ok ? 'ok' : ''}">${esc(value)}</span><span class="ps-trend ${trendClass(trend)} ${ok ? 'ok' : ''}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>`;
+    const batteryPct = Math.max(0, Math.min(100, parseNum(data.battery)));
+    const batteryBar = `<div class="ps-bbar"><div class="ps-bfill" style="width:${batteryPct}%"></div></div>`;
     return `<!-- phone-render:${esc(data.updated)} -->
 <style>
 .ps-wrap{width:100%;max-width:510px;height:970px;max-height:970px;overflow:hidden;margin:0 auto;display:grid;gap:4px;padding:4px;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,#10203a,#08111f);font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
@@ -1423,7 +1425,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf96'
+      adapterVersion: 'v0.3.15hf97'
     };
 
     const now = Date.now();
