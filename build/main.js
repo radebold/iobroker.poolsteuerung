@@ -768,13 +768,19 @@ body{
     const targetPct = Number.isFinite(targetTempNum) ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
     const autoBtn = (label, key, active) => `<button type="button" class="action-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
     const deviceBtn = (label, key, active) => `<button type="button" class="action-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'EIN' : 'AUS'}</span></button>`;
-    const quick = (label, value) => `
+    const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
+    const quick = (label, value, trend = '', barHtml = '') => `
       <div class="quick-card">
         <div class="quick-label">${esc(label)}</div>
-        <div class="quick-value">${esc(value)}</div>
+        <div class="quick-value-row">
+          <div class="quick-value">${esc(value)}</div>
+          ${trend ? `<div class="quick-trend ${trendClass(trend)}">${esc(trend)}</div>` : ''}
+        </div>
+        ${barHtml || ''}
       </div>`;
-    const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
     const metricValue = (value, trend = '→', ok = false) => `<span class="metric-main ${ok ? 'ok' : ''}">${esc(value)}</span><span class="trend ${trendClass(trend)} ${ok ? 'ok' : ''}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>`;
+    const batteryPct = Math.max(0, Math.min(100, parseNum(data.battery)));
+    const batteryBar = `<div class="mini-bar"><div class="mini-fill battery-fill" style="width:${batteryPct}%"></div></div>`;
 
     return `<!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
@@ -794,7 +800,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ph-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 .metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.metric-label{font-size:10px;color:#d9e5f5}.metric-value{font-size:13px;font-weight:900;color:#fff}
 .section-title{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px}
-.quick-card{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.quick-label{font-size:9px;color:#64748b;font-weight:700;margin-bottom:3px}.quick-value{font-size:12px;font-weight:900;color:#0f172a;line-height:1.08}
+.quick-card{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.quick-label{font-size:9px;color:#64748b;font-weight:700;margin-bottom:3px}.quick-value-row{display:flex;align-items:center;gap:8px}.quick-value{font-size:12px;font-weight:900;color:#0f172a;line-height:1.08}.quick-trend{font-size:18px;font-weight:900;line-height:1}.quick-trend.up{color:#ffb36b}.quick-trend.down{color:#52b7ff}.quick-trend.flat{color:#8fa3bc}.mini-bar{margin-top:6px;height:8px;border-radius:999px;background:linear-gradient(90deg,#ff6b6b 0%,#f59e0b 35%,#84cc16 65%,#22c55e 100%);position:relative;overflow:hidden}.mini-fill{height:100%;border-radius:999px}.battery-fill{background:linear-gradient(90deg,rgba(255,255,255,.28),rgba(255,255,255,.12));box-shadow:inset 0 0 0 999px rgba(255,255,255,.10)}
 .action-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:7px 9px;border-radius:13px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}
 .action-name{font-size:12px;font-weight:800}.action-state{font-size:9px;font-weight:800}
 .action-btn.is-on .action-name,.action-btn.is-on .action-state{color:#67dd7c}
@@ -839,9 +845,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   </div></div>
 
   <div class="card"><div class="section-title">Energie & Steuerung</div><div class="quick-grid">
-    ${quick('PV-Leistung', `${data.pv} W`)}
-    ${quick('Einspeisung', `${data.feedIn} W`)}
-    ${quick('Batterie', `${data.battery} %`)}
+    ${quick('PV-Leistung', `${data.pv} W`, data.pvTrend || '→')}
+    ${quick('Einspeisung', `${data.feedIn} W`, data.feedInTrend || '→')}
+    ${quick('Batterie', `${data.battery} %`, '', batteryBar)}
     ${quick('WP Freigabe', data.heatDecision)}
     ${quick('WP Lüfter', String(data.heatpumpFanPercent ?? '--'))}
     ${quick('WP Modus', data.heatpumpMode || '--')}
@@ -1132,9 +1138,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${deviceBtn('Wärmepumpe','heatpump',!!data.heatpumpOn)}
   </div></div>
   <div class="ps-card"><div class="ps-section">Energie & Steuerung</div><div class="ps-quickGrid">
-    ${quick('PV-Leistung', `${data.pv} W`)}
-    ${quick('Einspeisung', `${data.feedIn} W`)}
-    ${quick('Batterie', `${data.battery} %`)}
+    ${quick('PV-Leistung', `${data.pv} W`, data.pvTrend || '→')}
+    ${quick('Einspeisung', `${data.feedIn} W`, data.feedInTrend || '→')}
+    ${quick('Batterie', `${data.battery} %`, '', batteryBar)}
     ${quick('WP Freigabe', data.heatDecision)}
     ${quick('Chlor Freigabe', data.chlorDecision)}
     ${quick('pH Prüfung', data.phDecision)}
@@ -1345,6 +1351,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const orpTrend = historyTrends.orpTrend || '→';
     const poolTempTrend = historyTrends.poolTempTrend || '→';
     const outsideTempTrend = historyTrends.outsideTempTrend || '→';
+    const pvTrend = historyTrends.pvTrend || '→';
+    const feedInTrend = historyTrends.feedInTrend || '→';
 
     const phNumStable = parseNum(ph);
     const orpNumStable = parseNum(orp);
@@ -1363,6 +1371,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       orpTrend,
       poolTempTrend,
       outsideTempTrend,
+      pvTrend,
+      feedInTrend,
       phInRange,
       orpInRange,
       phTimes: standbyMode ? '-' : (this.config.phCheckTimes || '-'),
@@ -1411,7 +1421,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf94'
+      adapterVersion: 'v0.3.15hf95'
     };
 
     const now = Date.now();
@@ -2516,7 +2526,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       phTrend: '→',
       orpTrend: '→',
       poolTempTrend: '→',
-      outsideTempTrend: '→'
+      outsideTempTrend: '→',
+      pvTrend: '→',
+      feedInTrend: '→'
     };
     const tolPh = parseNum(this.config.trendTolerancePh || 0.03) || 0.03;
     const tolOrp = parseNum(this.config.trendToleranceOrp || 15) || 15;
@@ -2527,6 +2539,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       trends.orpTrend = await this.getHistoryTrendArrow(this.config.orpStateId, tolOrp, now);
       trends.poolTempTrend = await this.getHistoryTrendArrow(this.config.waterTempStateId, tolTemp, now);
       trends.outsideTempTrend = await this.getHistoryTrendArrow(this.config.outsideTempStateId, tolTemp, now);
+      trends.pvTrend = await this.getHistoryTrendArrow(this.config.pvPowerStateId, 150, now);
+      trends.feedInTrend = await this.getHistoryTrendArrow(this.config.gridFeedInStateId, 100, now);
     } catch (e) {
       if (this.config.debugMode) this.log.debug('[TREND] Berechnung fehlgeschlagen: ' + (e.message || e));
     }
