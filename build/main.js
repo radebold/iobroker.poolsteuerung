@@ -1511,7 +1511,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.16hf3'
+      adapterVersion: 'v0.3.16hf4'
     };
 
     const now = Date.now();
@@ -1843,6 +1843,37 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     start.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
     const end = new Date(start.getTime() + this.getStandbyDurationSec() * 1000);
     return { start, end };
+  }
+
+  getCirculationWindowsForDate(now = new Date()) {
+    const day = now.getDay();
+    let prefix = '';
+    if (day === 6) prefix = 'pumpSaturday';
+    else if (day === 0) prefix = 'pumpSunday';
+    else prefix = 'pumpWeekday';
+
+    const specialized = [
+      [this.config[`${prefix}Window1Start`], this.config[`${prefix}Window1End`]],
+      [this.config[`${prefix}Window2Start`], this.config[`${prefix}Window2End`]],
+    ].filter(([s, e]) => String(s || '').trim() && String(e || '').trim());
+
+    if (specialized.length) return specialized;
+
+    return [
+      [this.config.pumpWindow1Start, this.config.pumpWindow1End],
+      [this.config.pumpWindow2Start, this.config.pumpWindow2End],
+    ];
+  }
+
+  isWithinCirculationSchedule(now = new Date()) {
+    return this.getCirculationWindowsForDate(now).some(([start, end]) => inWindow(now, start, end));
+  }
+
+  getCirculationScheduleLabel(now = new Date()) {
+    const day = now.getDay();
+    if (day === 6) return 'Samstag';
+    if (day === 0) return 'Sonntag';
+    return 'Werktag';
   }
 
   isStandbyPumpActive(now = new Date()) {

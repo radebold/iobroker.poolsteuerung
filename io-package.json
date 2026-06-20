@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.3.16-hotfix3",
+    "version": "0.3.16-hotfix4",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -69,6 +69,18 @@
     "standbyModeEnabled": false,
     "standbyRunTime": "12:00",
     "standbyPumpDurationSec": 30,
-    "dependencyRules": []
+    "dependencyRules": [],
+    "pumpWeekdayWindow1Start": "",
+    "pumpWeekdayWindow1End": "",
+    "pumpWeekdayWindow2Start": "",
+    "pumpWeekdayWindow2End": "",
+    "pumpSaturdayWindow1Start": "",
+    "pumpSaturdayWindow1End": "",
+    "pumpSaturdayWindow2Start": "",
+    "pumpSaturdayWindow2End": "",
+    "pumpSundayWindow1Start": "",
+    "pumpSundayWindow1End": "",
+    "pumpSundayWindow2Start": "",
+    "pumpSundayWindow2End": ""
   }
 }

@@ -303,6 +303,105 @@
           "sm": 12,
           "md": 6,
           "lg": 6
+        },
+        "weekdayHeader": {
+          "type": "header",
+          "text": "Alternative Umwälzpumpe Werktage (Mo-Fr)"
+        },
+        "pumpWeekdayWindow1Start": {
+          "type": "text",
+          "label": "Werktag Fenster 1 Start (HH:MM)",
+          "newLine": true,
+          "sm": 12,
+          "md": 3,
+          "lg": 3
+        },
+        "pumpWeekdayWindow1End": {
+          "type": "text",
+          "label": "Werktag Fenster 1 Ende (HH:MM)",
+          "sm": 12,
+          "md": 3,
+          "lg": 3
+        },
+        "pumpWeekdayWindow2Start": {
+          "type": "text",
+          "label": "Werktag Fenster 2 Start (HH:MM)",
+          "sm": 12,
+          "md": 3,
+          "lg": 3
+        },
+        "pumpWeekdayWindow2End": {
+          "type": "text",
+          "label": "Werktag Fenster 2 Ende (HH:MM)",
+          "sm": 12,
+          "md": 3,
+          "lg": 3
+        },
+        "saturdayHeader": {
+          "type": "header",
+          "text": "Alternative Umwälzpumpe Samstag"
+        },
+        "pumpSaturdayWindow1Start": {
+          "type": "text",
+          "label": "Samstag Fenster 1 Start (HH:MM)",
+          "newLine": true,
+          "sm": 12,
+          "md": 3,
+          "lg": 3
+        },
+        "pumpSaturdayWindow1End": {
+          "type": "text",
+          "label": "Samstag Fenster 1 Ende (HH:MM)",
+          "sm": 12,
+          "md": 3,
+          "lg": 3
+        },
+        "pumpSaturdayWindow2Start": {
+          "type": "text",
+          "label": "Samstag Fenster 2 Start (HH:MM)",
+          "sm": 12,
+          "md": 3,
+          "lg": 3
+        },
+        "pumpSaturdayWindow2End": {
+          "type": "text",
+          "label": "Samstag Fenster 2 Ende (HH:MM)",
+          "sm": 12,
+          "md": 3,
+          "lg": 3
+        },
+        "sundayHeader": {
+          "type": "header",
+          "text": "Alternative Umwälzpumpe Sonntag"
+        },
+        "pumpSundayWindow1Start": {
+          "type": "text",
+          "label": "Sonntag Fenster 1 Start (HH:MM)",
+          "newLine": true,
+          "sm": 12,
+          "md": 3,
+          "lg": 3
+        },
+        "pumpSundayWindow1End": {
+          "type": "text",
+          "label": "Sonntag Fenster 1 Ende (HH:MM)",
+          "sm": 12,
+          "md": 3,
+          "lg": 3
+        },
+        "pumpSundayWindow2Start": {
+          "type": "text",
+          "label": "Sonntag Fenster 2 Start (HH:MM)",
+          "sm": 12,
+          "md": 3,
+          "lg": 3
+        },
+        "pumpSundayWindow2End": {
+          "type": "text",
+          "label": "Sonntag Fenster 2 Ende (HH:MM)",
+          "sm": 12,
+          "md": 3,
+          "lg": 3
         }
       },
       "hidden": "data.enableCirculationControl === false"
