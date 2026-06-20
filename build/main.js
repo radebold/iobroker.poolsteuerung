@@ -535,6 +535,15 @@ class Poolsteuerung extends utils.Adapter {
     return n === null || n === undefined || !Number.isFinite(n) ? fallback : n.toFixed(digits);
   }
 
+  formatDurationHours(hoursValue, fallback = '--') {
+    const hours = Number(hoursValue);
+    if (!Number.isFinite(hours)) return fallback;
+    const totalMinutes = Math.max(0, Math.round(hours * 60));
+    const hh = Math.floor(totalMinutes / 60);
+    const mm = totalMinutes % 60;
+    return `${hh}h ${String(mm).padStart(2, '0')}m`;
+  }
+
   statusItemHtml(name, hint, state, compact = false) {
     if (compact) {
       return `
@@ -1251,7 +1260,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const wallboxTargetSoc = this.fmt(wallboxTargetSocNum, 0, '--');
     const wallboxRangeKm = this.fmt(wallboxRangeKmNum, 0, '--');
     const wallboxPowerKw = this.fmt(wallboxPowerKwNum, 1, '--');
-    const wallboxTimeToFull = Number.isFinite(wallboxTimeFullNum) ? `${Math.floor(wallboxTimeFullNum)}h ${String(Math.round((wallboxTimeFullNum % 1) * 60)).padStart(2,'0')}m` : '--';
+    const wallboxTimeToFull = this.formatDurationHours(wallboxTimeFullNum, '--');
     const targetTempNumFromState = this.config.heatpumpSetTempStateId
       ? await this.getNumber(this.config.heatpumpSetTempStateId, NaN)
       : NaN;
@@ -1388,7 +1397,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatDesired = false;
       heatDecision = 'Umwälzpumpe nicht erreichbar';
     } else {
-      const hyst = this.applyHeatpumpHysteresis(true, `PV OK (${feedIn}W >= ${threshold}W)`, poolTemp, targetTemp, feedIn, threshold);
+      const hyst = this.applyHeatpumpHysteresis(true, `PV OK (${feedIn}W >= ${threshold}W) · Temperatur regelt WP selbst`, poolTemp, targetTemp, feedIn, threshold);
       heatDesired = hyst.desiredOn;
       heatDecision = hyst.reason;
     }
@@ -1499,7 +1508,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.15hf100'
+      adapterVersion: 'v0.3.15hf102'
     };
 
     const now = Date.now();
@@ -1643,12 +1652,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const lock = this.getHeatpumpLockState();
     const pvOnThreshold = parseNum(this.config.heatpumpPvOnThresholdW || parseNum(threshold) || 1000);
     const pvOffThreshold = parseNum(this.config.heatpumpPvOffThresholdW || 800);
-    const tempOnDelta = parseNum(this.config.heatpumpTempOnDeltaC || 0.5);
     const minSwitchSec = Math.max(120, parseNum(this.config.heatpumpMinSwitchSec || 300) || 300);
 
     const feedNum = parseNum(feedIn);
-    const poolNum = parseNum(poolTemp);
-    const targetNum = parseNum(targetTemp);
     const currentState = lock.state;
     const nowTs = Date.now();
 
@@ -1670,20 +1676,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       } else {
         nextDesired = false;
         nextReason = `PV zu gering (${feedNum}W < ${pvOnThreshold}W)`;
-      }
-    }
-
-    if (Number.isFinite(poolNum) && Number.isFinite(targetNum)) {
-      if (currentState === true) {
-        if (poolNum >= targetNum) {
-          nextDesired = false;
-          nextReason = 'Solltemperatur erreicht';
-        }
-      } else if (poolNum <= targetNum - tempOnDelta) {
-        if (nextDesired) nextReason = `Temperatur unter Soll - ${tempOnDelta.toFixed(1)}°C`;
-      } else {
-        nextDesired = false;
-        nextReason = `Temp-Hysterese (${poolNum.toFixed(1)}°C > ${(targetNum - tempOnDelta).toFixed(1)}°C)`;
       }
     }
 
