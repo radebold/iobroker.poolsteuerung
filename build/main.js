@@ -1508,7 +1508,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.16'
+      adapterVersion: 'v0.3.16hf1'
     };
 
     const now = Date.now();
@@ -1681,11 +1681,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
     if (currentState === true && nextDesired === false && lock.lastOnTs && (nowTs - lock.lastOnTs) < minSwitchSec * 1000) {
       nextDesired = true;
-      nextReason = `Mindestlaufzeit aktiv (${Math.ceil((minSwitchSec*1000 - (nowTs - lock.lastOnTs))/1000)}s Rest)`;
+      nextReason = `Mindestlaufzeit aktiv (${Math.ceil((minSwitchSec * 1000 - (nowTs - lock.lastOnTs)) / 1000)}s Rest)`;
     }
     if (currentState === false && nextDesired === true && lock.lastOffTs && (nowTs - lock.lastOffTs) < minSwitchSec * 1000) {
       nextDesired = false;
-      nextReason = `Mindestpause aktiv (${Math.ceil((minSwitchSec*1000 - (nowTs - lock.lastOffTs))/1000)}s Rest)`;
+      nextReason = `Mindestpause aktiv (${Math.ceil((minSwitchSec * 1000 - (nowTs - lock.lastOffTs)) / 1000)}s Rest)`;
     }
 
     return { desiredOn: nextDesired, reason: nextReason };
@@ -2175,7 +2175,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatReason = 'Netzeinspeisung ungültig';
     } else if (poolTemp !== null && Number.isFinite(poolTemp) && Number.isFinite(targetTemp) && poolTemp >= targetTemp) {
       shouldHeat = false;
-      heatReason = `Solltemp erreicht (${poolTemp}°C >= ${targetTemp}°C)`;
+      heatReason = `Temperaturregelung durch WP (${poolTemp}°C >= ${targetTemp}°C)`;
     } else if (feedIn < heatThreshold) {
       shouldHeat = false;
       heatReason = `PV zu gering (${feedIn}W < ${heatThreshold}W)`;
