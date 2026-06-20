@@ -1404,7 +1404,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
     if (this.isControlTransitionActive() && heatLock.state !== null) {
       heatDesired = heatLock.state;
-      heatDecision = `Schaltsperre aktiv`;
+      heatDecision = `Schaltsperre aktiv / Anti-Pendeln`;
     }
 
     if (this.config.heatpumpPowerStateId && heatDesired !== heatpumpOnRaw) {
@@ -1508,7 +1508,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.16hf1'
+      adapterVersion: 'v0.3.16hf2'
     };
 
     const now = Date.now();
@@ -1652,7 +1652,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const lock = this.getHeatpumpLockState();
     const pvOnThreshold = parseNum(this.config.heatpumpPvOnThresholdW || parseNum(threshold) || 1000);
     const pvOffThreshold = parseNum(this.config.heatpumpPvOffThresholdW || 800);
-    const minSwitchSec = Math.max(120, parseNum(this.config.heatpumpMinSwitchSec || 300) || 300);
+    const minSwitchSec = Math.max(300, parseNum(this.config.heatpumpMinSwitchSec || 600) || 600);
 
     const feedNum = parseNum(feedIn);
     const currentState = lock.state;
@@ -1668,7 +1668,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           nextReason = `PV AUS-Hysterese (${feedNum}W < ${pvOffThreshold}W)`;
         } else {
           nextDesired = true;
-          nextReason = `PV halten (${feedNum}W >= ${pvOffThreshold}W)`;
+          nextReason = `PV halten / Anti-Pendeln (${feedNum}W >= ${pvOffThreshold}W)`;
         }
       } else if (feedNum >= pvOnThreshold) {
         nextDesired = true;
@@ -2834,7 +2834,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         }
 
         if (id === `${this.namespace}.control.heatpump.resetLock` && !!state.val === true) {
-          this.beginControlTransition(1500);
+          this.beginControlTransition(10000);
           this.clearPendingRenderTimeouts('WP Reset');
           this.resetHeatpumpLocks('manueller Reset');
           await this.setStateIfChanged('control.heatpump.resetLock', false, false);
