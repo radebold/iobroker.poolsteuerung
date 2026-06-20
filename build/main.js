@@ -1253,14 +1253,17 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const wallboxRangeKmNum = await this.getNumber(this.config.wallboxRangeKmStateId, NaN);
     const wallboxPowerKwNum = await this.getNumber(this.config.wallboxPowerKwStateId, NaN);
     const wallboxChargingRawText = String(wallboxChargingStatusRaw || '').trim().toLowerCase();
-    const wallboxCharging = ['charging','laden','lädt','charge_state_charging_hv_battery'].includes(wallboxChargingRawText) || (Number.isFinite(wallboxPowerKwNum) && wallboxPowerKwNum > 0);
-    const wallboxChargingStatus = wallboxCharging ? 'LÄDT' : (wallboxChargingRawText === 'idle' ? 'BEREIT' : String(wallboxChargingStatusRaw || '--'));
-    const wallboxPlugStatus = String(wallboxPlugStatusRaw || '--').toLowerCase() === 'connected' ? 'Verbunden' : (String(wallboxPlugStatusRaw || '--').toLowerCase() === 'disconnected' ? 'Getrennt' : String(wallboxPlugStatusRaw || '--'));
+    const wallboxPlugRawText = String(wallboxPlugStatusRaw || '').trim().toLowerCase();
+    const wallboxIsConnected = ['connected', 'verbunden'].includes(wallboxPlugRawText);
+    const wallboxPowerForStatus = (wallboxIsConnected && Number.isFinite(wallboxPowerKwNum) && wallboxPowerKwNum >= 0.3) ? wallboxPowerKwNum : 0;
+    const wallboxCharging = ['charging','laden','lädt','charge_state_charging_hv_battery'].includes(wallboxChargingRawText) || wallboxPowerForStatus >= 0.3;
+    const wallboxChargingStatus = wallboxIsConnected ? (wallboxCharging ? 'LÄDT' : (wallboxChargingRawText === 'idle' ? 'BEREIT' : String(wallboxChargingStatusRaw || '--'))) : 'GETRENNT';
+    const wallboxPlugStatus = wallboxIsConnected ? 'Verbunden' : (wallboxPlugRawText === 'disconnected' ? 'Getrennt' : String(wallboxPlugStatusRaw || '--'));
     const wallboxSoc = this.fmt(wallboxSocNum, 0, '--');
     const wallboxTargetSoc = this.fmt(wallboxTargetSocNum, 0, '--');
     const wallboxRangeKm = this.fmt(wallboxRangeKmNum, 0, '--');
-    const wallboxPowerKw = this.fmt(wallboxPowerKwNum, 1, '--');
-    const wallboxTimeToFull = this.formatDurationHours(wallboxTimeFullNum, '--');
+    const wallboxPowerKw = this.fmt(wallboxPowerForStatus, 1, '--');
+    const wallboxTimeToFull = wallboxCharging ? this.formatDurationHours(wallboxTimeFullNum, '--') : '--';
     const targetTempNumFromState = this.config.heatpumpSetTempStateId
       ? await this.getNumber(this.config.heatpumpSetTempStateId, NaN)
       : NaN;
@@ -1508,7 +1511,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.16hf2'
+      adapterVersion: 'v0.3.16hf3'
     };
 
     const now = Date.now();
