@@ -1511,7 +1511,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.16hf4'
+      adapterVersion: 'v0.3.16hf5'
     };
 
     const now = Date.now();
@@ -1847,17 +1847,22 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   getCirculationWindowsForDate(now = new Date()) {
     const day = now.getDay();
-    let prefix = '';
-    if (day === 6) prefix = 'pumpSaturday';
-    else if (day === 0) prefix = 'pumpSunday';
-    else prefix = 'pumpWeekday';
 
-    const specialized = [
-      [this.config[`${prefix}Window1Start`], this.config[`${prefix}Window1End`]],
-      [this.config[`${prefix}Window2Start`], this.config[`${prefix}Window2End`]],
-    ].filter(([s, e]) => String(s || '').trim() && String(e || '').trim());
+    if (day === 6 && !!this.config.pumpSaturdayCustomEnabled) {
+      const saturday = [
+        [this.config.pumpSaturdayWindow1Start, this.config.pumpSaturdayWindow1End],
+        [this.config.pumpSaturdayWindow2Start, this.config.pumpSaturdayWindow2End],
+      ].filter(([s, e]) => String(s || '').trim() && String(e || '').trim());
+      if (saturday.length) return saturday;
+    }
 
-    if (specialized.length) return specialized;
+    if (day === 0 && !!this.config.pumpSundayCustomEnabled) {
+      const sunday = [
+        [this.config.pumpSundayWindow1Start, this.config.pumpSundayWindow1End],
+        [this.config.pumpSundayWindow2Start, this.config.pumpSundayWindow2End],
+      ].filter(([s, e]) => String(s || '').trim() && String(e || '').trim());
+      if (sunday.length) return sunday;
+    }
 
     return [
       [this.config.pumpWindow1Start, this.config.pumpWindow1End],
@@ -1871,9 +1876,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   getCirculationScheduleLabel(now = new Date()) {
     const day = now.getDay();
-    if (day === 6) return 'Samstag';
-    if (day === 0) return 'Sonntag';
-    return 'Werktag';
+    if (day === 6 && !!this.config.pumpSaturdayCustomEnabled) return 'Samstag';
+    if (day === 0 && !!this.config.pumpSundayCustomEnabled) return 'Sonntag';
+    return 'Standard';
   }
 
   isStandbyPumpActive(now = new Date()) {

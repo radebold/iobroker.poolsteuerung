@@ -304,42 +304,17 @@
           "md": 6,
           "lg": 6
         },
-        "weekdayHeader": {
+        "weekendHeader": {
           "type": "header",
-          "text": "Alternative Umwälzpumpe Werktage (Mo-Fr)"
+          "text": "Wochenende optional abweichend"
         },
-        "pumpWeekdayWindow1Start": {
-          "type": "text",
-          "label": "Werktag Fenster 1 Start (HH:MM)",
+        "pumpSaturdayCustomEnabled": {
+          "type": "checkbox",
+          "label": "Samstag eigene Zeiten verwenden",
           "newLine": true,
           "sm": 12,
-          "md": 3,
-          "lg": 3
-        },
-        "pumpWeekdayWindow1End": {
-          "type": "text",
-          "label": "Werktag Fenster 1 Ende (HH:MM)",
-          "sm": 12,
-          "md": 3,
-          "lg": 3
-        },
-        "pumpWeekdayWindow2Start": {
-          "type": "text",
-          "label": "Werktag Fenster 2 Start (HH:MM)",
-          "sm": 12,
-          "md": 3,
-          "lg": 3
-        },
-        "pumpWeekdayWindow2End": {
-          "type": "text",
-          "label": "Werktag Fenster 2 Ende (HH:MM)",
-          "sm": 12,
-          "md": 3,
-          "lg": 3
-        },
-        "saturdayHeader": {
-          "type": "header",
-          "text": "Alternative Umwälzpumpe Samstag"
+          "md": 6,
+          "lg": 6
         },
         "pumpSaturdayWindow1Start": {
           "type": "text",
@@ -347,32 +322,40 @@
           "newLine": true,
           "sm": 12,
           "md": 3,
-          "lg": 3
+          "lg": 3,
+          "hidden": "data.pumpSaturdayCustomEnabled !== true"
         },
         "pumpSaturdayWindow1End": {
           "type": "text",
           "label": "Samstag Fenster 1 Ende (HH:MM)",
           "sm": 12,
           "md": 3,
-          "lg": 3
+          "lg": 3,
+          "hidden": "data.pumpSaturdayCustomEnabled !== true"
         },
         "pumpSaturdayWindow2Start": {
           "type": "text",
           "label": "Samstag Fenster 2 Start (HH:MM)",
           "sm": 12,
           "md": 3,
-          "lg": 3
+          "lg": 3,
+          "hidden": "data.pumpSaturdayCustomEnabled !== true"
         },
         "pumpSaturdayWindow2End": {
           "type": "text",
           "label": "Samstag Fenster 2 Ende (HH:MM)",
           "sm": 12,
           "md": 3,
-          "lg": 3
+          "lg": 3,
+          "hidden": "data.pumpSaturdayCustomEnabled !== true"
         },
-        "sundayHeader": {
-          "type": "header",
-          "text": "Alternative Umwälzpumpe Sonntag"
+        "pumpSundayCustomEnabled": {
+          "type": "checkbox",
+          "label": "Sonntag eigene Zeiten verwenden",
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6
         },
         "pumpSundayWindow1Start": {
           "type": "text",
@@ -380,28 +363,32 @@
           "newLine": true,
           "sm": 12,
           "md": 3,
-          "lg": 3
+          "lg": 3,
+          "hidden": "data.pumpSundayCustomEnabled !== true"
         },
         "pumpSundayWindow1End": {
           "type": "text",
           "label": "Sonntag Fenster 1 Ende (HH:MM)",
           "sm": 12,
           "md": 3,
-          "lg": 3
+          "lg": 3,
+          "hidden": "data.pumpSundayCustomEnabled !== true"
         },
         "pumpSundayWindow2Start": {
           "type": "text",
           "label": "Sonntag Fenster 2 Start (HH:MM)",
           "sm": 12,
           "md": 3,
-          "lg": 3
+          "lg": 3,
+          "hidden": "data.pumpSundayCustomEnabled !== true"
         },
         "pumpSundayWindow2End": {
           "type": "text",
           "label": "Sonntag Fenster 2 Ende (HH:MM)",
           "sm": 12,
           "md": 3,
-          "lg": 3
+          "lg": 3,
+          "hidden": "data.pumpSundayCustomEnabled !== true"
         }
       },
       "hidden": "data.enableCirculationControl === false"
