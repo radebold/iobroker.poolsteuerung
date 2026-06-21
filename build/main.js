@@ -544,6 +544,21 @@ class Poolsteuerung extends utils.Adapter {
     return `${hh}h ${String(mm).padStart(2, '0')}m`;
   }
 
+  formatGermanDateTime(value, fallback = '--') {
+    const raw = String(value || '').trim();
+    if (!raw) return fallback;
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return raw;
+    return new Intl.DateTimeFormat('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }).format(d);
+  }
+
   statusItemHtml(name, hint, state, compact = false) {
     if (compact) {
       return `
@@ -1270,8 +1285,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const wallboxTimeToFull = wallboxCharging ? this.formatDurationHours(wallboxTimeFullNum, '--') : '--';
     const wallboxDatasetCreatedOnRaw = String(await this.getText('vw-connect.0.WVGZZZE23TE055069.statuseudata._dataset_created_on', '') || '').trim();
     const wallboxTibberLastSeenRaw = String(await this.getText('vw-connect.0.WVGZZZE23TE055069.statustibber.rawData.status.lastSeen', '') || '').trim();
-    const wallboxDatasetCreatedOn = wallboxDatasetCreatedOnRaw || '--';
-    const wallboxTibberLastSeen = wallboxTibberLastSeenRaw || '--';
+    const wallboxDatasetCreatedOn = this.formatGermanDateTime(wallboxDatasetCreatedOnRaw, '--');
+    const wallboxTibberLastSeen = this.formatGermanDateTime(wallboxTibberLastSeenRaw, '--');
     const targetTempNumFromState = this.config.heatpumpSetTempStateId
       ? await this.getNumber(this.config.heatpumpSetTempStateId, NaN)
       : NaN;
@@ -1532,7 +1547,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.16hf9'
+      adapterVersion: 'v0.3.16hf10'
     };
 
     const now = Date.now();
