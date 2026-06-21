@@ -788,8 +788,7 @@ body{
         ${mini('Reichweite', `${data.wallboxRangeKm} km`, 'info')}
       </div>
       <div style="margin-top:10px;font-size:11px;color:#64748b;line-height:1.45;">
-        ${data.wallboxDatasetCreatedOn && data.wallboxDatasetCreatedOn !== '--' ? `Stand VW: ${esc(data.wallboxDatasetCreatedOn)}<br>` : ''}
-        ${data.wallboxTibberLastSeen && data.wallboxTibberLastSeen !== '--' ? `Stand Tibber: ${esc(data.wallboxTibberLastSeen)}` : ''}
+        Stand: ${esc(data.wallboxTibberLastSeen || '--')}
       </div>
     </div>
   </div>
@@ -1299,7 +1298,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const wallboxRangeKm = this.fmt(wallboxRangeKmNum, 0, '--');
     const wallboxPowerKw = this.fmt(wallboxPowerForStatus, 1, '--');
     const wallboxTimeToFull = wallboxCharging ? this.formatDurationHours(wallboxTimeFullNum, '--') : '--';
-    const wallboxDatasetCreatedOn = await this.getFormattedDateTimeFromState('vw-connect.0.WVGZZZE23TE055069.statuseudata._dataset_created_on', '--');
+    const wallboxDatasetCreatedOn = '--';
     const wallboxTibberLastSeen = await this.getFormattedDateTimeFromState('vw-connect.0.WVGZZZE23TE055069.statustibber.rawData.status.lastSeen', '--');
     const targetTempNumFromState = this.config.heatpumpSetTempStateId
       ? await this.getNumber(this.config.heatpumpSetTempStateId, NaN)
@@ -1561,7 +1560,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.16hf11'
+      adapterVersion: 'v0.3.16hf12'
     };
 
     const now = Date.now();
