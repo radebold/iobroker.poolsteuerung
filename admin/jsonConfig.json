@@ -261,134 +261,89 @@
         },
         "headerWindows": {
           "type": "header",
-          "text": "Zeitfenster",
+          "text": "Zeitpläne",
           "newLine": true,
           "sm": 12,
           "md": 12,
           "lg": 12,
           "size": 2
         },
-        "pumpWindow1Start": {
-          "type": "text",
-          "label": "Zeitfenster 1 Start",
-          "newLine": true,
-          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv.",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "pumpWindow1End": {
-          "type": "text",
-          "label": "Zeitfenster 1 Ende",
-          "newLine": false,
-          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv.",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "pumpWindow2Start": {
-          "type": "text",
-          "label": "Zeitfenster 2 Start",
-          "newLine": true,
-          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv.",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "pumpWindow2End": {
-          "type": "text",
-          "label": "Zeitfenster 2 Ende",
-          "newLine": false,
-          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv.",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "weekendHeader": {
-          "type": "header",
-          "text": "Wochenende optional abweichend"
-        },
-        "pumpSaturdayCustomEnabled": {
-          "type": "checkbox",
-          "label": "Samstag eigene Zeiten verwenden",
+        "pumpSchedules": {
+          "type": "table",
+          "label": "Zeitpläne Umwälzpumpe",
           "newLine": true,
           "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "pumpSaturdayWindow1Start": {
-          "type": "text",
-          "label": "Samstag Fenster 1 Start (HH:MM)",
-          "newLine": true,
-          "sm": 12,
-          "md": 3,
-          "lg": 3,
-          "hidden": "data.pumpSaturdayCustomEnabled !== true"
-        },
-        "pumpSaturdayWindow1End": {
-          "type": "text",
-          "label": "Samstag Fenster 1 Ende (HH:MM)",
-          "sm": 12,
-          "md": 3,
-          "lg": 3,
-          "hidden": "data.pumpSaturdayCustomEnabled !== true"
-        },
-        "pumpSaturdayWindow2Start": {
-          "type": "text",
-          "label": "Samstag Fenster 2 Start (HH:MM)",
-          "sm": 12,
-          "md": 3,
-          "lg": 3,
-          "hidden": "data.pumpSaturdayCustomEnabled !== true"
-        },
-        "pumpSaturdayWindow2End": {
-          "type": "text",
-          "label": "Samstag Fenster 2 Ende (HH:MM)",
-          "sm": 12,
-          "md": 3,
-          "lg": 3,
-          "hidden": "data.pumpSaturdayCustomEnabled !== true"
-        },
-        "pumpSundayCustomEnabled": {
-          "type": "checkbox",
-          "label": "Sonntag eigene Zeiten verwenden",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "pumpSundayWindow1Start": {
-          "type": "text",
-          "label": "Sonntag Fenster 1 Start (HH:MM)",
-          "newLine": true,
-          "sm": 12,
-          "md": 3,
-          "lg": 3,
-          "hidden": "data.pumpSundayCustomEnabled !== true"
-        },
-        "pumpSundayWindow1End": {
-          "type": "text",
-          "label": "Sonntag Fenster 1 Ende (HH:MM)",
-          "sm": 12,
-          "md": 3,
-          "lg": 3,
-          "hidden": "data.pumpSundayCustomEnabled !== true"
-        },
-        "pumpSundayWindow2Start": {
-          "type": "text",
-          "label": "Sonntag Fenster 2 Start (HH:MM)",
-          "sm": 12,
-          "md": 3,
-          "lg": 3,
-          "hidden": "data.pumpSundayCustomEnabled !== true"
-        },
-        "pumpSundayWindow2End": {
-          "type": "text",
-          "label": "Sonntag Fenster 2 Ende (HH:MM)",
-          "sm": 12,
-          "md": 3,
-          "lg": 3,
-          "hidden": "data.pumpSundayCustomEnabled !== true"
+          "md": 12,
+          "lg": 12,
+          "help": "Beliebig viele Zeitfenster anlegen. Beispiele: 10:00-17:00 Mo-Fr oder 20:00-21:30 Sa-So.",
+          "items": [
+            {
+              "attr": "enabled",
+              "type": "checkbox",
+              "title": "Aktiv",
+              "width": "70px"
+            },
+            {
+              "attr": "start",
+              "type": "text",
+              "title": "Start",
+              "width": "110px"
+            },
+            {
+              "attr": "end",
+              "type": "text",
+              "title": "Ende",
+              "width": "110px"
+            },
+            {
+              "attr": "days",
+              "type": "select",
+              "title": "Tage",
+              "width": "140px",
+              "options": [
+                {
+                  "label": "Täglich",
+                  "value": "daily"
+                },
+                {
+                  "label": "Mo-Fr",
+                  "value": "mon_fri"
+                },
+                {
+                  "label": "Sa-So",
+                  "value": "sat_sun"
+                },
+                {
+                  "label": "Mo",
+                  "value": "mon"
+                },
+                {
+                  "label": "Di",
+                  "value": "tue"
+                },
+                {
+                  "label": "Mi",
+                  "value": "wed"
+                },
+                {
+                  "label": "Do",
+                  "value": "thu"
+                },
+                {
+                  "label": "Fr",
+                  "value": "fri"
+                },
+                {
+                  "label": "Sa",
+                  "value": "sat"
+                },
+                {
+                  "label": "So",
+                  "value": "sun"
+                }
+              ]
+            }
+          ]
         }
       },
       "hidden": "data.enableCirculationControl === false"

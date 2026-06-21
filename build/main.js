@@ -756,6 +756,10 @@ body{
         ${mini('Restzeit', data.wallboxTimeToFull, 'info')}
         ${mini('Reichweite', `${data.wallboxRangeKm} km`, 'info')}
       </div>
+      <div style="margin-top:10px;font-size:11px;color:#64748b;line-height:1.45;">
+        Stand VW: ${esc(data.wallboxDatasetCreatedOn || '--')}<br>
+        Stand Tibber: ${esc(data.wallboxTibberLastSeen || '--')}
+      </div>
     </div>
   </div>
 
@@ -1264,6 +1268,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const wallboxRangeKm = this.fmt(wallboxRangeKmNum, 0, '--');
     const wallboxPowerKw = this.fmt(wallboxPowerForStatus, 1, '--');
     const wallboxTimeToFull = wallboxCharging ? this.formatDurationHours(wallboxTimeFullNum, '--') : '--';
+    const wallboxDatasetCreatedOnRaw = String(await this.getText('vw-connect.0.WVGZZZE23TE055069.statuseudata._dataset_created_on', '') || '').trim();
+    const wallboxTibberLastSeenRaw = String(await this.getText('vw-connect.0.WVGZZZE23TE055069.statustibber.rawData.status.lastSeen', '') || '').trim();
+    const wallboxDatasetCreatedOn = wallboxDatasetCreatedOnRaw || '--';
+    const wallboxTibberLastSeen = wallboxTibberLastSeenRaw || '--';
     const targetTempNumFromState = this.config.heatpumpSetTempStateId
       ? await this.getNumber(this.config.heatpumpSetTempStateId, NaN)
       : NaN;
@@ -1388,15 +1396,23 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     }
 
     let heatDesired = heatpumpOnRaw;
+    let allowHeatpumpWrite = true;
+
     if (!heatEnabledMaster) {
+      allowHeatpumpWrite = false;
       if (!pumpOn && heatpumpOnRaw) {
         heatDesired = false;
-        heatDecision = 'Manuell blockiert: Umwälzpumpe AUS';
+        heatDecision = 'Sicherheits-AUS: Umwälzpumpe AUS';
+        allowHeatpumpWrite = true;
+      } else if (standbyMode && heatpumpOnRaw) {
+        heatDesired = false;
+        heatDecision = 'Sicherheits-AUS: Standby aktiv';
+        allowHeatpumpWrite = true;
       } else {
         heatDesired = heatpumpOnRaw;
         heatDecision = heatpumpOnRaw ? 'Manuell EIN (Auto AUS)' : 'Steuerung deaktiviert · manuell AUS';
       }
-    } else if (!circulationHeartbeatOkDisplay) {
+    } else if (!circulationHeartbeatOkDisplay && !pumpOn) {
       heatDesired = false;
       heatDecision = 'Umwälzpumpe nicht erreichbar';
     } else {
@@ -1405,12 +1421,19 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatDecision = hyst.reason;
     }
 
-    if (this.isControlTransitionActive() && heatLock.state !== null) {
+    if (heatEnabledMaster && this.isControlTransitionActive() && heatLock.state !== null) {
       heatDesired = heatLock.state;
       heatDecision = `Schaltsperre aktiv / Anti-Pendeln`;
     }
 
-    if (this.config.heatpumpPowerStateId && heatDesired !== heatpumpOnRaw) {
+    if (heatEnabledMaster && pumpOn && Number.isFinite(feedIn) && feedIn >= parseNum(this.config.heatpumpPvOffThresholdW || 800) && heatLock.state === true) {
+      heatDesired = true;
+      if (!this.isControlTransitionActive()) {
+        heatDecision = `PV halten / Anti-Pendeln (${feedIn}W >= ${parseNum(this.config.heatpumpPvOffThresholdW || 800)}W)`;
+      }
+    }
+
+    if (allowHeatpumpWrite && this.config.heatpumpPowerStateId && heatDesired !== heatpumpOnRaw) {
       try {
         await (heatDesired ? this.forceSwitchOnCompat(this.config.heatpumpPowerStateId) : this.forceSwitchOffCompat(this.config.heatpumpPowerStateId));
       } catch (e) {
@@ -1418,15 +1441,13 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       }
     }
 
-    if (heatDesired !== heatLock.state) {
+    if (allowHeatpumpWrite && heatDesired !== heatLock.state) {
       heatLock.state = heatDesired;
       if (heatDesired) heatLock.lastOnTs = Date.now();
       else heatLock.lastOffTs = Date.now();
-    } else {
-      heatLock.state = heatpumpOnRaw;
     }
 
-    const heatpumpOn = heatDesired;
+    const heatpumpOn = allowHeatpumpWrite ? heatDesired : heatpumpOnRaw;
 
     const historyTrends = await this.getHistoryTrends();
     const phTrend = historyTrends.phTrend || '→';
@@ -1511,7 +1532,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.16hf5'
+      adapterVersion: 'v0.3.16hf9'
     };
 
     const now = Date.now();
@@ -1845,24 +1866,31 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     return { start, end };
   }
 
+  matchesPumpScheduleDay(ruleDays, now = new Date()) {
+    const day = now.getDay(); // 0=So,1=Mo,...6=Sa
+    const days = String(ruleDays || '').trim().toLowerCase();
+    if (!days || days === 'daily') return true;
+    if (days === 'mon_fri') return day >= 1 && day <= 5;
+    if (days === 'sat_sun') return day === 0 || day === 6;
+    if (days === 'mon') return day === 1;
+    if (days === 'tue') return day === 2;
+    if (days === 'wed') return day === 3;
+    if (days === 'thu') return day === 4;
+    if (days === 'fri') return day === 5;
+    if (days === 'sat') return day === 6;
+    if (days === 'sun') return day === 0;
+    return false;
+  }
+
   getCirculationWindowsForDate(now = new Date()) {
-    const day = now.getDay();
+    const tableRules = Array.isArray(this.config.pumpSchedules) ? this.config.pumpSchedules : [];
+    const fromTable = tableRules
+      .filter(rule => !!rule && rule.enabled !== false)
+      .filter(rule => this.matchesPumpScheduleDay(rule.days, now))
+      .map(rule => [rule.start, rule.end])
+      .filter(([start, end]) => String(start || '').trim() && String(end || '').trim());
 
-    if (day === 6 && !!this.config.pumpSaturdayCustomEnabled) {
-      const saturday = [
-        [this.config.pumpSaturdayWindow1Start, this.config.pumpSaturdayWindow1End],
-        [this.config.pumpSaturdayWindow2Start, this.config.pumpSaturdayWindow2End],
-      ].filter(([s, e]) => String(s || '').trim() && String(e || '').trim());
-      if (saturday.length) return saturday;
-    }
-
-    if (day === 0 && !!this.config.pumpSundayCustomEnabled) {
-      const sunday = [
-        [this.config.pumpSundayWindow1Start, this.config.pumpSundayWindow1End],
-        [this.config.pumpSundayWindow2Start, this.config.pumpSundayWindow2End],
-      ].filter(([s, e]) => String(s || '').trim() && String(e || '').trim());
-      if (sunday.length) return sunday;
-    }
+    if (fromTable.length) return fromTable;
 
     return [
       [this.config.pumpWindow1Start, this.config.pumpWindow1End],
@@ -1875,9 +1903,28 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   }
 
   getCirculationScheduleLabel(now = new Date()) {
-    const day = now.getDay();
-    if (day === 6 && !!this.config.pumpSaturdayCustomEnabled) return 'Samstag';
-    if (day === 0 && !!this.config.pumpSundayCustomEnabled) return 'Sonntag';
+    const tableRules = Array.isArray(this.config.pumpSchedules) ? this.config.pumpSchedules : [];
+    const matching = tableRules
+      .filter(rule => !!rule && rule.enabled !== false)
+      .filter(rule => this.matchesPumpScheduleDay(rule.days, now));
+
+    if (matching.length) {
+      const days = String(matching[0].days || '').trim().toLowerCase();
+      const map = {
+        daily: 'Täglich',
+        mon_fri: 'Mo-Fr',
+        sat_sun: 'Sa-So',
+        mon: 'Mo',
+        tue: 'Di',
+        wed: 'Mi',
+        thu: 'Do',
+        fri: 'Fr',
+        sat: 'Sa',
+        sun: 'So',
+      };
+      return map[days] || 'Zeitplan';
+    }
+
     return 'Standard';
   }
 
@@ -2828,8 +2875,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         const standbyActiveNow = await this.getControlBool('control.standby', this.config.standbyModeEnabled === true);
 
         if (id === `${this.namespace}.control.standby`) {
-          this.beginControlTransition(3500);
+          this.beginControlTransition(10000);
           await this.resetManualBlockers('Standby gewechselt');
+          this.clearPendingRenderTimeouts('Standby gewechselt');
+          this.resetHeatpumpLocks('Standby gewechselt');
           if (!!state.val === true) {
             await this.setStateIfChanged('control.auto.circulation', false, false);
             await this.setStateIfChanged('control.auto.chlor', false, false);
@@ -2837,8 +2886,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
             await this.setStateIfChanged('control.auto.heatpump', false, false);
             await this.forceDependentDevicesOff('Standby aktiv');
             try {
-              if (await this.getBool(this.config.circulationPumpSocketStateId) && !this.isStandbyPumpActive(new Date())) {
-                await this.setSwitchStateCompat(this.config.circulationPumpSocketStateId, false);
+              if (this.config.circulationPumpSocketStateId) {
+                await this.forceSwitchOffCompat(this.config.circulationPumpSocketStateId);
                 await this.setStateIfChanged('control.device.circulation', false, true);
               }
             } catch {}

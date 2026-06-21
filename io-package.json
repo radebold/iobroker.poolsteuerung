@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.3.16-hotfix5",
+    "version": "0.3.16-hotfix9",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -83,6 +83,7 @@
     "pumpSundayWindow2Start": "",
     "pumpSundayWindow2End": "",
     "pumpSaturdayCustomEnabled": false,
-    "pumpSundayCustomEnabled": false
+    "pumpSundayCustomEnabled": false,
+    "pumpSchedules": []
   }
 }
