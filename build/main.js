@@ -559,6 +559,22 @@ class Poolsteuerung extends utils.Adapter {
     }).format(d);
   }
 
+  async getFormattedDateTimeFromState(id, fallback = '--') {
+    if (!id) return fallback;
+    try {
+      const s = await this.getForeignStateAsync(id);
+      if (!s) return fallback;
+      if (s.val !== undefined && s.val !== null && String(s.val).trim() !== '') {
+        return this.formatGermanDateTime(String(s.val), fallback);
+      }
+      const ts = Number(s.ts || s.lc || 0);
+      if (!ts) return fallback;
+      return this.formatGermanDateTime(new Date(ts).toISOString(), fallback);
+    } catch {
+      return fallback;
+    }
+  }
+
   statusItemHtml(name, hint, state, compact = false) {
     if (compact) {
       return `
@@ -772,8 +788,8 @@ body{
         ${mini('Reichweite', `${data.wallboxRangeKm} km`, 'info')}
       </div>
       <div style="margin-top:10px;font-size:11px;color:#64748b;line-height:1.45;">
-        Stand VW: ${esc(data.wallboxDatasetCreatedOn || '--')}<br>
-        Stand Tibber: ${esc(data.wallboxTibberLastSeen || '--')}
+        ${data.wallboxDatasetCreatedOn && data.wallboxDatasetCreatedOn !== '--' ? `Stand VW: ${esc(data.wallboxDatasetCreatedOn)}<br>` : ''}
+        ${data.wallboxTibberLastSeen && data.wallboxTibberLastSeen !== '--' ? `Stand Tibber: ${esc(data.wallboxTibberLastSeen)}` : ''}
       </div>
     </div>
   </div>
@@ -1283,10 +1299,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const wallboxRangeKm = this.fmt(wallboxRangeKmNum, 0, '--');
     const wallboxPowerKw = this.fmt(wallboxPowerForStatus, 1, '--');
     const wallboxTimeToFull = wallboxCharging ? this.formatDurationHours(wallboxTimeFullNum, '--') : '--';
-    const wallboxDatasetCreatedOnRaw = String(await this.getText('vw-connect.0.WVGZZZE23TE055069.statuseudata._dataset_created_on', '') || '').trim();
-    const wallboxTibberLastSeenRaw = String(await this.getText('vw-connect.0.WVGZZZE23TE055069.statustibber.rawData.status.lastSeen', '') || '').trim();
-    const wallboxDatasetCreatedOn = this.formatGermanDateTime(wallboxDatasetCreatedOnRaw, '--');
-    const wallboxTibberLastSeen = this.formatGermanDateTime(wallboxTibberLastSeenRaw, '--');
+    const wallboxDatasetCreatedOn = await this.getFormattedDateTimeFromState('vw-connect.0.WVGZZZE23TE055069.statuseudata._dataset_created_on', '--');
+    const wallboxTibberLastSeen = await this.getFormattedDateTimeFromState('vw-connect.0.WVGZZZE23TE055069.statustibber.rawData.status.lastSeen', '--');
     const targetTempNumFromState = this.config.heatpumpSetTempStateId
       ? await this.getNumber(this.config.heatpumpSetTempStateId, NaN)
       : NaN;
@@ -1547,7 +1561,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.16hf10'
+      adapterVersion: 'v0.3.16hf11'
     };
 
     const now = Date.now();
