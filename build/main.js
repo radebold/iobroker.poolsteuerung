@@ -1591,7 +1591,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.16hf17'
+      adapterVersion: 'v0.3.16hf18'
     };
 
     const now = Date.now();
@@ -2160,9 +2160,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const pumpState = await this.getStateSnapshot(pumpId);
     const pumpCurrent = !!(pumpState && pumpState.val);
     this.updateCirculationPumpRuntime(pumpCurrent, pumpState && (pumpState.lc || pumpState.ts));
-
-    await this.ensureState('status.debug.lastPumpScheduleActive', 'boolean', 'indicator', false, false);
-    await this.ensureState('status.debug.lastPumpLoggedDecision', 'string', 'text', '', false);
     const lastScheduleActive = this.lastPumpScheduleActiveMemory === null ? pumpTarget : this.lastPumpScheduleActiveMemory;
     const scheduleEdge = pumpTarget !== lastScheduleActive;
     const nowMs = now.getTime();
@@ -2221,19 +2218,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
     this.lastPumpScheduleActiveMemory = pumpTarget;
     await this.setStateAsync('status.debug.lastPumpScheduleActive', pumpTarget, true);
-    await this.ensureState('status.mode.active', 'string', 'text', 'normal', false);
     await this.setStateAsync('status.mode.active', standbyMode ? 'standby' : 'normal', true);
-    await this.ensureState('status.auto.circulation', 'string', 'text', '', false);
-    await this.ensureState('status.auto.chlor', 'string', 'text', '', false);
-    await this.ensureState('status.auto.ph', 'string', 'text', '', false);
-    await this.ensureState('status.auto.heatpump', 'string', 'text', '', false);
     await this.setStateAsync('status.auto.circulation', standbyMode ? 'STANDBY' : (circulationEnabled ? 'AKTIV' : 'AUS'), true);
     await this.setStateAsync('status.auto.chlor', standbyMode ? 'STANDBY' : (chlorEnabledMaster ? 'AKTIV' : 'AUS'), true);
     await this.setStateAsync('status.auto.ph', standbyMode ? 'STANDBY' : (phEnabledMaster ? 'AKTIV' : 'AUS'), true);
     await this.setStateAsync('status.auto.heatpump', standbyMode ? 'STANDBY' : (heatEnabledMaster ? 'AKTIV' : 'AUS'), true);
-    await this.ensureState('status.standby.nextRun', 'string', 'text', '', false);
-    await this.ensureState('status.standby.lastRun', 'number', 'value.time', 0, false);
-    await this.ensureState('status.standby.lastDurationSec', 'number', 'value.interval', 0, false);
     if (standbyMode) {
       const standbyNext = this.getNextStandbyRun(now);
       await this.setStateAsync('status.standby.nextRun', standbyNext ? standbyNext.toLocaleString('de-DE') : 'ungültige Uhrzeit', true);
@@ -2290,8 +2279,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         this.log.warn('Chlorinator konnte nicht gesetzt werden: ' + (e.message || e));
       }
     }
-
-    await this.ensureState('status.debug.lastChlorDecision', 'string', 'text', '', false);
     await this.setStateAsync('status.debug.lastChlorDecision', chlorDecision, true);
 
     const heatpumpId = this.config.heatpumpPowerStateId;
@@ -2337,8 +2324,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         this.log.warn('Wärmepumpe konnte nicht gesetzt werden: ' + (e.message || e));
       }
     }
-
-    await this.ensureState('status.heatpump.lastReason', 'string', 'text', '', false);
     await this.setStateAsync('status.heatpump.lastReason', heatReason, true);
 
     if (standbyMode) {
@@ -2432,9 +2417,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         phDecision = 'Dosierung fehlgeschlagen';
       }
     }
-
-    await this.ensureState('status.debug.lastPumpDecision', 'string', 'text', '', false);
-    await this.ensureState('status.debug.lastPhDecision', 'string', 'text', '', false);
     await this.setStateAsync('status.debug.lastPumpDecision', pumpDecision, true);
     const lastPumpLoggedDecisionState = await this.getStateAsync('status.debug.lastPumpLoggedDecision');
     const lastPumpLoggedDecision = lastPumpLoggedDecisionState && lastPumpLoggedDecisionState.val ? String(lastPumpLoggedDecisionState.val) : '';
