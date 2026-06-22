@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.3.16-hotfix15",
+    "version": "0.3.16-hotfix16",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
