@@ -767,6 +767,9 @@ body{
 .mini.highlight{background:linear-gradient(180deg,rgba(255,190,76,.11),rgba(255,255,255,.04))}
 .mini-label{font-size:12px;color:#c8d7eb;font-weight:800;margin-bottom:6px}
 .mini-value{font-size:13px;font-weight:900;line-height:1.1}
+.manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:10px 12px;border-radius:14px;min-height:52px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}
+.manual-btn span{font-size:20px}
+.manual-btn small{font-size:12px;color:#dbeafe}
 @media (max-width:1100px){
   .layout{display:block}
   .col-left,.col-mid,.col-right{width:auto}
@@ -814,6 +817,13 @@ body{
   </div>
 
   <div class="col-mid">
+    <div class="card">
+      <div class="section energy">Schnellzugriff</div>
+      <div class="mini-list">
+        ${mini('Poolsolltemperatur', `${data.targetTemp} °C`, 'info')}
+        <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.phManualDoseSec || 30) || 30}" style="min-height:64px;"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
+      </div>
+    </div>
     <div class="card">
       <div class="section energy">Energie & Steuerung</div>
       <div class="stack">
@@ -894,7 +904,7 @@ body{
 :root{--bg:#08111f;--bg2:#10203a;--line:rgba(15,23,42,.08);--text:#0f172a;--muted:#66758a}
 *{box-sizing:border-box}
 body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,var(--bg2),var(--bg));font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:var(--text)}
-.wrap{width:100%;max-width:510px;height:1090px;max-height:1090px;overflow:hidden;margin:0 auto;padding:4px;display:grid;gap:4px}
+.wrap{width:100%;max-width:510px;min-height:100vh;overflow:visible;margin:0 auto;padding:4px 4px 90px;display:grid;gap:4px}
 .card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid var(--line);border-radius:15px;padding:6px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
 .hero{background:radial-gradient(circle at top right, rgba(85,200,255,.24), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
 .header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}
@@ -903,7 +913,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .temp-row{display:flex;align-items:flex-end;gap:5px;margin:4px 0 4px}.temp{font-size:42px;font-weight:900;line-height:.9}.unit{font-size:16px;padding-bottom:4px;color:#d5e5f6}
 .scale{margin:2px 0 5px}.track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.target-mark{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#ffffff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.target-label{position:relative;height:12px;font-size:9px;color:#d2dded}.target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}.scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}
 .metrics,.quick-grid,.auto-grid,.status-grid,.control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
-.ph-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.ph-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 .metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.metric-label{font-size:10px;color:#d9e5f5}.metric-value{font-size:13px;font-weight:900;color:#fff}
 .section-title{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px}
 .quick-card{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.quick-label{font-size:9px;color:#64748b;font-weight:700;margin-bottom:3px}.quick-value-row{display:flex;align-items:center;gap:8px}.quick-value{font-size:12px;font-weight:900;color:#0f172a;line-height:1.08}.quick-trend{font-size:18px;font-weight:900;line-height:1}.quick-trend.up{color:#ffb36b}.quick-trend.down{color:#52b7ff}.quick-trend.flat{color:#8fa3bc}.mini-bar{margin-top:6px;height:8px;border-radius:999px;background:linear-gradient(90deg,#ff6b6b 0%,#f59e0b 35%,#84cc16 65%,#22c55e 100%);position:relative;overflow:hidden}.mini-fill{height:100%;border-radius:999px}.battery-fill{background:linear-gradient(90deg,rgba(255,255,255,.28),rgba(255,255,255,.12));box-shadow:inset 0 0 0 999px rgba(255,255,255,.10)}
@@ -1581,7 +1591,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.16hf16'
+      adapterVersion: 'v0.3.16hf17'
     };
 
     const now = Date.now();
