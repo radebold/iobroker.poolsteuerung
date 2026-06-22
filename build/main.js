@@ -9,6 +9,26 @@ function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function inWindow(now, startHHMM, endHHMM) {
+  const parseHHMM = (v) => {
+    const m = String(v || '').match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    const h = Number(m[1]);
+    const min = Number(m[2]);
+    if (h < 0 || h > 23 || min < 0 || min > 59) return null;
+    return h * 60 + min;
+  };
+  const start = parseHHMM(startHHMM);
+  const end = parseHHMM(endHHMM);
+  if (start === null || end === null) return false;
+  if (start === 0 && end === 0) return false;
+  const cur = now.getHours() * 60 + now.getMinutes();
+  if (start === end) return false;
+  if (start < end) return cur >= start && cur < end;
+  return cur >= start || cur < end;
+}
+
+
 class Poolsteuerung extends utils.Adapter {
 
   lastTabletHtml = '';
@@ -290,255 +310,217 @@ class Poolsteuerung extends utils.Adapter {
       if (!refTs) {
         return { ok: false, severity: 'warn', text: `${label}: Heartbeat ohne Zeitstempel`, ageMin: null, stateId };
       }
-      const ageMin = Number(((Date.now() - refTs) / 60000).toFixed(1));
-      if (ageMin <= maxAge) {
-        return { ok: true, severity: 'ok', text: `${label}: Heartbeat OK (${ageMin} min)`, ageMin, stateId };
+      const ageMin = Math.floor((Date.now() - refTs) / 60000);
+      if (ageMin > maxAge) {
+        return {
+          ok: false,
+          severity: 'warn',
+          text: `${label}: WARNUNG | letzte Meldung vor ${ageMin} min`,
+          ageMin,
+          stateId
+        };
       }
-      const severity = ageMin > maxAge * 2 ? 'error' : 'warn';
-      return { ok: false, severity, text: `${label}: WARNUNG | letzte Meldung vor ${ageMin} min`, ageMin, stateId };
+      return {
+        ok: true,
+        severity: 'ok',
+        text: `${label}: OK | letzte Meldung vor ${ageMin} min`,
+        ageMin,
+        stateId
+      };
     } catch (e) {
-      return { ok: false, severity: 'error', text: `${label}: Heartbeat-Prüfung fehlgeschlagen`, ageMin: null, stateId, error: String(e && (e.message || e)) };
+      return { ok: false, severity: 'error', text: `${label}: Prüffehler | ${e.message || e}`, ageMin: null, stateId };
     }
   }
 
   async runHeartbeatChecks() {
     const checks = [
-      { key: 'circulation', label: 'Umwälzpumpe', id: this.config.circulationPumpHeartbeatStateId, maxAge: this.config.circulationPumpHeartbeatMaxAgeMin },
-      { key: 'chlorinator', label: 'Chlorinator', id: this.config.chlorinatorHeartbeatStateId, maxAge: this.config.chlorinatorHeartbeatMaxAgeMin },
-      { key: 'phPump', label: 'pH-Dosierpumpe', id: this.config.phPumpHeartbeatStateId, maxAge: this.config.phPumpHeartbeatMaxAgeMin },
-      { key: 'heatpump', label: 'Wärmepumpe', id: this.config.heatpumpHeartbeatStateId, maxAge: this.config.heatpumpHeartbeatMaxAgeMin },
+      ['Umwälzpumpe', this.config.circulationPumpHeartbeatStateId, this.config.circulationPumpHeartbeatMaxAgeMin, 'status.checks.circulationPump'],
+      ['Chlorinator', this.config.chlorinatorHeartbeatStateId, this.config.chlorinatorHeartbeatMaxAgeMin, 'status.checks.chlorinator'],
+      ['pH-Dosierpumpe', this.config.phPumpHeartbeatStateId, this.config.phPumpHeartbeatMaxAgeMin, 'status.checks.phPump'],
+      ['WP', this.config.heatpumpHeartbeatStateId, this.config.heatpumpHeartbeatMaxAgeMin, 'status.checks.heatpump']
     ];
 
-    const messages = [];
-    const summary = {};
-    const severityRank = { ok: 0, warn: 1, error: 2 };
-    let overall = 'ok';
+    for (const [label, stateId, maxAgeMin, targetId] of checks) {
+      await this.ensureState(targetId, 'string', 'text', '', false);
+      const prevState = await this.getStateAsync(targetId);
+      const prevText = String((prevState && prevState.val) || '').trim();
+      const result = await this.evaluateHeartbeat(label, stateId, maxAgeMin);
+      await this.setStateIfChanged(targetId, result.text, true);
 
-    for (const c of checks) {
-      const result = await this.evaluateHeartbeat(c.label, c.id, c.maxAge);
-      summary[c.key] = result;
-      if (severityRank[result.severity] > severityRank[overall]) overall = result.severity;
-      if (!result.ok) {
-        messages.push(`[CHECK] ${result.text}`);
-      }
-    }
-
-    await this.ensureState('status.heartbeat.summary', 'string', 'text', 'ok', false);
-    await this.ensureState('status.heartbeat.detailsJson', 'string', 'json', '{}', false);
-    await this.setStateAsync('status.heartbeat.summary', overall, true);
-    await this.setStateAsync('status.heartbeat.detailsJson', JSON.stringify(summary), true);
-
-    for (const msg of messages) {
-      this.log.warn(msg);
-      await this.sendAlert('heartbeat', msg);
-    }
-  }
-
-  async sendAlert(type, message) {
-    if (!this.config.enableAlerts) return;
-    const lockKey = `${type}:${message}`;
-    const repeatLockMin = Math.max(1, Number(this.config.alertRepeatLockMin) || 30);
-    const now = Date.now();
-    if (this.alertLockMemory[lockKey] && now - this.alertLockMemory[lockKey] < repeatLockMin * 60000) return;
-    this.alertLockMemory[lockKey] = now;
-
-    this.log.info(`[ALERT] ${message}`);
-
-    if (this.config.alertWhatsappEnabled && this.config.alertWhatsappInstance && this.config.alertWhatsappTo) {
-      try {
-        await this.sendToAsync(this.config.alertWhatsappInstance, 'send', {
-          to: this.config.alertWhatsappTo,
-          message,
-        });
-      } catch (e) {
-        this.log.warn('WhatsApp Alert fehlgeschlagen: ' + (e.message || e));
-      }
-    }
-
-    if (this.config.alertTelegramEnabled && this.config.alertTelegramInstance && this.config.alertTelegramTo) {
-      try {
-        await this.sendToAsync(this.config.alertTelegramInstance, {
-          user: this.config.alertTelegramTo,
-          text: message,
-        });
-      } catch (e) {
-        this.log.warn('Telegram Alert fehlgeschlagen: ' + (e.message || e));
-      }
-    }
-
-    if (this.config.alertEmailEnabled && this.config.alertEmailInstance && this.config.alertEmailTo) {
-      try {
-        await this.sendToAsync(this.config.alertEmailInstance, 'send', {
-          to: this.config.alertEmailTo,
-          subject: 'Poolsteuerung Alert',
-          text: message,
-        });
-      } catch (e) {
-        this.log.warn('E-Mail Alert fehlgeschlagen: ' + (e.message || e));
+      const changed = prevText !== result.text;
+      if (stateId && (Number(maxAgeMin) || 0) > 0 && changed) {
+        if (result.severity === 'error' || result.severity === 'warn') {
+          this.log.warn(`[CHECK] ${result.text}`);
+        } else if (this.config.debugMode) {
+          this.log.info(`[CHECK] ${result.text}`);
+        }
       }
     }
   }
 
-  parseHHMM(v) {
-    const m = String(v || '').match(/^(\d{1,2}):(\d{2})$/);
-    if (!m) return null;
-    const h = Number(m[1]); const min = Number(m[2]);
-    if (h < 0 || h > 23 || min < 0 || min > 59) return null;
-    return h * 60 + min;
+  async getHeartbeatOk(targetId) {
+    if (!targetId) return true;
+    try {
+      const s = await this.getStateAsync(targetId);
+      const text = String((s && s.val) || '').trim();
+      if (!text) return true;
+      if (text.includes('keine Heartbeat-Prüfung')) return true;
+      return text.includes(': OK |');
+    } catch {
+      return true;
+    }
   }
 
-  getStandbyDurationSec() {
-    return Math.max(1, parseNum(this.config.standbyPumpDurationSec || 30));
-  }
-
-  getStandbyRunWindow(now = new Date()) {
-    const mins = this.parseHHMM(this.config.standbyRunTime || '12:00');
-    if (mins === null) return null;
-    const start = new Date(now);
-    start.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
-    const end = new Date(start.getTime() + this.getStandbyDurationSec() * 1000);
-    return { start, end };
-  }
-
-  matchesPumpScheduleDay(ruleDays, now = new Date()) {
-    const day = now.getDay(); // 0=So,1=Mo,...6=Sa
-    const days = String(ruleDays || '').trim().toLowerCase();
-    if (!days || days === 'daily') return true;
-    if (days === 'mon_fri') return day >= 1 && day <= 5;
-    if (days === 'sat_sun') return day === 0 || day === 6;
-    if (days === 'mon') return day === 1;
-    if (days === 'tue') return day === 2;
-    if (days === 'wed') return day === 3;
-    if (days === 'thu') return day === 4;
-    if (days === 'fri') return day === 5;
-    if (days === 'sat') return day === 6;
-    if (days === 'sun') return day === 0;
-    return false;
-  }
-
-  getCirculationWindowsForDate(now = new Date()) {
-    const tableRules = Array.isArray(this.config.pumpSchedules) ? this.config.pumpSchedules : [];
-    const fromTable = tableRules
-      .filter(rule => !!rule && rule.enabled !== false)
-      .filter(rule => this.matchesPumpScheduleDay(rule.days, now))
-      .map(rule => [rule.start, rule.end])
-      .filter(([start, end]) => String(start || '').trim() && String(end || '').trim());
-
-    if (fromTable.length) return fromTable;
-
-    return [
-      [this.config.pumpWindow1Start, this.config.pumpWindow1End],
-      [this.config.pumpWindow2Start, this.config.pumpWindow2End],
-    ];
-  }
-
-  isWithinCirculationSchedule(now = new Date()) {
-    return this.getCirculationWindowsForDate(now).some(([start, end]) => inWindow(now, start, end));
-  }
-
-  getCirculationScheduleLabel(now = new Date()) {
-    const tableRules = Array.isArray(this.config.pumpSchedules) ? this.config.pumpSchedules : [];
-    const matching = tableRules
-      .filter(rule => !!rule && rule.enabled !== false)
-      .filter(rule => this.matchesPumpScheduleDay(rule.days, now));
-
-    if (matching.length) {
-      const days = String(matching[0].days || '').trim().toLowerCase();
-      const map = {
-        daily: 'Täglich',
-        mon_fri: 'Mo-Fr',
-        sat_sun: 'Sa-So',
-        mon: 'Mo',
-        tue: 'Di',
-        wed: 'Mi',
-        thu: 'Do',
-        fri: 'Fr',
-        sat: 'Sa',
-        sun: 'So',
+  getTasmotaZigbeeWriteTarget(id) {
+    const s = String(id || '');
+    const m = s.match(/^(.*)\.ZbReceived_(0x[0-9A-Fa-f]+)_Power$/);
+    if (m) {
+      return {
+        cmdId: `${m[1]}.ZbSend`,
+        device: m[2]
       };
-      return map[days] || 'Zeitplan';
     }
-
-    return 'Standard';
+    return null;
   }
 
-  isStandbyPumpActive(now = new Date()) {
-    const w = this.getStandbyRunWindow(now);
-    if (!w) return false;
-    return now >= w.start && now < w.end;
+  isSingleWriteDevice(id) {
+    const s = String(id || '');
+    return s.startsWith('tuya.') || s === String(this.config.heatpumpPowerStateId || '');
   }
 
-  getNextStandbyRun(now = new Date()) {
-    const mins = this.parseHHMM(this.config.standbyRunTime || '12:00');
-    if (mins === null) return null;
-    const next = new Date(now);
-    next.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
-    if (next <= now) next.setDate(next.getDate() + 1);
-    return next;
-  }
-
-  async applyDependencyRules() {
-    const rules = Array.isArray(this.config.dependencyRules) ? this.config.dependencyRules : [];
-    for (const rule of rules) {
-      if (!rule || rule.enabled === false || !rule.compareStateId || !rule.targetStateId) continue;
+  async waitForBoolState(id, expected, waits = [500, 1000, 1500, 2500]) {
+    for (const waitMs of waits) {
       try {
-        const cmp = await this.getStateSnapshot(rule.compareStateId);
-        const cmpVal = cmp ? cmp.val : undefined;
-        let matched = false;
-        const op = String(rule.operator || 'eq');
-        const compareValue = rule.compareValue;
-        if (op === 'istrue') matched = this.boolish(cmpVal) === true;
-        else if (op === 'isfalse') matched = this.boolish(cmpVal) === false;
-        else if (op === 'eq') matched = String(cmpVal) == String(compareValue);
-        else if (op === 'neq') matched = String(cmpVal) != String(compareValue);
-        else {
-          const a = Number(String(cmpVal).replace(',', '.'));
-          const b = Number(String(compareValue).replace(',', '.'));
-          if (Number.isFinite(a) && Number.isFinite(b)) {
-            if (op === 'gt') matched = a > b;
-            if (op === 'gte') matched = a >= b;
-            if (op === 'lt') matched = a < b;
-            if (op === 'lte') matched = a <= b;
-          }
-        }
-        const raw = matched ? rule.thenValue : rule.elseValue;
-        const targetObj = await this.getForeignObjectAsync(rule.targetStateId);
-        const converted = this.convertValueForTarget(raw, targetObj && targetObj.common ? targetObj.common.type : 'mixed');
-        await this.setForeignStateAsync(rule.targetStateId, converted, false);
-        if (rule.logEnabled) {
-          this.log.info(`[RULE] ${rule.name || rule.targetStateId}: ${rule.compareStateId} ${rule.operator} ${compareValue} => ${matched ? 'THEN' : 'ELSE'} | ${rule.targetStateId}=${converted}`);
-        }
-      } catch (e) {
-        this.log.warn(`[RULE] Fehler bei ${rule.name || rule.targetStateId}: ${e.message || e}`);
-      }
+        await new Promise(resolve => setTimeout(resolve, waitMs));
+        const current = await this.getBool(id);
+        if (current === expected) return true;
+      } catch {}
     }
-  }
-
-  boolish(v) {
-    if (typeof v === 'boolean') return v;
-    if (typeof v === 'number') return v !== 0;
-    const s = String(v ?? '').trim().toLowerCase();
-    if (['true', '1', 'on', 'ein', 'yes', 'ja'].includes(s)) return true;
-    if (['false', '0', 'off', 'aus', 'no', 'nein'].includes(s)) return false;
     return false;
   }
 
-  convertValueForTarget(raw, type) {
-    if (type === 'boolean') return this.boolish(raw);
-    if (type === 'number') {
-      const n = Number(String(raw).replace(',', '.'));
-      return Number.isFinite(n) ? n : 0;
-    }
-    return raw;
+  resetHeatpumpLocks(reason = '') {
+    const suffix = reason ? ` (${reason})` : '';
+    this.heatpumpLock = { state: null, lastOnTs: 0, lastOffTs: 0 };
+    this.debug('Heatpump-Locks zurückgesetzt' + suffix);
   }
 
-  inPhCheckWindow(now = new Date()) {
-    const times = String(this.config.phCheckTimes || '').split(',').map(s => s.trim()).filter(Boolean);
-    const curMin = now.getHours() * 60 + now.getMinutes();
-    return times.some(t => {
-      const mins = this.parseHHMM(t);
-      return mins !== null && curMin >= mins && curMin < mins + 1;
-    });
+  clearPendingRenderTimeouts(reason = '') {
+    const suffix = reason ? ` (${reason})` : '';
+    for (const h of Array.from(this.pendingTimeouts)) {
+      try { clearTimeout(h); } catch {}
+      this.pendingTimeouts.delete(h);
+    }
+    this.renderQueued = false;
+    this.debug('Pending-Timeouts gelöscht' + suffix);
+  }
+
+  async setSwitchStateCompat(id, on) {
+    if (!id) return;
+
+    const zbTarget = this.getTasmotaZigbeeWriteTarget(id);
+    if (zbTarget) {
+      const payload = JSON.stringify({
+        Device: zbTarget.device,
+        Send: { Power: on ? 1 : 0 }
+      });
+      await this.setForeignStateAsync(zbTarget.cmdId, payload, false);
+      return;
+    }
+
+    let mode = '';
+    if (id === this.config.circulationPumpSocketStateId) mode = this.config.circulationPumpWriteMode || '';
+    if (id === this.config.chlorinatorSocketStateId) mode = this.config.chlorinatorWriteMode || '';
+    if (id === this.config.phPumpSocketStateId) mode = this.config.phPumpWriteMode || '';
+    if (id === this.config.heatpumpPowerStateId) mode = this.config.heatpumpWriteMode || '';
+    if (id === this.config.heatpumpPowerStateId) mode = this.config.heatpumpWriteMode || '';
+
+    const obj = await this.getForeignObjectAsync(id);
+    const common = obj && obj.common ? obj.common : {};
+    let value;
+
+    if (mode === 'num01') {
+      value = on ? 1 : 0;
+    } else if (mode === 'bool') {
+      value = !!on;
+    } else if (common.type === 'number') {
+      value = on ? 1 : 0;
+    } else if (common.type === 'string') {
+      const states = common.states || {};
+      const entries = Object.entries(states).map(([k, v]) => [String(k), String(v).toLowerCase()]);
+      const onEntry = entries.find(([k, v]) => k === '1' || v === 'on' || v === 'ein' || v === 'true');
+      const offEntry = entries.find(([k, v]) => k === '0' || v === 'off' || v === 'aus' || v === 'false');
+      value = on ? (onEntry ? onEntry[0] : '1') : (offEntry ? offEntry[0] : '0');
+    } else {
+      value = !!on;
+    }
+
+    await this.setForeignStateAsync(id, value, false);
+  }
+
+
+  async forceSwitchOnCompat(id) {
+    if (!id) return false;
+    const zbTarget = this.getTasmotaZigbeeWriteTarget(id);
+    if (zbTarget) {
+      try { await this.setSwitchStateCompat(id, true); } catch {}
+      await this.waitForBoolState(id, true, [400, 700, 1000, 1500]);
+      return true;
+    }
+
+    if (this.isSingleWriteDevice(id)) {
+      try { await this.setSwitchStateCompat(id, true); } catch {}
+      await this.waitForBoolState(id, true, [500, 1000, 1500, 2500, 3500]);
+      return true;
+    }
+
+    const attempts = [
+      async () => this.setSwitchStateCompat(id, true),
+      async () => this.setForeignStateAsync(id, true, false),
+      async () => this.setForeignStateAsync(id, 1, false),
+      async () => this.setForeignStateAsync(id, '1', false),
+    ];
+    for (const attempt of attempts) {
+      try { await attempt(); } catch {}
+      try {
+        await new Promise(resolve => setTimeout(resolve, 350));
+        const current = await this.getBool(id);
+        if (current) return true;
+      } catch {}
+    }
+    return false;
+  }
+
+  async forceSwitchOffCompat(id) {
+    if (!id) return false;
+    const zbTarget = this.getTasmotaZigbeeWriteTarget(id);
+    if (zbTarget) {
+      try { await this.setSwitchStateCompat(id, false); } catch {}
+      await this.waitForBoolState(id, false, [400, 700, 1000, 1500]);
+      return true;
+    }
+
+    if (this.isSingleWriteDevice(id)) {
+      try { await this.setSwitchStateCompat(id, false); } catch {}
+      await this.waitForBoolState(id, false, [500, 1000, 1500, 2500, 3500]);
+      return true;
+    }
+
+    const attempts = [
+      async () => this.setSwitchStateCompat(id, false),
+      async () => this.setForeignStateAsync(id, false, false),
+      async () => this.setForeignStateAsync(id, 0, false),
+      async () => this.setForeignStateAsync(id, '0', false),
+    ];
+    for (const attempt of attempts) {
+      try { await attempt(); } catch {}
+      try {
+        await new Promise(resolve => setTimeout(resolve, 350));
+        const current = await this.getBool(id);
+        if (!current) return true;
+      } catch {}
+    }
+    return false;
   }
 
   async getText(id, fallback = '--') {
@@ -615,42 +597,208 @@ class Poolsteuerung extends utils.Adapter {
 
   statusItemHtml(name, hint, state, compact = false) {
     if (compact) {
-      return `<div class="status-item compact ${state ? 'on' : 'off'}"><div class="status-line"><span class="name">${esc(name)}</span><span class="state">${state ? 'EIN' : 'AUS'}</span></div>${hint ? `<div class="hint">${esc(hint)}</div>` : ''}</div>`;
+      return `
+        <div class="statusItem">
+          <div>${esc(name)}</div>
+          <div class="pill ${state ? 'on' : 'off'}">${state ? 'EIN' : 'AUS'}</div>
+        </div>
+      `;
     }
-    return `<div class="status-item ${state ? 'on' : 'off'}"><div class="name">${esc(name)}</div>${hint ? `<div class="hint">${esc(hint)}</div>` : ''}<div class="state">${state ? 'EIN' : 'AUS'}</div></div>`;
+    return `
+      <div class="statusItem">
+        <div>
+          <div class="statusName">${esc(name)}</div>
+          <div class="statusHint">${esc(hint)}</div>
+        </div>
+        <div class="pill ${state ? 'on' : 'off'}">${state ? 'EIN' : 'AUS'}</div>
+      </div>
+    `;
   }
 
   buildTabletHtml(data) {
-    const hero = this.buildHeroCard(data);
-    const quick = (label, value, cls = '') => `<div class="quick-card ${cls}"><div class="quick-label">${esc(label)}</div><div class="quick-value">${esc(value)}</div></div>`;
-    const autoBtn = (label, key, active) => `<button class="action-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
-    const deviceBtn = (label, key, active) => `<button class="action-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'EIN' : 'AUS'}</span></button>`;
-    return `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>
-:root{--bg:#0b1320;--card:#0f1b2d;--card2:#13243c;--text:#fff;--muted:#cbd5e1;--accent:#57b9ff;--ok:#5dd46f;--warn:#ffb067;--bad:#ff7e73;--shadow:0 10px 26px rgba(0,0,0,.35)}
-*{box-sizing:border-box}html,body{margin:0;padding:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),#0a1323;color:var(--text);font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
-.wrap{max-width:1180px;margin:0 auto;padding:8px;display:grid;grid-template-columns:280px 340px 1fr 150px;gap:8px}
-.card{background:linear-gradient(180deg,#10203a 0%, #0a1323 100%);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:10px;box-shadow:var(--shadow)}
-.hero{grid-column:1/span 1;display:grid;gap:8px}
-.mid{grid-column:2/span 1;display:grid;gap:8px}
-.right{grid-column:3/span 1;display:grid;gap:8px}
-.side{grid-column:4/span 1;display:grid;gap:8px}
-.titleRow{display:flex;justify-content:space-between;align-items:flex-start}.title{font-size:20px;font-weight:800;display:flex;align-items:baseline;gap:8px}.ver{font-size:11px;color:#b9d7ff;font-weight:700}.mode{font-size:14px;font-weight:800;padding:4px 10px;border-radius:999px;background:linear-gradient(180deg,#334f84,#1b3158);border:1px solid rgba(255,255,255,.12)}.updated{font-size:12px;color:#d2dded;text-align:right}
-.tempWrap{display:flex;align-items:flex-end;gap:8px}.tempVal{font-size:68px;font-weight:900;line-height:.9}.tempUnit{font-size:20px;padding-bottom:10px;color:#dbeafe}
-.trackWrap{margin-top:2px}.track{position:relative;height:10px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.track .target{position:absolute;top:50%;left:${Math.max(0,Math.min(100,((parseNum(data.targetTemp)-15)/(32-15))*100))}%;width:4px;height:18px;background:#fff;border:1px solid #1e3a5f;border-radius:999px;transform:translate(-50%,-50%)}.track .dot{position:absolute;top:50%;left:${Math.max(0,Math.min(100,((parseNum(data.poolTemp)-15)/(32-15))*100))}%;width:15px;height:15px;border-radius:50%;background:#dbeafe;border:4px solid #314a72;transform:translate(-50%,-50%)}.trackLabels{display:flex;justify-content:space-between;font-size:12px;color:#d2dded;margin-top:4px}.trackTarget{font-size:12px;color:#d2dded;text-align:center;margin-top:2px}
-.metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px}.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px}.metric.warn{background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.04))}.metric-label{font-size:13px;color:#d9e5f5}.metric-value{font-size:18px;font-weight:900;margin-top:4px}.metric-sub{font-size:12px;color:#d9e5f5;margin-top:2px}.metric-badge{display:inline-flex;align-items:center;justify-content:center;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.12);font-size:12px;font-weight:800;margin-top:8px}.metric-badge.ok{background:rgba(93,212,111,.18);color:#90f3a3}.metric-badge.warn{background:rgba(255,176,103,.18);color:#ffd39e}
-.section{font-size:13px;font-weight:800;color:#fff;margin-bottom:6px}.section.green{color:#a9f5b5}.section.orange{color:#ffd39e}
-.list{display:grid;gap:6px}.status-item{background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px}.status-item .name{font-size:12px;font-weight:700}.status-item .hint{font-size:10px;color:#cbd5e1;margin-top:2px}.status-item .state{font-size:14px;font-weight:900;margin-top:6px}.status-item.on .state{color:#6de27e}.status-item.off .state{color:#ff8d7b}.status-item.compact .status-line{display:flex;justify-content:space-between;gap:8px}.status-item.compact .state{margin-top:0}
-.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.mini{background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px}.mini .label{font-size:11px;color:#d9e5f5}.mini .value{font-size:13px;font-weight:900;margin-top:4px;white-space:pre-line}
-.side .toggle{display:flex;align-items:center;gap:8px;color:#dbeafe;font-size:12px}.switch{position:relative;width:110px;height:34px;border-radius:999px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.1)}.switch::after{content:'';position:absolute;top:3px;left:${'${on ? 55px : 3px}'};width:48px;height:26px;border-radius:999px;background:#e5e7eb;box-shadow:0 2px 8px rgba(0,0,0,.3)}
-.btnGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.action-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:12px 12px;border-radius:14px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;gap:3px}.action-name{font-size:16px;font-weight:800}.action-state{font-size:11px;font-weight:800}.action-btn.is-on .action-name,.action-btn.is-on .action-state{color:#67dd7c}.action-btn.is-off .action-name,.action-btn.is-off .action-state{color:#ff8d7b}
-.buttonBar{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pill-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:14px 16px;border-radius:999px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);color:#fff;font-weight:800;border:1px solid rgba(255,255,255,.09);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28)}
-.quick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.quick-card{background:#fff;color:#0f172a;border-radius:14px;padding:10px;border:1px solid rgba(15,23,42,.08)}.quick-label{font-size:12px;color:#64748b;font-weight:700}.quick-value{font-size:18px;font-weight:900;margin-top:4px}.quick-wide{grid-column:span 2}.manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:10px 12px;border-radius:999px;min-height:52px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}.manual-btn span{font-size:17px}.manual-btn small{font-size:12px;color:#dbeafe}
-.wallbox-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.footer-note{font-size:11px;color:#64748b;margin-top:10px;line-height:1.45}
-</style></head><body>
-<div class="wrap">
-  ${hero}
+    const phNum = parseNum(data.ph);
+    const phSetNum = parseNum(data.phSet);
+    const orpNum = parseNum(data.orp);
+    const orpOnNum = parseNum(data.orpOnThreshold);
+    const orpOffNum = parseNum(data.orpOffThreshold);
+    const poolTempNum = parseNum(data.poolTemp);
+    const tempScaleMin = 15;
+    const tempScaleMax = 32;
+    const tempPct = Number.isFinite(poolTempNum)
+      ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100))
+      : 0;
+    const targetTempNum = parseNum(data.targetTemp);
+    const targetPct = Number.isFinite(targetTempNum)
+      ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100))
+      : 0;
+
+    const phBadge = !Number.isFinite(phNum)
+      ? { cls: 'neutral', txt: '—' }
+      : phNum < 7.1 ? { cls: 'low', txt: 'Niedrig' }
+      : phNum <= 7.25 ? { cls: 'ok', txt: 'OK' }
+      : { cls: 'high', txt: 'Hoch' };
+
+    const orpBadge = !Number.isFinite(orpNum) || !Number.isFinite(orpOnNum) || !Number.isFinite(orpOffNum)
+      ? { cls: 'neutral', txt: '—' }
+      : orpNum < orpOnNum ? { cls: 'low', txt: 'Niedrig' }
+      : orpNum > orpOffNum ? { cls: 'high', txt: 'Hoch' }
+      : { cls: 'ok', txt: 'OK' };
+
+    const kv = (label, value, extraCls = '') => `
+      <div class="kv ${extraCls}">
+        <div class="kv-label">${esc(label)}</div>
+        <div class="kv-value">${esc(value)}</div>
+      </div>`;
+
+    const status = (name, hint, on) => `
+      <div class="status-row ${on ? 'status-on' : 'status-off'}">
+        <div class="status-left">
+          <div class="status-name">${esc(name)}</div>
+          <div class="status-hint">${esc(hint)}</div>
+        </div>
+        <div class="pill ${on ? 'on' : 'off'}">${on ? 'EIN' : 'AUS'}</div>
+      </div>`;
+
+    const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
+    const metric = (label, value, sub = '', badge = null, accent = '', trend = '', trendOk = false) => `
+      <div class="metric ${accent}">
+        <div class="metric-label">${esc(label)}</div>
+        <div class="metric-value">
+          <span class="metric-main ${trendOk ? 'ok' : ''}">${esc(value)}</span>
+          ${trend ? `<span class="metric-trend ${trendClass(trend)} ${trendOk ? 'ok' : ''}">${esc(trend)}</span>` : ''}
+        </div>
+        ${sub ? `<div class="metric-sub">${esc(sub)}</div>` : ''}
+        ${badge ? `<div class="badge ${badge.cls}">${badge.txt}</div>` : ''}
+      </div>`;
+
+    const mini = (label, value, accent = '') => `
+      <div class="mini ${accent}">
+        <div class="mini-label">${esc(label)}</div>
+        <div class="mini-value">${esc(value)}</div>
+      </div>`;
+
+    return `<!DOCTYPE html>
+<html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<style>
+:root{
+  --bg:#08121f;--bg2:#0f1d34;--line:rgba(255,255,255,.08);
+  --txt:#f7fbff;--muted:#b6c4d8;--accent:#55c8ff;--accent2:#6a7cff;
+  --green:#57d96e;--orange:#ffb347;--red:#ff7668;--cyan:#62d8ff;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  font-family:Arial,Helvetica,sans-serif;color:var(--txt);
+  background:
+    radial-gradient(circle at top left, rgba(85,200,255,.16), transparent 25%),
+    radial-gradient(circle at bottom right, rgba(106,124,255,.13), transparent 22%),
+    linear-gradient(180deg,var(--bg2),var(--bg));
+}
+.wrap{width:100%;max-width:1000px;height:730px;max-height:730px;padding:6px;overflow:hidden;margin:0 auto}
+.layout{display:flex;gap:8px;align-items:flex-start;width:100%;height:718px;max-height:718px;overflow:hidden}
+.col-left{flex:0 0 28%}
+.col-mid{flex:0 0 34%}
+.col-right{flex:1 1 0}
+.card{
+  background:linear-gradient(180deg,rgba(15,32,57,.96),rgba(10,24,44,.98));
+  border:1px solid var(--line);border-radius:18px;padding:10px;overflow:hidden;
+  box-shadow:0 18px 40px rgba(0,0,0,.28)
+}
+.hero{
+  background:
+    radial-gradient(circle at top right, rgba(82,199,255,.22), transparent 28%),
+    linear-gradient(180deg,rgba(23,46,80,.97),rgba(11,26,48,.98));
+  min-height:330px;
+  border-color:rgba(86,196,255,.18);
+}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.title{font-size:15px;font-weight:900;letter-spacing:.2px}
+.meta{text-align:right;font-size:10px;color:var(--muted);line-height:1.15;max-width:86px}
+.mode{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:9px;font-weight:900;margin-bottom:6px;box-shadow:0 6px 18px rgba(88,172,255,.25)}
+.temp-wrap{margin:18px 0 6px;display:flex;align-items:flex-end;gap:8px}
+.temp{font-size:68px;font-weight:900;line-height:.9}
+.unit{font-size:16px;color:#d4e5f6;padding-bottom:7px}
+.temp-scale{margin:6px 0 10px}
+.scale-row{display:flex;justify-content:space-between;font-size:11px;color:#c7d6ea;margin-top:6px}
+.scale-track{position:relative;height:8px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+.scale-target{position:absolute;top:50%;left:${targetPct}%;width:3px;height:18px;border-radius:999px;background:#ffffff;box-shadow:0 0 0 1px rgba(15,33,60,.65), 0 0 0 2px rgba(255,255,255,.15);transform:translate(-50%,-50%)}
+.scale-dot{position:absolute;top:50%;width:13px;height:13px;border-radius:50%;background:#fff;border:3px solid #0f213c;box-shadow:0 0 0 3px rgba(255,255,255,.25), 0 4px 12px rgba(0,0,0,.35);transform:translate(-50%,-50%);left:${tempPct}%}
+.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:9px;min-height:78px;position:relative}
+.metric.cool{background:linear-gradient(180deg,rgba(80,166,255,.15),rgba(255,255,255,.05))}
+.metric.warn{background:linear-gradient(180deg,rgba(255,145,96,.12),rgba(255,255,255,.05))}
+.metric-target{background:linear-gradient(180deg,rgba(86,217,120,.10),rgba(255,255,255,.05))}
+.metric-label{font-size:12px;color:#c8d4e6;font-weight:800;margin-bottom:6px}
+.metric-value{font-size:17px;font-weight:900;line-height:1.05;display:flex;align-items:center;gap:8px}
+.metric-main.ok{color:#67dd7c}
+.metric-trend{display:inline-flex;min-width:18px;justify-content:center;font-size:20px;font-weight:900;line-height:1;margin-left:10px}
+.metric-trend.up{color:#ffb36b}.metric-trend.down{color:#7dd3fc}.metric-trend.flat{color:#d5e4f8}.metric-trend.ok{color:#67dd7c}
+.metric-sub{font-size:10px;color:#aebed5;margin-top:4px}
+.badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;margin-top:8px;font-size:11px;font-weight:900}
+.badge.ok{background:rgba(64,196,99,.18);color:#9ff5b3}
+.badge.low{background:rgba(255,176,32,.18);color:#ffd480}
+.badge.high{background:rgba(255,107,87,.18);color:#ffc0b7}
+.badge.neutral{background:rgba(148,163,184,.18);color:#d8e1ec}
+.section{font-size:15px;font-weight:900;margin-bottom:8px}
+.section.energy{color:#8eddff}
+.section.status{color:#89ffa7}
+.section.extra{color:#ffd37d}
+.stack{display:grid;gap:5px}
+.kv{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:6px}
+.kv.energy{background:linear-gradient(90deg,rgba(68,171,255,.10),rgba(255,255,255,.04))}
+.kv.auto{background:linear-gradient(90deg,rgba(109,128,255,.14),rgba(255,255,255,.04))}
+.kv.reason{background:linear-gradient(90deg,rgba(94,210,158,.11),rgba(255,255,255,.04))}
+.kv-label{font-size:12px;color:#c6d7ea;font-weight:800;max-width:42%}
+.kv-value{font-size:13px;font-weight:900;line-height:1.15;text-align:right;word-break:break-word;max-width:58%}
+.status-card{margin-bottom:10px}
+.status-list{display:grid;gap:6px}
+.status-row{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:6px}
+.status-on{background:linear-gradient(90deg,rgba(78,204,102,.10),rgba(255,255,255,.04))}
+.status-off{background:linear-gradient(90deg,rgba(255,108,95,.10),rgba(255,255,255,.04))}
+.status-left{min-width:0;max-width:calc(100% - 86px)}
+.status-name{font-size:13px;font-weight:900;line-height:1.1}
+.status-hint{font-size:10px;color:#aebed5;margin-top:2px}
+.pill{min-width:64px;text-align:center;padding:7px 8px;border-radius:999px;font-size:9px;font-weight:900;color:#fff;flex:0 0 auto}
+.pill.on{background:linear-gradient(180deg,#56d56e,#36b357);box-shadow:0 8px 18px rgba(56,179,87,.25)}
+.pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d);box-shadow:0 8px 18px rgba(223,74,61,.25)}
+.mini-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.mini{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:14px;padding:9px}
+.mini.info{background:linear-gradient(180deg,rgba(90,166,255,.09),rgba(255,255,255,.04))}
+.mini.highlight{background:linear-gradient(180deg,rgba(255,190,76,.11),rgba(255,255,255,.04))}
+.mini-label{font-size:12px;color:#c8d7eb;font-weight:800;margin-bottom:6px}
+.mini-value{font-size:13px;font-weight:900;line-height:1.1}
+@media (max-width:1100px){
+  .layout{display:block}
+  .col-left,.col-mid,.col-right{width:auto}
+  .col-mid,.col-right{margin-top:14px}
+}
+</style></head><body><div class="wrap"><div class="layout">
+  <div class="col-left">
+    <div class="card hero">
+      <div class="head">
+        <div class="title">Pool Manager <span class="ver">${esc(data.adapterVersion)}</span></div>
+        <div class="meta">
+          <div class="mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>
+          Aktualisiert<br>${esc(data.updated)}
+        </div>
+      </div>
+      <div class="temp-wrap">
+        <div class="temp">${esc(data.poolTemp)}</div>
+        <div class="unit">°C</div>
+      </div>
+      <div class="temp-scale">
+        <div class="scale-track"><div class="scale-target" title="Soll ${esc(data.targetTemp)} °C"></div><div class="scale-dot"></div></div>
+        <div class="scale-row"><span>15 °C</span><span>Aktuell: ${esc(data.poolTemp)} °C</span><span>32 °C</span></div>
+      </div>
+      <div class="metrics">
+        ${metric('pH', data.ph, `Soll ${data.phSet}`, phBadge, 'warn', data.phTrend || '→', !!data.phInRange)}
+        ${metric('ORP', data.orp, `Soll ${data.orpSet}`, orpBadge, 'warn', data.orpTrend || '→', !!data.orpInRange)}
+        ${metric('Außen', `${data.outsideTemp}°C`, 'Außen', null, 'cool', data.outsideTempTrend || '→', false)}
+        ${metric('Solltemp', `${data.targetTemp}°C`, 'Soll', null, 'metric-target')}
+      </div>
+    </div>
     <div class="card">
-      <div class="section green">Auto &amp; Wallbox</div>
+      <div class="section energy">Auto & Wallbox</div>
       <div class="mini-list">
         ${mini('Status', data.wallboxChargingStatus, data.wallboxCharging ? 'highlight' : 'info')}
         ${mini('Stecker', data.wallboxPlugStatus, 'info')}
@@ -664,477 +812,146 @@ class Poolsteuerung extends utils.Adapter {
       </div>
     </div>
   </div>
-  <div class="mid">
-    <div class="card"><div class="section">Energie & Steuerung</div><div class="list">
-      ${this.statusItemHtml('Pumpe Auto', '', data.autoCirculationControl, true)}
-      ${this.statusItemHtml('Chlor Auto', '', data.autoChlorControl, true)}
-      ${this.statusItemHtml('pH Auto', '', data.autoPhControl, true)}
-      ${this.statusItemHtml('WP Auto', '', data.autoHeatpumpControl, true)}
-      <div class="status-item compact"><div class="status-line"><span class="name">PV-Leistung</span><span class="state" style="color:#fff">${esc(data.pv)} W</span></div></div>
-      <div class="status-item compact"><div class="status-line"><span class="name">Netzeinspeisung</span><span class="state" style="color:#fff">${esc(data.feedIn)} W</span></div></div>
-      <div class="status-item compact"><div class="status-line"><span class="name">Netzbezug</span><span class="state" style="color:#fff">${esc(data.gridSupply)} W</span></div></div>
-      <div class="status-item compact"><div class="status-line"><span class="name">Batterie SoC</span><span class="state" style="color:#fff">${esc(data.battery)} %</span></div></div>
-      <div class="status-item compact"><div class="status-line"><span class="name">WP Freigabe</span><span class="state" style="color:#fff">${esc(data.heatDecision)}</span></div></div>
-      <div class="status-item compact"><div class="status-line"><span class="name">Chlor Freigabe</span><span class="state" style="color:#fff">${esc(data.chlorDecision)}</span></div></div>
-      <div class="status-item compact"><div class="status-line"><span class="name">Zeitplan</span><span class="state" style="color:#fff">${esc(data.pumpDecision)}</span></div></div>
-      <div class="status-item compact"><div class="status-line"><span class="name">pH Prüfung</span><span class="state" style="color:#fff">${esc(data.phDecision)}</span></div></div>
-      <div class="status-item compact"><div class="status-line"><span class="name">pH Zeiten</span><span class="state" style="color:#fff">${esc(data.phCheckTimes)}</span></div></div>
-      <div class="status-item compact"><div class="status-line"><span class="name">Standby nächster Lauf</span><span class="state" style="color:#fff">${esc(data.standbyNext)}</span></div></div>
-      <div class="status-item compact"><div class="status-line"><span class="name">Letzte Dosierung</span><span class="state" style="color:#fff">${esc(data.phLastDoseDurationSec)} s</span></div></div>
-    </div></div>
-  </div>
-  <div class="right">
-    <div class="card"><div class="section green">Aktoren & Status</div><div class="list">
-      ${this.statusItemHtml('Umwälzpumpe', 'IST-Zustand', data.pumpOn)}
-      ${this.statusItemHtml('Chlorinator', 'ORP-Regelung', data.chlorOn)}
-      ${this.statusItemHtml('pH-Dosierpumpe', 'Prüfzeiten', data.phPumpOn)}
-      ${this.statusItemHtml('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
-    </div></div>
-    <div class="card"><div class="section orange">Zusatzwerte</div><div class="info-grid">
-      <div class="mini"><div class="label">Zeitplan</div><div class="value">${esc(data.pumpDecision.includes('Zeitfenster aktiv') ? 'AKTIV' : (data.pumpDecision.includes('Standby') ? 'STANDBY' : (data.pumpDecision.includes('Steuerung deaktiviert') ? 'INAKTIV' : 'INAKTIV')))}</div></div>
-      <div class="mini"><div class="label">PV Schwelle</div><div class="value">${esc(data.pvThreshold)} W</div></div>
-      <div class="mini"><div class="label">ORP Grenzen</div><div class="value">${esc(data.orpOnThreshold)} / ${esc(data.orpOffThreshold)}</div></div>
-      <div class="mini"><div class="label">pH Tag</div><div class="value">${esc(data.phDailyCount)}</div></div>
-      <div class="mini"><div class="label">Pumpe ml/min</div><div class="value">${esc(data.phPumpFlowMlPerMin)}</div></div>
-      <div class="mini"><div class="label">ml je 0,1 / 10m³</div><div class="value">${esc(data.phDoseMlPer01Per10m3)}</div></div>
-      <div class="mini"><div class="label">Poolvolumen</div><div class="value">${esc(data.volume)} m³</div></div>
-      <div class="mini"><div class="label">WP Lüfter</div><div class="value">${esc(data.heatpumpFanPercent)}</div></div>
-      <div class="mini"><div class="label">WP Modus</div><div class="value">${esc(data.heatpumpMode)}</div></div>
-      <div class="mini"><div class="label">Granulat manuell</div><div class="value">${esc(data.manualGranulateText)}</div></div>
-    </div></div>
-  </div>
-  <div class="side">
-    ${this.switchHtml('Standby', 'standby', data.standbyControl)}
-    ${this.switchHtml('Auto Pumpe', 'circulation', data.autoCirculationControl, true)}
-    ${this.switchHtml('Auto Chlor', 'chlor', data.autoChlorControl, true)}
-    ${this.switchHtml('Auto PH', 'ph', data.autoPhControl, true)}
-    ${this.switchHtml('Auto Wärmepumpe', 'heatpump', data.autoHeatpumpControl, true)}
-  </div>
-  <div class="card" style="grid-column:1 / span 4;"><div class="section orange">Manuelle Aktionen</div><div class="buttonBar">
-    <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.phManualDoseSec || 30) || 30}"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
-    <div class="buttonBar">
-      <button type="button" class="pill-btn js-temp-btn" data-delta="-0.5">Solltemperatur -0,5°C</button>
-      <button type="button" class="pill-btn js-temp-btn" data-delta="0.5">Solltemperatur +0,5°C</button>
+
+  <div class="col-mid">
+    <div class="card">
+      <div class="section energy">Energie & Steuerung</div>
+      <div class="stack">
+        ${kv('Pumpe Auto', data.autoCirculation, 'auto')}
+        ${kv('Chlor Auto', data.autoChlor, 'auto')}
+        ${kv('pH Auto', data.autoPh, 'auto')}
+        ${kv('WP Auto', data.autoHeatpump, 'auto')}
+        ${kv('PV-Leistung', `${data.pv} W`, 'energy')}
+        ${kv('Netzeinspeisung', `${data.feedIn} W`, 'energy')}
+        ${kv('Netzbezug', `${data.gridSupply} W`, 'energy')}
+        ${kv('Batterie SoC', `${data.battery} %`, 'energy')}
+        ${kv('WP Freigabe', data.heatReason, 'reason')}
+        ${kv('Chlor Freigabe', data.chlorDecision, 'reason')}
+        ${kv('Zeitplan', data.pumpDecision, 'reason')}
+        ${kv('pH Prüfung', data.phDecision, 'reason')}
+        ${kv('pH Zeiten', data.phTimes)}
+        ${kv('Standby nächster Lauf', data.standbyNext)}
+        ${kv('Letzte Dosierung', `${data.phLastDoseDurationSec} s`)}
+      </div>
     </div>
-  </div></div>
-</div>
-<script>
-(function(){
-  function getVisApi(){
-    try{ if(window.vis) return window.vis; }catch(e){}
-    try{ if(window.parent&&window.parent.vis) return window.parent.vis; }catch(e){}
-    try{ if(window.top&&window.top.vis) return window.top.vis; }catch(e){}
-    return null;
-  }
-  function getConn(){
-    try{ const v=getVisApi(); if(v&&v.conn&&typeof v.conn.setState==='function') return v.conn; }catch(e){}
-    return null;
-  }
-  window.poolSetState = async function(id,val){
-    const v=getVisApi();
-    const conn=getConn();
-    try{
-      if(v && typeof v.setValue === 'function'){
-        const r=v.setValue(id,val);
-        if(r && typeof r.then==='function'){ await r; }
-        return true;
-      }
-    }catch(e){}
-    if(!conn) return false;
-    const attempts = [
-      () => conn.setState(id,val),
-      () => conn.setState(id,val,false),
-      () => conn.setState(id,val,()=>{}),
-      () => conn.setState(id,val,false,()=>{})
-    ];
-    for(const fn of attempts){
-      try{
-        const r=fn();
-        if(r && typeof r.then==='function'){ await r; }
-        return true;
-      }catch(e){}
-    }
-    return false;
-  };
-  window.poolToggleControl = async function(key,current){
-    const ns=${JSON.stringify(data.namespace)};
-    const ok=await window.poolSetState(ns+'.control.auto.'+key, !current);
-    if(!ok) alert('VIS setState nicht verfügbar');
-  };
-  window.poolToggleStandby = async function(current){
-    const ns=${JSON.stringify(data.namespace)};
-    const ok=await window.poolSetState(ns+'.control.standby', !current);
-    if(!ok) alert('VIS setState nicht verfügbar');
-  };
-  window.poolToggleState = async function(key,current){
-    const ns=${JSON.stringify(data.namespace)};
-    let ctrl='';
-    if(key==='circulation') ctrl='.control.device.circulation';
-    else if(key==='chlorinator') ctrl='.control.device.chlorinator';
-    else if(key==='phPump') ctrl='.control.device.phPump';
-    else if(key==='heatpump') ctrl='.control.device.heatpump';
-    if(!ctrl){ alert('Kein Control-Key hinterlegt'); return; }
-    const ok=await window.poolSetState(ns+ctrl, !current);
-    if(!ok) alert('VIS setState nicht verfügbar');
-  };
-  window.poolPhManualDose = async function(sec){
-    const ns=${JSON.stringify(data.namespace)};
-    await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30);
-    const ok=await window.poolSetState(ns + '.control.ph.manualStart', true);
-    if(!ok) alert('VIS setState nicht verfügbar');
-  };
-  window.poolAdjustSetTemp = async function(delta){
-    const ns=${JSON.stringify(data.namespace)};
-    const hpOn=${data.heatpumpOn ? 'true' : 'false'};
-    if(!hpOn){ alert('Solltemperatur nur bei laufender Wärmepumpe änderbar'); return; }
-    if(!${JSON.stringify(data.heatpumpSetTempStateId || '')}){ alert('Kein Solltemperatur-State hinterlegt'); return; }
-    const current=Number(${JSON.stringify(data.targetTemp)}.replace(',', '.'));
-    const next=Math.max(10, Math.min(40, Math.round((current + Number(delta))*10)/10));
-    const ok=await window.poolSetState(ns+'.control.heatpump.setTemp', next);
-    if(!ok) alert('VIS setState nicht verfügbar');
-  };
-  const bind = () => {
-    document.querySelectorAll('.js-auto-btn').forEach(el => {
-      const fn=(ev)=>{try{if(ev){ev.preventDefault();ev.stopPropagation();}}catch(e){};window.poolToggleControl(el.dataset.key, el.dataset.current==='1');return false;};
-      el.onclick=fn; try{el.addEventListener('touchend', fn, {passive:false});}catch(e){}
-    });
-    document.querySelectorAll('.js-device-btn').forEach(el => {
-      const fn=(ev)=>{try{if(ev){ev.preventDefault();ev.stopPropagation();}}catch(e){};window.poolToggleState(el.dataset.key||'', el.dataset.current==='1');return false;};
-      el.onclick=fn; try{el.addEventListener('touchend', fn, {passive:false});}catch(e){}
-    });
-    document.querySelectorAll('.js-standby-btn').forEach(el => {
-      const fn=(ev)=>{try{if(ev){ev.preventDefault();ev.stopPropagation();}}catch(e){};window.poolToggleStandby(el.dataset.current==='1');return false;};
-      el.onclick=fn; try{el.addEventListener('touchend', fn, {passive:false});}catch(e){}
-    });
-    document.querySelectorAll('.js-manual-dose-btn').forEach(el => {
-      const fn=(ev)=>{try{if(ev){ev.preventDefault();ev.stopPropagation();}}catch(e){};window.poolPhManualDose(Number(el.dataset.sec||30));return false;};
-      el.onclick=fn; try{el.addEventListener('touchend', fn, {passive:false});}catch(e){}
-    });
-    document.querySelectorAll('.js-temp-btn').forEach(el => {
-      const fn=(ev)=>{try{if(ev){ev.preventDefault();ev.stopPropagation();}}catch(e){};window.poolAdjustSetTemp(Number(el.dataset.delta||0));return false;};
-      el.onclick=fn; try{el.addEventListener('touchend', fn, {passive:false});}catch(e){}
-    });
-  };
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bind); else bind();
-})();
-</script></body></html>`;
+  </div>
+
+  <div class="col-right">
+    <div class="card status-card">
+      <div class="section status">Aktoren & Status</div>
+      <div class="status-list">
+        ${status('Umwälzpumpe', 'IST-Zustand', data.pumpOn)}
+        ${status('Chlorinator', 'ORP-Regelung', data.chlorOn)}
+        ${status('pH-Dosierpumpe', 'Prüfzeiten', data.phPumpOn)}
+        ${status('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
+      </div>
+    </div>
+    <div class="card">
+      <div class="section extra">Zusatzwerte</div>
+      <div class="mini-list">
+        ${mini('Zeitplan', data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV', 'highlight')}
+        ${mini('PV Schwelle', `${data.threshold} W`, 'info')}
+        ${mini('ORP Grenzen', `${data.orpOnThreshold} / ${data.orpOffThreshold}`, 'highlight')}
+        ${mini('pH Tag', `${data.phDailyCount}`, 'info')}
+        ${mini('Pumpe ml/min', `${data.phFlowMlMin}`, 'info')}
+        ${mini('ml je 0,1 / 10m³', `${data.phMlPer01Per10}`, 'info')}
+        ${mini('Poolvolumen', `${data.volume} m³`, 'highlight')}
+        ${mini('WP Lüfter', String(data.heatpumpFanPercent ?? '--'), 'info')}
+        ${mini('WP Modus', data.heatpumpMode || '--', 'highlight')}
+        ${mini('Granulat manuell', data.manualGranulateText, 'highlight')}
+      </div>
+    </div>
+  </div>
+</div></body></html>`;
   }
 
-  switchHtml(label, key, on, isAuto = false) {
-    return `<div class="toggle"><div class="switch ${on ? 'on' : ''} js-${isAuto ? 'auto' : 'standby'}-btn" data-key="${esc(key)}" data-current="${on ? '1' : '0'}"></div><div>${esc(label)}</div></div>`;
-  }
-
-  buildHeroCard(data) {
+  buildPhoneHtml(data) {
     const poolTempNum = parseNum(data.poolTemp);
     const tempScaleMin = 15;
     const tempScaleMax = 32;
     const tempPct = Number.isFinite(poolTempNum) ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
     const targetTempNum = parseNum(data.targetTemp);
     const targetPct = Number.isFinite(targetTempNum) ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
-
-    const metric = (label, value, sub = '', badge = '', extraClass = '', trend = '→', ok = false) => `
-      <div class="metric ${extraClass}">
-        <div class="metric-label">${esc(label)}</div>
-        <div class="metric-value">${esc(value)}${trend ? `<span class="trend ${trend === '↑' ? 'up' : trend === '↓' ? 'down' : 'flat'} ${ok ? 'ok' : ''}" style="margin-left:14px;font-weight:900;font-size:32px;line-height:1;vertical-align:middle;display:inline-block;min-width:28px;text-align:center;">${esc(trend)}</span>` : ''}</div>
-        ${sub ? `<div class="metric-sub">${esc(sub)}</div>` : ''}
-        ${badge || ''}
+    const autoBtn = (label, key, active) => `<button type="button" class="action-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
+    const deviceBtn = (label, key, active) => `<button type="button" class="action-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'EIN' : 'AUS'}</span></button>`;
+    const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
+    const quick = (label, value, trend = '', barHtml = '') => `
+      <div class="quick-card">
+        <div class="quick-label">${esc(label)}</div>
+        <div class="quick-value-row">
+          <div class="quick-value">${esc(value)}</div>
+          ${trend ? `<div class="quick-trend ${trendClass(trend)}">${esc(trend)}</div>` : ''}
+        </div>
+        ${barHtml || ''}
       </div>`;
-
-    const orpBadge = data.orpInRange
-      ? `<div class="metric-badge ok">OK</div>`
-      : `<div class="metric-badge warn">${parseNum(data.orp) < parseNum(data.orpOnThreshold) ? 'Niedrig' : 'Hoch'}</div>`;
-
-    const phBadge = data.phInRange
-      ? `<div class="metric-badge ok">OK</div>`
-      : `<div class="metric-badge warn">${parseNum(data.ph) < 7.1 ? 'Niedrig' : 'Hoch'}</div>`;
-
-    return `
-  <div class="card hero">
-    <div class="titleRow">
-      <div class="title">Pool Manager <span class="ver">${esc(data.adapterVersion)}</span></div>
-      <div>
-        <div class="mode">${data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL'}</div>
-        <div class="updated">Aktualisiert<br>${esc(data.updated)}</div>
-      </div>
-    </div>
-    <div class="tempWrap"><div class="tempVal">${esc(data.poolTemp)}</div><div class="tempUnit">°C</div></div>
-    <div class="trackWrap">
-      <div class="track"><div class="target"></div><div class="dot"></div></div>
-      <div class="trackTarget">Aktuell: ${esc(data.poolTemp)} °C</div>
-      <div class="trackLabels"><span>15 °C</span><span>32 °C</span></div>
-    </div>
-      <div class="metrics">
-        ${metric('pH', data.ph, `Soll ${data.phSet}`, phBadge, 'warn', data.phTrend || '→', !!data.phInRange)}
-        ${metric('ORP', data.orp, `Soll ${data.orpSet}`, orpBadge, 'warn', data.orpTrend || '→', !!data.orpInRange)}
-        ${metric('Außen', `${data.outsideTemp}°C`, 'Außen', null, 'cool', data.outsideTempTrend || '→', false)}
-        ${metric('Solltemp', `${data.targetTemp}°C`, 'Soll', null, 'metric-target')}
-      </div>
-    </div>
-  </div>`;
-  }
-
-  buildTabletWidget(data) {
-    const quick = (label, value, trend = '', barHtml = '') => `<div class="quick-card"><div class="quick-label">${esc(label)}</div><div class="quick-value-row"><div class="quick-value">${esc(value)}</div>${trend ? `<div class="quick-trend ${trend === '↑' ? 'up' : trend === '↓' ? 'down' : 'flat'}">${esc(trend)}</div>` : ''}</div>${barHtml || ''}</div>`;
-    const autoBtn = (label, key, active) => `<button class="action-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
-    const deviceBtn = (label, key, active) => `<button class="action-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'EIN' : 'AUS'}</span></button>`;
+    const metricValue = (value, trend = '→', ok = false) => `<span class="metric-main ${ok ? 'ok' : ''}">${esc(value)}</span><span class="trend ${trendClass(trend)} ${ok ? 'ok' : ''}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>`;
     const batteryPct = Math.max(0, Math.min(100, parseNum(data.battery)));
     const batteryBar = `<div class="mini-bar"><div class="mini-fill battery-fill" style="width:${batteryPct}%"></div></div>`;
-    return `<!-- widget-render:${esc(data.updated)} -->
-<style>
-.widget-wrap{width:100%;max-width:1180px;display:grid;grid-template-columns:280px 340px 1fr 150px;gap:8px;padding:8px;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),#0a1323;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
-.card{background:linear-gradient(180deg,#10203a 0%, #0a1323 100%);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:10px;box-shadow:0 10px 26px rgba(0,0,0,.35)}
-.hero{grid-column:1/span 1;color:#fff}
-.mid{grid-column:2/span 1;display:grid;gap:8px}
-.right{grid-column:3/span 1;display:grid;gap:8px}
-.side{grid-column:4/span 1;display:grid;gap:8px;color:#dbeafe}
-.titleRow{display:flex;justify-content:space-between;align-items:flex-start}.title{font-size:20px;font-weight:800;color:#fff}.ver{font-size:11px;color:#b9d7ff;font-weight:700;margin-left:8px}.mode{font-size:14px;font-weight:800;padding:4px 10px;border-radius:999px;background:linear-gradient(180deg,#334f84,#1b3158);border:1px solid rgba(255,255,255,.12);display:inline-block;color:#fff}.updated{font-size:12px;color:#d2dded;text-align:right}
-.tempWrap{display:flex;align-items:flex-end;gap:8px}.tempVal{font-size:68px;font-weight:900;line-height:.9;color:#fff}.tempUnit{font-size:20px;padding-bottom:10px;color:#dbeafe}
-.trackWrap{margin-top:4px}.track{position:relative;height:10px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.target{position:absolute;top:50%;left:${Math.max(0,Math.min(100,((parseNum(data.targetTemp)-15)/(32-15))*100))}%;width:4px;height:18px;background:#fff;border:1px solid #1e3a5f;border-radius:999px;transform:translate(-50%,-50%)}.dot{position:absolute;top:50%;left:${Math.max(0,Math.min(100,((parseNum(data.poolTemp)-15)/(32-15))*100))}%;width:15px;height:15px;border-radius:50%;background:#dbeafe;border:4px solid #314a72;transform:translate(-50%,-50%)}.trackTarget{text-align:center;color:#d2dded;font-size:12px;margin-top:2px}.trackLabels{display:flex;justify-content:space-between;font-size:12px;color:#d2dded;margin-top:4px}
-.metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px}.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px}.metric-label{font-size:13px;color:#d9e5f5}.metric-value{font-size:18px;font-weight:900;color:#fff}.metric-sub{font-size:12px;color:#d9e5f5;margin-top:2px}.metric-badge{display:inline-flex;align-items:center;justify-content:center;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:800;margin-top:8px}.metric-badge.ok{background:rgba(93,212,111,.18);color:#90f3a3}.metric-badge.warn{background:rgba(255,176,103,.18);color:#ffd39e}
-.section{font-size:13px;font-weight:800;color:#fff;margin-bottom:6px}.section.green{color:#a9f5b5}.section.orange{color:#ffd39e}
-.list{display:grid;gap:6px}.status-item{background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px;color:#fff}.status-item .name{font-size:12px;font-weight:700}.status-item .hint{font-size:10px;color:#cbd5e1;margin-top:2px}.status-item .state{font-size:14px;font-weight:900;margin-top:6px}.status-item.on .state{color:#6de27e}.status-item.off .state{color:#ff8d7b}.status-item.compact .status-line{display:flex;justify-content:space-between;gap:8px}.status-item.compact .state{margin-top:0}
-.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.mini{background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px;color:#fff}.mini .label{font-size:11px;color:#d9e5f5}.mini .value{font-size:13px;font-weight:900;margin-top:4px;white-space:pre-line}
-.toggle{display:flex;align-items:center;gap:8px;font-size:12px}.switch{position:relative;width:110px;height:34px;border-radius:999px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.1)}.switch.on{background:linear-gradient(90deg,#4ade80 0%, #22c55e 55%, rgba(255,255,255,.15) 55%, rgba(255,255,255,.15) 100%)}.switch::after{content:'';position:absolute;top:3px;left:3px;width:48px;height:26px;border-radius:999px;background:#e5e7eb;box-shadow:0 2px 8px rgba(0,0,0,.3);transition:left .2s ease}.switch.on::after{left:59px}
-.buttonBar{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pill-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:14px 16px;border-radius:999px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);color:#fff;font-weight:800;border:1px solid rgba(255,255,255,.09);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28)}
-.quick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.quick-card{background:#fff;color:#0f172a;border-radius:14px;padding:10px;border:1px solid rgba(15,23,42,.08)}.quick-label{font-size:12px;color:#64748b;font-weight:700}.quick-value-row{display:flex;align-items:center;gap:8px}.quick-value{font-size:18px;font-weight:900;margin-top:4px}.quick-trend{font-size:18px;font-weight:900;line-height:1}.quick-trend.up{color:#ffb36b}.quick-trend.down{color:#52b7ff}.quick-trend.flat{color:#8fa3bc}.mini-bar{margin-top:6px;height:8px;border-radius:999px;background:linear-gradient(90deg,#ff6b6b 0%,#f59e0b 35%,#84cc16 65%,#22c55e 100%);position:relative;overflow:hidden}.mini-fill{height:100%;border-radius:999px}.battery-fill{background:linear-gradient(90deg,rgba(255,255,255,.28),rgba(255,255,255,.12));box-shadow:inset 0 0 0 999px rgba(255,255,255,.10)}
-.action-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:12px 12px;border-radius:14px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;gap:3px}.action-name{font-size:16px;font-weight:800}.action-state{font-size:11px;font-weight:800}.action-btn.is-on .action-name,.action-btn.is-on .action-state{color:#67dd7c}.action-btn.is-off .action-name,.action-btn.is-off .action-state{color:#ff8d7b}
-.manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:10px 12px;border-radius:999px;min-height:52px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}.manual-btn span{font-size:17px}.manual-btn small{font-size:12px;color:#dbeafe}
-</style>
-<div class="widget-wrap">
-  ${this.buildHeroCard(data)}
-    <div class="card">
-      <div class="section green">Auto &amp; Wallbox</div>
-      <div class="info-grid">
-        ${quick('Status', data.wallboxChargingStatus)}
-        ${quick('Stecker', data.wallboxPlugStatus)}
-        ${quick('Leistung', `${data.wallboxPowerKw} kW`)}
-        ${quick('SoC', `${data.wallboxSoc} % / ${data.wallboxTargetSoc} %`)}
-        ${quick('Restzeit', data.wallboxTimeToFull)}
-        ${quick('Reichweite', `${data.wallboxRangeKm} km`)}
-      </div>
-      <div class="footer-note">Stand: ${esc(data.wallboxTibberLastSeen || '--')}</div>
-    </div>
-  </div>
-  <div class="mid">
-    <div class="card"><div class="section">Energie & Steuerung</div><div class="list">
-      ${this.statusItemHtml('Pumpe Auto', '', data.autoCirculationControl, true)}
-      ${this.statusItemHtml('Chlor Auto', '', data.autoChlorControl, true)}
-      ${this.statusItemHtml('pH Auto', '', data.autoPhControl, true)}
-      ${this.statusItemHtml('WP Auto', '', data.autoHeatpumpControl, true)}
-      <div class="status-item compact"><div class="status-line"><span class="name">PV-Leistung</span><span class="state" style="color:#fff">${esc(data.pv)} W</span></div></div>
-      <div class="status-item compact"><div class="status-line"><span class="name">Netzeinspeisung</span><span class="state" style="color:#fff">${esc(data.feedIn)} W</span></div></div>
-      <div class="status-item compact"><div class="status-line"><span class="name">Netzbezug</span><span class="state" style="color:#fff">${esc(data.gridSupply)} W</span></div></div>
-      <div class="status-item compact"><div class="status-line"><span class="name">Batterie SoC</span><span class="state" style="color:#fff">${esc(data.battery)} %</span></div></div>
-      <div class="status-item compact"><div class="status-line"><span class="name">WP Freigabe</span><span class="state" style="color:#fff">${esc(data.heatDecision)}</span></div></div>
-      <div class="status-item compact"><div class="status-line"><span class="name">Chlor Freigabe</span><span class="state" style="color:#fff">${esc(data.chlorDecision)}</span></div></div>
-      <div class="status-item compact"><div class="status-line"><span class="name">Zeitplan</span><span class="state" style="color:#fff">${esc(data.pumpDecision)}</span></div></div>
-      <div class="status-item compact"><div class="status-line"><span class="name">pH Prüfung</span><span class="state" style="color:#fff">${esc(data.phDecision)}</span></div></div>
-      <div class="status-item compact"><div class="status-line"><span class="name">pH Zeiten</span><span class="state" style="color:#fff">${esc(data.phCheckTimes)}</span></div></div>
-      <div class="status-item compact"><div class="status-line"><span class="name">Standby nächster Lauf</span><span class="state" style="color:#fff">${esc(data.standbyNext)}</span></div></div>
-      <div class="status-item compact"><div class="status-line"><span class="name">Letzte Dosierung</span><span class="state" style="color:#fff">${esc(data.phLastDoseDurationSec)} s</span></div></div>
-    </div></div>
-  </div>
-  <div class="right">
-    <div class="card"><div class="section green">Aktoren & Status</div><div class="list">
-      ${this.statusItemHtml('Umwälzpumpe', 'IST-Zustand', data.pumpOn)}
-      ${this.statusItemHtml('Chlorinator', 'ORP-Regelung', data.chlorOn)}
-      ${this.statusItemHtml('pH-Dosierpumpe', 'Prüfzeiten', data.phPumpOn)}
-      ${this.statusItemHtml('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
-    </div></div>
-    <div class="card"><div class="section orange">Zusatzwerte</div><div class="info-grid">
-      <div class="mini"><div class="label">Zeitplan</div><div class="value">${esc(data.pumpDecision.includes('Zeitfenster aktiv') ? 'AKTIV' : (data.pumpDecision.includes('Standby') ? 'STANDBY' : (data.pumpDecision.includes('Steuerung deaktiviert') ? 'INAKTIV' : 'INAKTIV')))}</div></div>
-      <div class="mini"><div class="label">PV Schwelle</div><div class="value">${esc(data.pvThreshold)} W</div></div>
-      <div class="mini"><div class="label">ORP Grenzen</div><div class="value">${esc(data.orpOnThreshold)} / ${esc(data.orpOffThreshold)}</div></div>
-      <div class="mini"><div class="label">pH Tag</div><div class="value">${esc(data.phDailyCount)}</div></div>
-      <div class="mini"><div class="label">Pumpe ml/min</div><div class="value">${esc(data.phPumpFlowMlPerMin)}</div></div>
-      <div class="mini"><div class="label">ml je 0,1 / 10m³</div><div class="value">${esc(data.phDoseMlPer01Per10m3)}</div></div>
-      <div class="mini"><div class="label">Poolvolumen</div><div class="value">${esc(data.volume)} m³</div></div>
-      <div class="mini"><div class="label">WP Lüfter</div><div class="value">${esc(data.heatpumpFanPercent)}</div></div>
-      <div class="mini"><div class="label">WP Modus</div><div class="value">${esc(data.heatpumpMode)}</div></div>
-      <div class="mini"><div class="label">Granulat manuell</div><div class="value">${esc(data.manualGranulateText)}</div></div>
-    </div></div>
-  </div>
-  <div class="side">
-    ${this.switchHtml('Standby', 'standby', data.standbyControl)}
-    ${this.switchHtml('Auto Pumpe', 'circulation', data.autoCirculationControl, true)}
-    ${this.switchHtml('Auto Chlor', 'chlor', data.autoChlorControl, true)}
-    ${this.switchHtml('Auto PH', 'ph', data.autoPhControl, true)}
-    ${this.switchHtml('Auto Wärmepumpe', 'heatpump', data.autoHeatpumpControl, true)}
-  </div>
-  <div class="card" style="grid-column:1 / span 4;"><div class="section orange">Manuelle Aktionen</div><div class="buttonBar">
-    <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.phManualDoseSec || 30) || 30}"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
-    <div class="buttonBar">
-      <button type="button" class="pill-btn js-temp-btn" data-delta="-0.5">Solltemperatur -0,5°C</button>
-      <button type="button" class="pill-btn js-temp-btn" data-delta="0.5">Solltemperatur +0,5°C</button>
-    </div>
-  </div></div>
-</div>
-<script>
-(function(){
-  function getVisApi(){
-    try{ if(window.vis) return window.vis; }catch(e){}
-    try{ if(window.parent&&window.parent.vis) return window.parent.vis; }catch(e){}
-    try{ if(window.top&&window.top.vis) return window.top.vis; }catch(e){}
-    return null;
-  }
-  function getConn(){
-    try{ const v=getVisApi(); if(v&&v.conn&&typeof v.conn.setState==='function') return v.conn; }catch(e){}
-    return null;
-  }
-  window.poolSetState = async function(id,val){
-    const v=getVisApi();
-    const conn=getConn();
-    try{
-      if(v && typeof v.setValue === 'function'){
-        const r=v.setValue(id,val);
-        if(r && typeof r.then==='function'){ await r; }
-        return true;
-      }
-    }catch(e){}
-    if(!conn) return false;
-    const attempts = [
-      () => conn.setState(id,val),
-      () => conn.setState(id,val,false),
-      () => conn.setState(id,val,()=>{}),
-      () => conn.setState(id,val,false,()=>{})
-    ];
-    for(const fn of attempts){
-      try{
-        const r=fn();
-        if(r && typeof r.then==='function'){ await r; }
-        return true;
-      }catch(e){}
-    }
-    return false;
-  };
-  window.poolToggleControl = async function(key,current){
-    const ns=${JSON.stringify(data.namespace)};
-    const ok=await window.poolSetState(ns+'.control.auto.'+key, !current);
-    if(!ok) alert('VIS setState nicht verfügbar');
-  };
-  window.poolToggleStandby = async function(current){
-    const ns=${JSON.stringify(data.namespace)};
-    const ok=await window.poolSetState(ns+'.control.standby', !current);
-    if(!ok) alert('VIS setState nicht verfügbar');
-  };
-  window.poolToggleState = async function(key,current){
-    const ns=${JSON.stringify(data.namespace)};
-    let ctrl='';
-    if(key==='circulation') ctrl='.control.device.circulation';
-    else if(key==='chlorinator') ctrl='.control.device.chlorinator';
-    else if(key==='phPump') ctrl='.control.device.phPump';
-    else if(key==='heatpump') ctrl='.control.device.heatpump';
-    if(!ctrl){ alert('Kein Control-Key hinterlegt'); return; }
-    const ok=await window.poolSetState(ns+ctrl, !current);
-    if(!ok) alert('VIS setState nicht verfügbar');
-  };
-  window.poolPhManualDose = async function(sec){
-    const ns=${JSON.stringify(data.namespace)};
-    await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30);
-    const ok=await window.poolSetState(ns + '.control.ph.manualStart', true);
-    if(!ok) alert('VIS setState nicht verfügbar');
-  };
-  window.poolAdjustSetTemp = async function(delta){
-    const ns=${JSON.stringify(data.namespace)};
-    const hpOn=${data.heatpumpOn ? 'true' : 'false'};
-    if(!hpOn){ alert('Solltemperatur nur bei laufender Wärmepumpe änderbar'); return; }
-    if(!${JSON.stringify(data.heatpumpSetTempStateId || '')}){ alert('Kein Solltemperatur-State hinterlegt'); return; }
-    const current=Number(${JSON.stringify(data.targetTemp)}.replace(',', '.'));
-    const next=Math.max(10, Math.min(40, Math.round((current + Number(delta))*10)/10));
-    const ok=await window.poolSetState(ns+'.control.heatpump.setTemp', next);
-    if(!ok) alert('VIS setState nicht verfügbar');
-  };
-  const bind = () => {
-    document.querySelectorAll('.js-auto-btn').forEach(el => {
-      const fn=(ev)=>{try{if(ev){ev.preventDefault();ev.stopPropagation();}}catch(e){};window.poolToggleControl(el.dataset.key, el.dataset.current==='1');return false;};
-      el.onclick=fn; try{el.addEventListener('touchend', fn, {passive:false});}catch(e){}
-    });
-    document.querySelectorAll('.js-device-btn').forEach(el => {
-      const fn=(ev)=>{try{if(ev){ev.preventDefault();ev.stopPropagation();}}catch(e){};window.poolToggleState(el.dataset.key||'', el.dataset.current==='1');return false;};
-      el.onclick=fn; try{el.addEventListener('touchend', fn, {passive:false});}catch(e){}
-    });
-    document.querySelectorAll('.js-standby-btn').forEach(el => {
-      const fn=(ev)=>{try{if(ev){ev.preventDefault();ev.stopPropagation();}}catch(e){};window.poolToggleStandby(el.dataset.current==='1');return false;};
-      el.onclick=fn; try{el.addEventListener('touchend', fn, {passive:false});}catch(e){}
-    });
-    document.querySelectorAll('.js-manual-dose-btn').forEach(el => {
-      const fn=(ev)=>{try{if(ev){ev.preventDefault();ev.stopPropagation();}}catch(e){};window.poolPhManualDose(Number(el.dataset.sec||30));return false;};
-      el.onclick=fn; try{el.addEventListener('touchend', fn, {passive:false});}catch(e){}
-    });
-    document.querySelectorAll('.js-temp-btn').forEach(el => {
-      const fn=(ev)=>{try{if(ev){ev.preventDefault();ev.stopPropagation();}}catch(e){};window.poolAdjustSetTemp(Number(el.dataset.delta||0));return false;};
-      el.onclick=fn; try{el.addEventListener('touchend', fn, {passive:false});}catch(e){}
-    });
-  };
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bind); else bind();
-})();
-</script>`;
-  }
 
-  buildPhoneWidget(data) {
-    const poolTempNum = parseNum(data.poolTemp);
-    const tempScaleMin = 15;
-    const tempScaleMax = 32;
-    const tempPct = Number.isFinite(poolTempNum) ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
-    const targetTempNum = parseNum(data.targetTemp);
-    const targetPct = Number.isFinite(targetTempNum) ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
-    const autoBtn = (label, key, active) => `<button class="ps-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
-    const deviceBtn = (label, key, active) => `<button class="ps-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'EIN' : 'AUS'}</span></button>`;
-    const quick = (l, v, trend = '', barHtml = '') => `<div class="ps-q"><div class="ps-ql">${esc(l)}</div><div class="ps-qvr"><div class="ps-qv">${esc(v)}</div>${trend ? `<div class="ps-qtrend ${trendClass(trend)}">${esc(trend)}</div>` : ''}</div>${barHtml || ''}</div>`;
-    const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
-    const metricValue = (value, trend = '→', ok = false) => `<span class="ps-mmain ${ok ? 'ok' : ''}">${esc(value)}</span><span class="ps-trend ${trendClass(trend)} ${ok ? 'ok' : ''}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>`;
-    const batteryPct = Math.max(0, Math.min(100, parseNum(data.battery)));
-    const batteryBar = `<div class="ps-bbar"><div class="ps-bfill" style="width:${batteryPct}%"></div></div>`;
-    return `<!-- phone-render:${esc(data.updated)} -->
+    return `<!DOCTYPE html>
+<html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <style>
-.ps-wrap{width:100%;max-width:510px;height:1090px;max-height:1090px;overflow:hidden;margin:0 auto;display:grid;gap:4px;padding:4px;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,#10203a,#08111f);font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
-.ps-card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid rgba(15,23,42,.08);border-radius:15px;padding:6px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
-.ps-hero{background:radial-gradient(circle at top right, rgba(85,200,255,.26), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
-.ps-header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}.ps-title{font-size:15px;font-weight:900}.ps-ver{font-size:9px;font-weight:800;color:#b9d7ff;margin-left:6px}.ps-sub{font-size:9px;color:#d2dded;text-align:right}.ps-mode{display:inline-flex;align-items:center;justify-content:center;padding:3px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(180deg,#334f84,#1b3158);font-weight:800;font-size:10px;color:#fff;cursor:pointer}
-.ps-tempRow{display:flex;align-items:flex-end;gap:5px;margin:4px 0 4px}.ps-temp{font-size:42px;font-weight:900;line-height:.9}.ps-unit{font-size:16px;padding-bottom:4px;color:#d5e5f6}
-.ps-scale{margin:2px 0 5px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-target{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#fff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}.ps-target-label{position:relative;height:12px;font-size:9px;color:#d2dded}.ps-target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}
-.ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.ps-phGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
-.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.ps-ml{font-size:10px;color:#d9e5f5}.ps-mv{font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center}.ps-ms{font-size:9px;color:#d9e5f5;margin-top:2px}.ps-badge{display:inline-flex;align-items:center;justify-content:center;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:800;margin-top:6px}.ps-badge.ok{background:rgba(93,212,111,.18);color:#90f3a3}.ps-badge.warn{background:rgba(255,176,103,.18);color:#ffd39e}
-.ps-section{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px}.ps-q{background:#f8fbff;border:1px solid #d7e1ee;border-radius:12px;padding:6px}.ps-ql{font-size:10px;color:#66758a;font-weight:700}.ps-qvr{display:flex;align-items:center;gap:8px}.ps-qv{font-size:13px;font-weight:900;color:#0f172a}.ps-qtrend{font-size:16px;font-weight:900;line-height:1;display:inline-flex;min-width:16px;justify-content:center}.ps-qtrend.up{color:#ffb36b}.ps-qtrend.down{color:#7dd3fc}.ps-qtrend.flat{color:#9aa8bc}.ps-bbar{margin-top:5px;height:7px;border-radius:999px;background:linear-gradient(90deg,#ff6b6b 0%, #f59e0b 45%, #58d27a 100%);overflow:hidden}.ps-bfill{height:100%;border-radius:999px;background:rgba(255,255,255,.35);box-shadow:inset 0 0 0 999px rgba(255,255,255,.18)}
-.ps-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:7px 9px;border-radius:13px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}.ps-btn-name{font-size:12px;font-weight:800}.ps-btn-state{font-size:9px;font-weight:800}.ps-btn.is-on .ps-btn-name,.ps-btn.is-on .ps-btn-state{color:#67dd7c}.ps-btn.is-off .ps-btn-name,.ps-btn.is-off .ps-btn-state{color:#ff8d7b}
-.manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:7px 9px;border-radius:999px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}.manual-btn span{font-size:13px}.manual-btn small{font-size:10px;color:#dbeafe}
+:root{--bg:#08111f;--bg2:#10203a;--line:rgba(15,23,42,.08);--text:#0f172a;--muted:#66758a}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,var(--bg2),var(--bg));font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:var(--text)}
+.wrap{width:100%;max-width:510px;height:1090px;max-height:1090px;overflow:hidden;margin:0 auto;padding:4px;display:grid;gap:4px}
+.card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid var(--line);border-radius:15px;padding:6px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
+.hero{background:radial-gradient(circle at top right, rgba(85,200,255,.24), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
+.header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}
+.title{font-size:15px;font-weight:900}.ver{font-size:9px;font-weight:800;color:#b9d7ff;margin-left:6px}
+.meta{font-size:9px;color:#d2dded;text-align:right}.mode-badge{display:inline-flex;align-items:center;justify-content:center;padding:3px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(180deg,#334f84,#1b3158);font-size:9px;font-weight:900;color:#fff;margin-bottom:4px}
+.temp-row{display:flex;align-items:flex-end;gap:5px;margin:4px 0 4px}.temp{font-size:42px;font-weight:900;line-height:.9}.unit{font-size:16px;padding-bottom:4px;color:#d5e5f6}
+.scale{margin:2px 0 5px}.track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.target-mark{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#ffffff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.target-label{position:relative;height:12px;font-size:9px;color:#d2dded}.target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}.scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}
+.metrics,.quick-grid,.auto-grid,.status-grid,.control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+.ph-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.metric-label{font-size:10px;color:#d9e5f5}.metric-value{font-size:13px;font-weight:900;color:#fff}
+.section-title{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px}
+.quick-card{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.quick-label{font-size:9px;color:#64748b;font-weight:700;margin-bottom:3px}.quick-value-row{display:flex;align-items:center;gap:8px}.quick-value{font-size:12px;font-weight:900;color:#0f172a;line-height:1.08}.quick-trend{font-size:18px;font-weight:900;line-height:1}.quick-trend.up{color:#ffb36b}.quick-trend.down{color:#52b7ff}.quick-trend.flat{color:#8fa3bc}.mini-bar{margin-top:6px;height:8px;border-radius:999px;background:linear-gradient(90deg,#ff6b6b 0%,#f59e0b 35%,#84cc16 65%,#22c55e 100%);position:relative;overflow:hidden}.mini-fill{height:100%;border-radius:999px}.battery-fill{background:linear-gradient(90deg,rgba(255,255,255,.28),rgba(255,255,255,.12));box-shadow:inset 0 0 0 999px rgba(255,255,255,.10)}
+.action-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:7px 9px;border-radius:13px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}
+.action-name{font-size:12px;font-weight:800}.action-state{font-size:9px;font-weight:800}
+.action-btn.is-on .action-name,.action-btn.is-on .action-state{color:#67dd7c}
+.action-btn.is-off .action-name,.action-btn.is-off .action-state{color:#ff8d7b}
+.manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:7px 9px;border-radius:999px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}
+.manual-btn span{font-size:13px}.manual-btn small{font-size:10px;color:#dbeafe}
 .temp-btn{appearance:none;border:none;cursor:pointer;border-radius:12px;min-height:52px;padding:8px 10px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:16px}
-.temp-center{display:flex;flex-direction:column;justify-content:center;align-items:center;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.temp-center .quick-label{margin-bottom:2px}.temp-center .quick-value{font-size:16px}
+.temp-center{display:flex;flex-direction:column;justify-content:center;align-items:center;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}
+.temp-center .quick-label{margin-bottom:2px}
+.temp-center .quick-value{font-size:16px}
 </style>
-</head><body><div class="ps-wrap">
-  <div class="ps-card ps-hero">
-    <div class="ps-header"><div class="ps-title">Pool Manager <span class="ps-ver">${esc(data.adapterVersion)}</span></div><div class="ps-sub"><div class="ps-mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div></div>
-    <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
-    <div class="ps-scale"><div class="ps-track"><div class="ps-target"></div><div class="ps-dot"></div></div><div class="ps-target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
-    <div class="ps-metrics">
-      <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${metricValue(data.ph, data.phTrend, data.phInRange)}</div></div>
-      <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${metricValue(data.orp, data.orpTrend, data.orpInRange)}</div></div>
-      <div class="ps-metric"><div class="ps-ml">Außen</div><div class="ps-mv">${metricValue(`${data.outsideTemp}°C`, data.outsideTempTrend, false)}</div></div>
-      <div class="ps-metric"><div class="ps-ml">Soll</div><div class="ps-mv">${esc(data.targetTemp)}°C</div></div>
+</head><body><div class="wrap">
+  <div class="card hero">
+    <div class="header"><div class="title">Pool Manager <span class="ver">${esc(data.adapterVersion)}</span></div><div class="meta"><div class="mode-badge">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div></div>
+    <div class="temp-row"><div class="temp">${esc(data.poolTemp)}</div><div class="unit">°C</div></div>
+    <div class="scale"><div class="track"><div class="target-mark"></div><div class="dot"></div></div><div class="target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">pH</div><div class="metric-value">${metricValue(data.ph, data.phTrend, data.phInRange)}</div></div>
+      <div class="metric"><div class="metric-label">ORP</div><div class="metric-value">${metricValue(data.orp, data.orpTrend, data.orpInRange)}</div></div>
+      <div class="metric"><div class="metric-label">Außen</div><div class="metric-value">${metricValue(`${data.outsideTemp}°C`, data.outsideTempTrend, false)}</div></div>
+      <div class="metric"><div class="metric-label">Soll</div><div class="metric-value">${esc(data.targetTemp)}°C</div></div>
     </div>
   </div>
 
-  <div class="ps-card"><div class="ps-section">Schnellzugriff</div><div class="control-grid">
+  <div class="card"><div class="section-title">Schnellzugriff</div><div class="control-grid">
     <button type="button" class="action-btn js-standby-btn ${data.standbyControl ? 'is-on' : 'is-off'}" data-current="${data.standbyControl ? '1' : '0'}"><span class="action-name">Standby</span><span class="action-state">${data.standbyControl ? 'AKTIV' : 'AUS'}</span></button>
     <div class="temp-center"><div class="quick-label">Poolsolltemperatur</div><div class="quick-value">${esc(data.targetTemp)}°C</div></div>
     <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.phManualDoseSec || 30) || 30}" style="grid-column:1 / -1;"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
   </div></div>
 
-  <div class="ps-card"><div class="ps-section">Automatik</div><div class="ps-auto">
+  <div class="card"><div class="section-title">Automatik</div><div class="auto-grid">
     ${autoBtn('Umwälzpumpe','circulation',!!data.autoCirculationControl)}
     ${autoBtn('Chlor','chlor',!!data.autoChlorControl)}
     ${autoBtn('pH','ph',!!data.autoPhControl)}
     ${autoBtn('Wärmepumpe','heatpump',!!data.autoHeatpumpControl)}
   </div></div>
 
-  <div class="ps-card"><div class="ps-section">Aktoren & Status</div><div class="ps-statusGrid">
+  <div class="card"><div class="section-title">Aktoren & Status</div><div class="status-grid">
     ${deviceBtn('Umwälzpumpe','circulation',!!data.pumpOn)}
     ${deviceBtn('Chlorinator','chlorinator',!!data.chlorOn)}
     ${deviceBtn('pH-Dosierpumpe','phPump',!!data.phPumpOn)}
     ${deviceBtn('Wärmepumpe','heatpump',!!data.heatpumpOn)}
   </div></div>
 
-  <div class="ps-card"><div class="ps-section">Energie & Steuerung</div><div class="ps-quickGrid">
+  <div class="card"><div class="section-title">Energie & Steuerung</div><div class="quick-grid">
     ${quick('PV-Leistung', `${data.pv} W`, data.pvTrend || '→')}
     ${quick('Einspeisung', `${data.feedIn} W`, data.feedInTrend || '→')}
     ${quick('Batterie', `${data.battery} %`, '', batteryBar)}
@@ -1145,7 +962,7 @@ class Poolsteuerung extends utils.Adapter {
     ${quick('pH Prüfung', data.phDecision)}
   </div></div>
 
-  <div class="ps-card"><div class="ps-section">pH Info</div><div class="ps-quickGrid ps-phGrid">
+  <div class="card"><div class="section-title">pH Info</div><div class="quick-grid ph-grid">
     ${quick('Berechnet', `${data.phCalculatedDoseSec} s / ${data.phCalculatedDoseMl} ml`)}
     ${quick('Letzte Dosis', `${data.phLastDoseDurationSec} s / ${data.phLastDoseMl} ml`)}
     ${quick('Heute dosiert', `${data.phDailyCount}x`)}
@@ -1260,580 +1077,225 @@ class Poolsteuerung extends utils.Adapter {
 
 
   buildTabletWidget(data) {
-    const badge = txt => `<div style="display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.12);font-size:11px;font-weight:800;color:#fff;">${esc(txt)}</div>`;
-    return this.buildTabletHtml(data)
-      .replace('<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>', '<!-- widget-render:'+ esc(data.updated) +' --><style>')
-      .replace('</head><body>', '')
-      .replace('</body></html>', '');
-  }
-
-  async getHistoryPoints(stateId, startTs, endTs) {
-    if (!stateId || !this.config.trendHistoryInstance) return [];
-    const options = {
-      id: stateId,
-      options: {
-        start: startTs,
-        end: endTs,
-        aggregate: 'none'
-      }
+    const badgeClass = (value, low, high) => {
+      const n = parseNum(value);
+      if (!Number.isFinite(n)) return 'neutral';
+      if (n < low) return 'warn';
+      if (n > high) return 'bad';
+      return 'good';
     };
-    return await new Promise(resolve => {
-      try {
-        this.sendTo(this.config.trendHistoryInstance, 'getHistory', options, result => {
-          const rows = result && Array.isArray(result.result) ? result.result : [];
-          resolve(rows);
-        });
-      } catch (e) {
-        this.log.warn('History-Abfrage fehlgeschlagen für ' + stateId + ': ' + (e.message || e));
-        resolve([]);
-      }
-    });
-  }
-
-  avgNumbers(rows) {
-    const nums = (rows || []).map(r => Number(String(r && r.val).replace(',', '.'))).filter(Number.isFinite);
-    if (!nums.length) return null;
-    const sum = nums.reduce((a, b) => a + b, 0);
-    return sum / nums.length;
-  }
-
-  trendArrow(delta, tolerance) {
-    if (!Number.isFinite(delta)) return '→';
-    if (Math.abs(delta) <= tolerance) return '→';
-    return delta > 0 ? '↑' : '↓';
-  }
-
-  async getHistoryTrends() {
-    const now = Date.now();
-    if (this.trendCache.data && (now - (this.trendCache.ts || 0)) < 120000) {
-      return this.trendCache.data;
-    }
-
-    const historyInstance = String(this.config.trendHistoryInstance || 'history.0').trim();
-    if (!historyInstance) return {};
-
-    const windowMin = Math.max(15, Number(this.config.trendWindowMin) || 60);
-    const smoothMin = Math.max(1, Number(this.config.trendSmoothMin) || 5);
-    const tolPh = Math.max(0.001, Number(String(this.config.trendTolerancePh || '0.03').replace(',', '.')) || 0.03);
-    const tolOrp = Math.max(1, Number(this.config.trendToleranceOrp) || 15);
-    const tolTemp = Math.max(0.01, Number(String(this.config.trendToleranceTemp || '0.3').replace(',', '.')) || 0.3);
-    const tolPower = Math.max(10, Number(this.config.trendTolerancePowerW) || 50);
-
-    const ranges = {
-      nowStart: now - smoothMin * 60000,
-      nowEnd: now,
-      prevStart: now - windowMin * 60000,
-      prevEnd: now - windowMin * 60000 + smoothMin * 60000,
-    };
-
-    const collectTrend = async (stateId, tolerance) => {
-      if (!stateId) return '→';
-      const [currRows, prevRows] = await Promise.all([
-        this.getHistoryPoints(stateId, ranges.nowStart, ranges.nowEnd),
-        this.getHistoryPoints(stateId, ranges.prevStart, ranges.prevEnd),
-      ]);
-      const curr = this.avgNumbers(currRows);
-      const prev = this.avgNumbers(prevRows);
-      if (!Number.isFinite(curr) || !Number.isFinite(prev)) return '→';
-      return this.trendArrow(curr - prev, tolerance);
-    };
-
-    const originalHistoryInstance = this.config.trendHistoryInstance;
-    this.config.trendHistoryInstance = historyInstance;
-    const data = {
-      phTrend: await collectTrend(this.config.phStateId, tolPh),
-      orpTrend: await collectTrend(this.config.orpStateId, tolOrp),
-      poolTempTrend: await collectTrend(this.config.poolTempStateId, tolTemp),
-      outsideTempTrend: await collectTrend(this.config.outsideTempStateId, tolTemp),
-      pvTrend: await collectTrend(this.config.pvPowerStateId, tolPower),
-      feedInTrend: await collectTrend(this.config.gridFeedInStateId, tolPower),
-    };
-    this.config.trendHistoryInstance = originalHistoryInstance;
-    this.trendCache = { ts: now, data };
-    return data;
-  }
-
-  async onReady() {
-    try {
-      this.log.info('Poolsteuerung startet...');
-      if (this.config.adapterEnabled === false) {
-        this.log.warn('Adapter ist deaktiviert. Keine Steuerung wird ausgeführt.');
-      }
-
-      await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
-      await this.ensureState('info.poolVolume', 'number', 'value.volume', 0, false);
-      await this.ensureState('control.standby', 'boolean', 'switch.enable', this.config.standbyModeEnabled === true, true);
-      await this.ensureState('control.auto.circulation', 'boolean', 'switch.enable', this.config.enableCirculationControl !== false, true);
-      await this.ensureState('control.auto.chlor', 'boolean', 'switch.enable', this.config.enableChlorControl !== false, true);
-      await this.ensureState('control.auto.ph', 'boolean', 'switch.enable', this.config.enablePhControl !== false, true);
-      await this.ensureState('control.auto.heatpump', 'boolean', 'switch.enable', this.config.enableHeatpumpControl !== false, true);
-      await this.ensureState('control.device.circulation', 'boolean', 'switch', false, true);
-      await this.ensureState('control.device.chlorinator', 'boolean', 'switch', false, true);
-      await this.ensureState('control.device.phPump', 'boolean', 'switch', false, true);
-      await this.ensureState('control.device.heatpump', 'boolean', 'switch', false, true);
-      await this.ensureState('control.heatpump.resetLock', 'boolean', 'button', false, true);
-      await this.ensureState('control.ph.manualStart', 'boolean', 'button', false, true);
-      await this.ensureState('control.ph.manualDoseSec', 'number', 'value.interval', parseNum(this.config.phDoseDurationSec || 30), true);
-      await this.ensureState('control.heatpump.setTemp', 'number', 'level.temperature', 0, true);
-      await this.ensureState('status.pump.lastRuntimeSec', 'number', 'value.interval', 0, false);
-      await this.ensureState('status.pump.lastDecision', 'string', 'text', '--', false);
-      await this.ensureState('status.heatpump.lastReason', 'string', 'text', '--', false);
-      await this.ensureState('status.chlor.lastReason', 'string', 'text', '--', false);
-      await this.ensureState('status.ph.lastReason', 'string', 'text', '--', false);
-      await this.ensureState('status.ph.lastDoseDurationSec', 'number', 'value.interval', 0, false);
-      await this.ensureState('status.ph.lastDoseTimestamp', 'number', 'value.time', 0, false);
-      await this.ensureState('status.ph.dailyCount', 'number', 'value.counter', 0, false);
-      await this.ensureState('status.ph.dailyDate', 'string', 'text', '', false);
-      await this.ensureState('status.ph.lastDoseMl', 'number', 'value.volume', 0, false);
-      await this.ensureState('status.ph.calculatedDoseSec', 'number', 'value.interval', 0, false);
-      await this.ensureState('status.ph.calculatedDoseMl', 'number', 'value.volume', 0, false);
-      await this.ensureState('status.ph.manualGranulateG', 'number', 'value.mass', 0, false);
-      await this.ensureState('status.ph.stopAtTs', 'number', 'value.time', 0, false);
-      await this.ensureState('status.debug.lastPumpScheduleActive', 'boolean', 'indicator', false, false);
-      await this.ensureState('status.debug.lastPumpLoggedDecision', 'string', 'text', '', false);
-      await this.ensureState('status.heartbeat.summary', 'string', 'text', 'ok', false);
-      await this.ensureState('status.heartbeat.detailsJson', 'string', 'json', '{}', false);
-      await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
-      await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
-      await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
-      await this.ensureState('vis.widgetPhone', 'string', 'html', '', false);
-
-      await this.updateComputedStates();
-      await this.setStateAsync('info.connection', true, true);
-      await this.resetManualBlockers('Adapterstart');
-      this.clearPendingRenderTimeouts('Adapterstart');
-      this.resetHeatpumpLocks('Adapterstart');
-      await this.forceDependentDevicesOff('Adapterstart Recovery');
-      await this.syncControlStates();
-      await this.syncDeviceControlStates();
-      await this.applyControlLogic();
-      await this.logStartupSummary();
-      await this.renderVis();
-      this.timer = setInterval(async () => {
-        try {
-          await this.updateComputedStates();
-          await this.applyControlLogic();
-          await this.syncControlStates();
-          await this.syncDeviceControlStates();
-          await this.renderVis();
-          await this.applyDependencyRules();
-        } catch (e) {
-          if (!this.isDbClosedError(e)) this.log.warn('Loop Fehler: ' + (e && e.stack ? e.stack : e));
-        }
-      }, Math.max(1, parseNum(this.config.pollIntervalMin || 1)) * 60000);
-    } catch (e) {
-      this.log.error('Startup Fehler: ' + (e && e.stack ? e.stack : e));
-    }
-  }
-
-  async getControlBool(id, defaultVal = false) {
-    try {
-      const s = await this.getStateAsync(id);
-      if (s && s.val !== null && s.val !== undefined) return !!s.val;
-    } catch {}
-    return !!defaultVal;
-  }
-
-  async syncControlStates() {
-    await this.setStateIfChanged('control.standby', this.config.standbyModeEnabled === true, true);
-    await this.setStateIfChanged('control.auto.circulation', this.config.enableCirculationControl !== false, true);
-    await this.setStateIfChanged('control.auto.chlor', this.config.enableChlorControl !== false, true);
-    await this.setStateIfChanged('control.auto.ph', this.config.enablePhControl !== false, true);
-    await this.setStateIfChanged('control.auto.heatpump', this.config.enableHeatpumpControl !== false, true);
-  }
-
-  getTasmotaZigbeeWriteTarget(id) {
-    const s = String(id || '');
-    const m = s.match(/^(.*)\.ZbReceived_(0x[0-9A-Fa-f]+)_Power$/);
-    if (m) {
-      return {
-        cmdId: `${m[1]}.ZbSend`,
-        device: m[2]
-      };
-    }
-    return null;
-  }
-
-  isSingleWriteDevice(id) {
-    const s = String(id || '');
-    return s.startsWith('tuya.') || s === String(this.config.heatpumpPowerStateId || '');
-  }
-
-  async waitForBoolState(id, expected, waits = [500, 1000, 1500, 2500]) {
-    for (const waitMs of waits) {
-      try {
-        await new Promise(resolve => setTimeout(resolve, waitMs));
-        const current = await this.getBool(id);
-        if (current === expected) return true;
-      } catch {}
-    }
+    const phClass = badgeClass(data.ph, 7.1, 7.25);
+    const orpClass = badgeClass(data.orp, Number(data.orpOnThreshold || 725), Number(data.orpOffThreshold || 750));
+    const autoBtn = (label, key, active) => `
+      <button class="ps-action-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}">
+        <span class="ps-action-name">${esc(label)}</span>
+        <span class="ps-action-state">${active ? 'AKTIV' : 'AUS'}</span>
+      </button>`;
+    const deviceBtn = (label, key, active) => `
+      <button class="ps-action-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}">
+        <span class="ps-action-name">${esc(label)}</span>
+        <span class="ps-action-state">${active ? 'EIN' : 'AUS'}</span>
+      </button>`;
+    const decisionValue = v => `<div class="ps-v ps-wrap">${esc(v)}</div>`;
+    const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
+    const metricValue = (value, trend = '→', ok = false) => `<span class="ps-mmain ${ok ? 'ok' : ''}">${esc(value)}</span><span class="ps-trend ${trendClass(trend)} ${ok ? 'ok' : ''}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>`;
+    const batteryPct = Math.max(0, Math.min(100, parseNum(data.battery)));
+    const batteryBar = `<div class="ps-bbar"><div class="ps-bfill" style="width:${batteryPct}%"></div></div>`;
+    return `
+<!-- widget-render:${esc(data.updated)} -->
+<style>
+.ps-root,*{box-sizing:border-box}
+.ps-root{width:100%;max-width:1000px;height:730px;max-height:730px;overflow:hidden;padding:8px;margin:0 auto;color:#0f172a;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(180deg,#0b1220 0%,#0f172a 100%)}
+.ps-grid{display:grid;grid-template-columns:278px 330px 368px;gap:8px;width:100%;height:714px;overflow:hidden}
+.ps-card{display:flex;flex-direction:column;min-width:0;overflow:hidden;background:linear-gradient(180deg,#f8fbff 0%,#eef4fb 100%);border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:10px;box-shadow:0 14px 28px rgba(0,0,0,.18)}
+.ps-hero{background:radial-gradient(circle at top right, rgba(85,200,255,.22), transparent 28%),linear-gradient(180deg,#1b3763 0%,#102342 100%);color:#fff;border-color:rgba(255,255,255,.1)}
+.ps-header{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.ps-title{font-size:16px;font-weight:800;color:inherit}.ps-ver{font-size:9px;font-weight:800;color:#b9d7ff;margin-left:6px}.ps-sub{font-size:11px;color:#d4deec;text-align:right;flex:0 0 auto}.ps-mode{display:inline-flex;align-items:center;justify-content:center;padding:3px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(180deg,#334f84,#1b3158);font-weight:800;font-size:11px;color:#fff;cursor:pointer}
+.ps-tempRow{display:flex;align-items:flex-end;gap:8px;margin:10px 0 10px}.ps-temp{font-size:70px;font-weight:900;line-height:.9;color:inherit}.ps-unit{font-size:20px;color:#d7e5f5;padding-bottom:8px}
+.ps-scale{margin:2px 0 10px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-target{position:absolute;top:50%;left:${Math.max(0, Math.min(100, ((parseNum(data.targetTemp)-15)/(32-15))*100 || 0))}%;width:3px;height:14px;border-radius:999px;background:#fff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.ps-dot{position:absolute;top:50%;left:${Math.max(0, Math.min(100, ((parseNum(data.poolTemp)-15)/(32-15))*100 || 0))}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}.ps-target-label{position:relative;height:12px;font-size:10px;color:#e3edf9}.ps-target-label span{position:absolute;left:${Math.max(0, Math.min(100, ((parseNum(data.targetTemp)-15)/(32-15))*100 || 0))}%;transform:translateX(-50%)}
+.ps-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:auto}.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px;min-height:74px}.ps-k{font-size:12px;color:inherit;opacity:.88;margin-bottom:6px;font-weight:700}.ps-v{font-size:22px;font-weight:800;line-height:1.15;color:#0f172a}.ps-v.ps-wrap{font-size:13px;font-weight:700;line-height:1.2;word-break:break-word;overflow-wrap:anywhere;white-space:normal}.ps-s{font-size:11px;color:#e3edf9;margin-top:6px}.ps-hero .ps-v{color:#fff}.ps-chip{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;font-size:9px;font-weight:800;margin-top:6px}.ps-chip.good{background:#dcfce7;color:#166534}.ps-chip.warn{background:#fef3c7;color:#92400e}.ps-chip.bad{background:#fee2e2;color:#991b1b}.ps-chip.neutral{background:#e2e8f0;color:#334155}
+.ps-block-title{font-size:16px;font-weight:800;color:#0f172a;margin-bottom:8px}.ps-list{display:grid;gap:6px}.ps-row{display:grid;grid-template-columns:minmax(88px,116px) minmax(0,1fr);gap:8px;align-items:start;background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}.ps-actions-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}.ps-action-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:10px 12px;border-radius:14px;min-height:58px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:4px}.ps-action-btn:disabled{opacity:.5;cursor:default}.ps-action-name{font-size:14px;font-weight:800}.ps-action-state{font-size:12px;font-weight:800}.ps-action-btn.is-on .ps-action-name,.ps-action-btn.is-on .ps-action-state{color:#67dd7c}.ps-action-btn.is-off .ps-action-name,.ps-action-btn.is-off .ps-action-state{color:#ff8d7b}.ps-statuswrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+@media (max-width: 1050px){.ps-grid{grid-template-columns:1fr}}
+</style>
+<div class="ps-root"><div class="ps-grid">
+  <div class="ps-card ps-hero">
+    <div class="ps-header">
+      <div><div class="ps-title">Pool Manager <span class="ps-ver">${esc(data.adapterVersion)}</span></div></div>
+      <div class="ps-sub"><button class="ps-mode js-standby-btn" data-current="${data.standbyControl ? '1' : '0'}">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</button><br>Aktualisiert<br>${esc(data.updated)}</div>
+    </div>
+    <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
+    <div class="ps-scale"><div class="ps-track"><div class="ps-target"></div><div class="ps-dot"></div></div><div class="ps-target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
+    <div class="ps-metrics">
+      <div class="ps-metric"><div class="ps-k">pH</div><div class="ps-v">${metricValue(data.ph, data.phTrend, data.phInRange)}</div><div class="ps-s">Soll ${esc(data.phSet)}</div><div class="ps-chip ${phClass}">${phClass === 'good' ? 'OK' : phClass === 'warn' ? 'Niedrig' : 'Hoch'}</div></div>
+      <div class="ps-metric"><div class="ps-k">ORP</div><div class="ps-v">${metricValue(data.orp, data.orpTrend, data.orpInRange)}</div><div class="ps-s">Soll ${esc(data.orpSet)}</div><div class="ps-chip ${orpClass}">${orpClass === 'good' ? 'OK' : orpClass === 'warn' ? 'Niedrig' : 'Hoch'}</div></div>
+      <div class="ps-metric"><div class="ps-k">Außen</div><div class="ps-v">${metricValue(`${data.outsideTemp}°C`, data.outsideTempTrend, false)}</div></div>
+      <div class="ps-metric"><div class="ps-k">Solltemp</div><div class="ps-v">${esc(data.targetTemp)}°C</div></div>
+    </div>
+  </div>
+  <div class="ps-card">
+    <div class="ps-block-title">Automatik</div>
+    <div class="ps-actions-grid">
+      ${autoBtn('Umwälzpumpe','circulation',!!data.autoCirculationControl)}
+      ${autoBtn('Chlor','chlor',!!data.autoChlorControl)}
+      ${autoBtn('pH','ph',!!data.autoPhControl)}
+      ${autoBtn('Wärmepumpe','heatpump',!!data.autoHeatpumpControl)}
+    </div>
+    <div class="ps-block-title">Energie & Steuerung</div>
+    <div class="ps-list">
+      <div class="ps-row"><div class="ps-k">PV-Leistung</div><div class="ps-v">${esc(data.pv)} W</div></div>
+      <div class="ps-row"><div class="ps-k">Netzeinspeisung</div><div class="ps-v">${esc(data.feedIn)} W</div></div>
+      <div class="ps-row"><div class="ps-k">Netzbezug</div><div class="ps-v">${esc(data.gridSupply)} W</div></div>
+      <div class="ps-row"><div class="ps-k">Batterie SoC</div><div class="ps-v">${esc(data.battery)} %</div></div>
+      <div class="ps-row"><div class="ps-k">WP Freigabe</div>${decisionValue(data.heatDecision)}</div>
+      <div class="ps-row"><div class="ps-k">Chlor Freigabe</div>${decisionValue(data.chlorDecision)}</div>
+      <div class="ps-row"><div class="ps-k">Zeitplan</div>${decisionValue(data.pumpDecision)}</div>
+      <div class="ps-row"><div class="ps-k">pH Prüfung</div>${decisionValue(data.phDecision)}</div>
+    </div>
+  </div>
+  <div class="ps-card">
+    <div class="ps-block-title">Aktoren & Status</div>
+    <div class="ps-statuswrap">
+      ${deviceBtn('Umwälzpumpe','circulation',!!data.pumpOn)}
+      ${deviceBtn('Chlorinator','chlorinator',!!data.chlorOn)}
+      ${deviceBtn('pH-Dosierpumpe','phPump',!!data.phPumpOn)}
+      ${deviceBtn('Wärmepumpe','heatpump',!!data.heatpumpOn)}
+    </div>
+    <div class="ps-list">
+      <div class="ps-row"><div class="ps-k">Zeitplan</div><div class="ps-v">${data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV'}</div></div>
+      <div class="ps-row"><div class="ps-k">PV Schwelle</div><div class="ps-v">${esc(data.threshold)} W</div></div>
+      <div class="ps-row"><div class="ps-k">ORP Grenzen</div><div class="ps-v">${esc(data.orpOnThreshold)} / ${esc(data.orpOffThreshold)}</div></div>
+      <div class="ps-row"><div class="ps-k">pH Tag</div><div class="ps-v">${esc(data.phDailyCount)}</div></div>
+      <div class="ps-row"><div class="ps-k">Pumpe ml/min</div><div class="ps-v">${esc(data.phFlowMlMin)}</div></div>
+      <div class="ps-row"><div class="ps-k">ml je 0,1 / 10m³</div><div class="ps-v">${esc(data.phMlPer01Per10)}</div></div>
+      <div class="ps-row"><div class="ps-k">Poolvolumen</div><div class="ps-v">${esc(data.volume)} m³</div></div>
+      <div class="ps-row"><div class="ps-k">Granulat manuell</div><div class="ps-v">${esc(data.manualGranulateText)}</div></div>
+    </div>
+  </div>
+</div></div>
+<script>
+(function(){
+  window.poolSetState = async function(id,val){
+    try{ if(window.vis&&window.vis.conn&&typeof window.vis.conn.setState==='function'){ window.vis.conn.setState(id,val); return true; } }catch(e){}
+    try{ if(window.parent&&window.parent.vis&&window.parent.vis.conn&&typeof window.parent.vis.conn.setState==='function'){ window.parent.vis.conn.setState(id,val); return true; } }catch(e){}
+    try{ if(window.top&&window.top.vis&&window.top.vis.conn&&typeof window.top.vis.conn.setState==='function'){ window.top.vis.conn.setState(id,val); return true; } }catch(e){}
     return false;
+  };
+  window.poolToggleControl = async function(key,current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.auto.'+key, !current); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolToggleStandby = async function(current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.standby', !current); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolToggleState = async function(key,current){
+    const ns=${JSON.stringify(data.namespace)};
+    let ctrl='';
+    if(key==='circulation') ctrl='.control.device.circulation';
+    else if(key==='chlorinator') ctrl='.control.device.chlorinator';
+    else if(key==='phPump') ctrl='.control.device.phPump';
+    else if(key==='heatpump') ctrl='.control.device.heatpump';
+    if(!ctrl){ alert('Kein Control-Key hinterlegt'); return; }
+    const ok=await window.poolSetState(ns+ctrl, !current);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+})();
+</script>`;
   }
 
-  resetHeatpumpLocks(reason = '') {
-    const suffix = reason ? ` (${reason})` : '';
-    this.heatpumpLock = { state: null, lastOnTs: 0, lastOffTs: 0 };
-    this.debug('Heatpump-Locks zurückgesetzt' + suffix);
-  }
-
-  clearPendingRenderTimeouts(reason = '') {
-    const suffix = reason ? ` (${reason})` : '';
-    for (const h of Array.from(this.pendingTimeouts)) {
-      try { clearTimeout(h); } catch {}
-      this.pendingTimeouts.delete(h);
-    }
-    this.renderQueued = false;
-    this.debug('Pending-Timeouts gelöscht' + suffix);
-  }
-
-  async setSwitchStateCompat(id, on) {
-    if (!id) return false;
-    const mode = String(
-      id === this.config.circulationPumpSocketStateId ? (this.config.circulationPumpWriteMode || 'bool') :
-      id === this.config.chlorinatorSocketStateId ? (this.config.chlorinatorWriteMode || 'bool') :
-      id === this.config.phPumpSocketStateId ? (this.config.phPumpWriteMode || 'bool') : 'bool'
-    );
-
-    const zbTarget = this.getTasmotaZigbeeWriteTarget(id);
-    if (zbTarget) {
-      try {
-        await this.setForeignStateAsync(zbTarget.cmdId, JSON.stringify({ Device: zbTarget.device, Send: { Power: on ? 1 : 0 } }), false);
-        return true;
-      } catch (e) {
-        this.log.warn('Tasmota Zigbee Write fehlgeschlagen: ' + (e.message || e));
-      }
-    }
-
-    const value = mode === 'num01' ? (on ? 1 : 0) : !!on;
-    await this.setForeignStateAsync(id, value, false);
-    return true;
-  }
-
-  async forceSwitchOnCompat(id) {
-    if (!id) return false;
-    const zbTarget = this.getTasmotaZigbeeWriteTarget(id);
-    if (zbTarget) {
-      try { await this.setSwitchStateCompat(id, true); } catch {}
-      await this.waitForBoolState(id, true, [400, 700, 1000, 1500]);
-      return true;
-    }
-
-    if (this.isSingleWriteDevice(id)) {
-      try { await this.setSwitchStateCompat(id, true); } catch {}
-      await this.waitForBoolState(id, true, [500, 1000, 1500, 2500, 3500]);
-      return true;
-    }
-
-    const attempts = [
-      async () => this.setSwitchStateCompat(id, true),
-      async () => this.setForeignStateAsync(id, true, false),
-      async () => this.setForeignStateAsync(id, 1, false),
-      async () => this.setForeignStateAsync(id, '1', false),
-    ];
-    for (const attempt of attempts) {
-      try { await attempt(); } catch {}
-      try {
-        await new Promise(resolve => setTimeout(resolve, 350));
-        const current = await this.getBool(id);
-        if (current) return true;
-      } catch {}
-    }
+  buildPhoneWidget(data) {
+    const poolTempNum = parseNum(data.poolTemp);
+    const tempScaleMin = 15;
+    const tempScaleMax = 32;
+    const tempPct = Number.isFinite(poolTempNum) ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
+    const targetTempNum = parseNum(data.targetTemp);
+    const targetPct = Number.isFinite(targetTempNum) ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
+    const autoBtn = (label, key, active) => `<button class="ps-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
+    const deviceBtn = (label, key, active) => `<button class="ps-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'EIN' : 'AUS'}</span></button>`;
+    const quick = (l, v, trend = '', barHtml = '') => `<div class="ps-q"><div class="ps-ql">${esc(l)}</div><div class="ps-qvr"><div class="ps-qv">${esc(v)}</div>${trend ? `<div class="ps-qtrend ${trendClass(trend)}">${esc(trend)}</div>` : ''}</div>${barHtml || ''}</div>`;
+    const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
+    const metricValue = (value, trend = '→', ok = false) => `<span class="ps-mmain ${ok ? 'ok' : ''}">${esc(value)}</span><span class="ps-trend ${trendClass(trend)} ${ok ? 'ok' : ''}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>`;
+    const batteryPct = Math.max(0, Math.min(100, parseNum(data.battery)));
+    const batteryBar = `<div class="ps-bbar"><div class="ps-bfill" style="width:${batteryPct}%"></div></div>`;
+    return `<!-- phone-render:${esc(data.updated)} -->
+<style>
+.ps-wrap{width:100%;max-width:510px;height:1090px;max-height:1090px;overflow:hidden;margin:0 auto;display:grid;gap:4px;padding:4px;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,#10203a,#08111f);font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
+.ps-card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid rgba(15,23,42,.08);border-radius:15px;padding:6px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
+.ps-hero{background:radial-gradient(circle at top right, rgba(85,200,255,.26), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
+.ps-header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}.ps-title{font-size:15px;font-weight:900}.ps-ver{font-size:9px;font-weight:800;color:#b9d7ff;margin-left:6px}.ps-sub{font-size:9px;color:#d2dded;text-align:right}.ps-mode{display:inline-flex;align-items:center;justify-content:center;padding:3px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(180deg,#334f84,#1b3158);font-weight:800;font-size:10px;color:#fff;cursor:pointer}
+.ps-tempRow{display:flex;align-items:flex-end;gap:5px;margin:4px 0 4px}.ps-temp{font-size:42px;font-weight:900;line-height:.9}.ps-unit{font-size:16px;padding-bottom:4px;color:#d5e5f6}
+.ps-scale{margin:2px 0 5px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-target{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#fff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}.ps-target-label{position:relative;height:12px;font-size:9px;color:#d2dded}.ps-target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}
+.ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.ps-phGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.ps-ml{font-size:10px;color:#d9e5f5}.ps-mv{font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center}.ps-ms{display:none}.ps-mmain.ok{color:#67dd7c}.ps-trend{font-size:18px;font-weight:900;color:#c9d7ee;line-height:1;display:inline-flex;min-width:18px;justify-content:center;margin-left:10px}.ps-trend.up{color:#ffb36b}.ps-trend.down{color:#7dd3fc}.ps-trend.flat{color:#c9d7ee}.ps-trend.ok{color:#67dd7c}.ps-section{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px}
+.ps-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:7px 9px;border-radius:13px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}.ps-btn:disabled{opacity:.5;cursor:default}.ps-btn-name{font-size:12px;font-weight:800}.ps-btn-state{font-size:9px;font-weight:800}.ps-btn.is-on .ps-btn-name,.ps-btn.is-on .ps-btn-state{color:#67dd7c}.ps-btn.is-off .ps-btn-name,.ps-btn.is-off .ps-btn-state{color:#ff8d7b}
+.ps-q{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.ps-ql{font-size:9px;color:#64748b;font-weight:700;margin-bottom:3px}.ps-qv{font-size:12px;font-weight:900;color:#0f172a;line-height:1.08}
+.manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:7px 9px;border-radius:999px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}.manual-btn span{font-size:13px}.manual-btn small{font-size:10px;color:#dbeafe}
+</style>
+<div class="ps-wrap">
+  <div class="ps-card ps-hero">
+    <div class="ps-header"><div class="ps-title">Pool Manager <span class="ps-ver">${esc(data.adapterVersion)}</span></div><div class="ps-sub"><button class="ps-mode js-standby-btn" data-current="${data.standbyControl ? '1' : '0'}">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</button><br>Aktualisiert<br>${esc(data.updated)}</div></div>
+    <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
+    <div class="ps-scale"><div class="ps-track"><div class="ps-target"></div><div class="ps-dot"></div></div><div class="ps-target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
+    <div class="ps-metrics">
+      <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${metricValue(data.ph, data.phTrend, data.phInRange)}</div></div>
+      <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${metricValue(data.orp, data.orpTrend, data.orpInRange)}</div></div>
+      <div class="ps-metric"><div class="ps-ml">Außen</div><div class="ps-mv">${metricValue(`${data.outsideTemp}°C`, data.outsideTempTrend, false)}</div></div>
+      <div class="ps-metric"><div class="ps-ml">Soll</div><div class="ps-mv">${esc(data.targetTemp)}°C</div></div>
+    </div>
+  </div>
+  <div class="ps-card"><div class="ps-section">Automatik</div><div class="ps-auto">
+    ${autoBtn('Umwälzpumpe','circulation',!!data.autoCirculationControl)}
+    ${autoBtn('Chlor','chlor',!!data.autoChlorControl)}
+    ${autoBtn('pH','ph',!!data.autoPhControl)}
+    ${autoBtn('Wärmepumpe','heatpump',!!data.autoHeatpumpControl)}
+  </div></div>
+  <div class="ps-card"><div class="ps-section">Aktoren & Status</div><div class="ps-statusGrid">
+    ${deviceBtn('Umwälzpumpe','circulation',!!data.pumpOn)}
+    ${deviceBtn('Chlorinator','chlorinator',!!data.chlorOn)}
+    ${deviceBtn('pH-Dosierpumpe','phPump',!!data.phPumpOn)}
+    ${deviceBtn('Wärmepumpe','heatpump',!!data.heatpumpOn)}
+  </div></div>
+  <div class="ps-card"><div class="ps-section">Energie & Steuerung</div><div class="ps-quickGrid">
+    ${quick('PV-Leistung', `${data.pv} W`, data.pvTrend || '→')}
+    ${quick('Einspeisung', `${data.feedIn} W`, data.feedInTrend || '→')}
+    ${quick('Batterie', `${data.battery} %`, '', batteryBar)}
+    ${quick('WP Freigabe', data.heatDecision)}
+    ${quick('Chlor Freigabe', data.chlorDecision)}
+    ${quick('pH Prüfung', data.phDecision)}
+  </div></div>
+  <div class="ps-card"><div class="ps-section">pH Info</div><div class="ps-quickGrid ps-phGrid">
+    ${quick('Berechnet', `${data.phCalculatedDoseSec} s / ${data.phCalculatedDoseMl} ml`)}
+    ${quick('Letzte Dosis', `${data.phLastDoseDurationSec} s / ${data.phLastDoseMl} ml`)}
+    ${quick('Heute dosiert', `${data.phDailyCount}x`)}
+    ${quick('Nächste Prüfung', data.phNextCheck)}
+    ${quick('Granulat manuell', data.manualGranulateText)}
+    <button class="manual-btn js-manual-dose-btn" data-sec="${Number(data.phManualDoseSec || 30) || 30}"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
+  </div></div>
+</div>
+<script>
+(function(){
+  window.poolSetState = async function(id,val){
+    try{ if(window.vis&&window.vis.conn&&typeof window.vis.conn.setState==='function'){ window.vis.conn.setState(id,val); return true; } }catch(e){}
+    try{ if(window.parent&&window.parent.vis&&window.parent.vis.conn&&typeof window.parent.vis.conn.setState==='function'){ window.parent.vis.conn.setState(id,val); return true; } }catch(e){}
+    try{ if(window.top&&window.top.vis&&window.top.vis.conn&&typeof window.top.vis.conn.setState==='function'){ window.top.vis.conn.setState(id,val); return true; } }catch(e){}
     return false;
+  };
+  window.poolToggleControl = async function(key,current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.auto.'+key, !current); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolToggleStandby = async function(current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.standby', !current); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolToggleState = async function(key,current){
+    const ns=${JSON.stringify(data.namespace)};
+    let ctrl='';
+    if(key==='circulation') ctrl='.control.device.circulation';
+    else if(key==='chlorinator') ctrl='.control.device.chlorinator';
+    else if(key==='phPump') ctrl='.control.device.phPump';
+    else if(key==='heatpump') ctrl='.control.device.heatpump';
+    if(!ctrl){ alert('Kein Control-Key hinterlegt'); return; }
+    const ok=await window.poolSetState(ns+ctrl, !current);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+  window.poolPhManualDose = async function(sec){ const ns=${JSON.stringify(data.namespace)}; await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30); const ok=await window.poolSetState(ns + '.control.ph.manualStart', true); if(!ok) alert('VIS setState nicht verfügbar'); };
+})();
+</script>`;
   }
 
-  async forceSwitchOffCompat(id) {
-    if (!id) return false;
-    const zbTarget = this.getTasmotaZigbeeWriteTarget(id);
-    if (zbTarget) {
-      try { await this.setSwitchStateCompat(id, false); } catch {}
-      await this.waitForBoolState(id, false, [400, 700, 1000, 1500]);
-      return true;
-    }
-
-    if (this.isSingleWriteDevice(id)) {
-      try { await this.setSwitchStateCompat(id, false); } catch {}
-      await this.waitForBoolState(id, false, [500, 1000, 1500, 2500, 3500]);
-      return true;
-    }
-
-    const attempts = [
-      async () => this.setSwitchStateCompat(id, false),
-      async () => this.setForeignStateAsync(id, false, false),
-      async () => this.setForeignStateAsync(id, 0, false),
-      async () => this.setForeignStateAsync(id, '0', false),
-    ];
-    for (const attempt of attempts) {
-      try { await attempt(); } catch {}
-      try {
-        await new Promise(resolve => setTimeout(resolve, 350));
-        const current = await this.getBool(id);
-        if (!current) return true;
-      } catch {}
-    }
-    return false;
-  }
-
-  async forceDependentDevicesOff(reason = '') {
-    const suffix = reason ? ` (${reason})` : '';
-    try {
-      if (this.config.chlorinatorSocketStateId && await this.getBool(this.config.chlorinatorSocketStateId)) {
-        await this.forceSwitchOffCompat(this.config.chlorinatorSocketStateId);
-      }
-    } catch (e) {
-      this.log.warn('Chlorinator AUS fehlgeschlagen' + suffix + ': ' + (e.message || e));
-    }
-    try {
-      if (this.config.phPumpSocketStateId && await this.getBool(this.config.phPumpSocketStateId)) {
-        await this.forceSwitchOffCompat(this.config.phPumpSocketStateId);
-      }
-    } catch (e) {
-      this.log.warn('pH-Pumpe AUS fehlgeschlagen' + suffix + ': ' + (e.message || e));
-    }
-    try {
-      if (this.config.heatpumpPowerStateId && await this.getBool(this.config.heatpumpPowerStateId)) {
-        await this.forceSwitchOffCompat(this.config.heatpumpPowerStateId);
-      }
-    } catch (e) {
-      this.log.warn('Wärmepumpe AUS fehlgeschlagen' + suffix + ': ' + (e.message || e));
-    }
-    await this.setStateIfChanged('control.device.chlorinator', false, true);
-    await this.setStateIfChanged('control.device.phPump', false, true);
-    await this.setStateIfChanged('control.device.heatpump', false, true);
-  }
-
-  async resetManualBlockers(reason = '') {
-    const suffix = reason ? ` (${reason})` : '';
-    try { await this.setStateIfChanged('control.device.circulation', false, true); } catch (e) { this.log.warn('Reset control.device.circulation fehlgeschlagen' + suffix + ': ' + (e.message || e)); }
-    try { await this.setStateIfChanged('control.device.chlorinator', false, true); } catch (e) { this.log.warn('Reset control.device.chlorinator fehlgeschlagen' + suffix + ': ' + (e.message || e)); }
-    try { await this.setStateIfChanged('control.device.phPump', false, true); } catch (e) { this.log.warn('Reset control.device.phPump fehlgeschlagen' + suffix + ': ' + (e.message || e)); }
-    try { await this.setStateIfChanged('control.device.heatpump', false, true); } catch (e) { this.log.warn('Reset control.device.heatpump fehlgeschlagen' + suffix + ': ' + (e.message || e)); }
-    try { await this.setStateIfChanged('control.ph.manualStart', false, true); } catch {}
-  }
-
-  async syncDeviceControlStates() {
-    try { await this.setStateIfChanged('control.device.circulation', await this.getBool(this.config.circulationPumpSocketStateId), true); } catch {}
-    try { await this.setStateIfChanged('control.device.chlorinator', await this.getBool(this.config.chlorinatorSocketStateId), true); } catch {}
-    try { await this.setStateIfChanged('control.device.phPump', await this.getBool(this.config.phPumpSocketStateId), true); } catch {}
-    try { await this.setStateIfChanged('control.device.heatpump', await this.getBool(this.config.heatpumpPowerStateId), true); } catch {}
-  }
-
-  formatManualGranulateText(value) {
-    const num = parseNum(value);
-    if (!Number.isFinite(num) || num <= 0) return 'nicht nötig';
-    const rounded = num >= 100 ? Math.round(num / 10) * 10 : Math.round(num);
-    return `${rounded} g`;
-  }
-
-  async resetDailyPhCounterIfNeeded(now = new Date()) {
-    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const dateState = await this.getStateAsync('status.ph.dailyDate');
-    const countState = await this.getStateAsync('status.ph.dailyCount');
-    const storedDate = dateState && dateState.val ? String(dateState.val) : '';
-    if (storedDate !== today) {
-      await this.setStateAsync('status.ph.dailyDate', today, true);
-      await this.setStateAsync('status.ph.dailyCount', 0, true);
-      return 0;
-    }
-    return Number(countState && countState.val) || 0;
-  }
-
-  async incrementTodayDoseCount(now = new Date()) {
-    const current = await this.resetDailyPhCounterIfNeeded(now);
-    const next = current + 1;
-    await this.setStateAsync('status.ph.dailyCount', next, true);
-    return next;
-  }
-
-  async syncPhStopState(now = Date.now()) {
-    try {
-      const stopState = await this.getStateAsync('status.ph.stopAtTs');
-      const stopAt = Number(stopState && stopState.val) || 0;
-      this.phDoseStopAtTsMemory = stopAt;
-      if (stopAt > 0) {
-        if (!this.phStopWatcher) {
-          this.phStopWatcher = setInterval(async () => {
-            try {
-              if (!this.phDoseStopAtTsMemory) return;
-              if (Date.now() < this.phDoseStopAtTsMemory) return;
-              await this.stopDosePumpManaged('Timer abgelaufen');
-            } catch (e) {
-              if (!this.isDbClosedError(e)) this.log.warn('[PH] Stop-Überwachung fehlgeschlagen: ' + (e.message || e));
-            }
-          }, 1000);
-        }
-      } else if (this.phStopWatcher) {
-        clearInterval(this.phStopWatcher);
-        this.phStopWatcher = null;
-      }
-    } catch (e) {
-      if (!this.isDbClosedError(e)) this.log.warn('[PH] syncPhStopState Fehler: ' + (e.message || e));
-    }
-  }
-
-  async startDosePumpManaged(durationSec, info = {}) {
-    if (!this.config.phPumpSocketStateId) return false;
-    const pumpOn = await this.getBool(this.config.circulationPumpSocketStateId);
-    if (!pumpOn) {
-      this.log.warn('[PH] Dosierung blockiert: Umwälzpumpe nicht erreichbar');
-      return false;
-    }
-    const sec = Math.max(1, Number(durationSec) || 0);
-    const stopAtTs = Date.now() + sec * 1000;
-    await this.forceSwitchOnCompat(this.config.phPumpSocketStateId);
-    await this.setStateAsync('status.ph.stopAtTs', stopAtTs, true);
-    this.phDoseStopAtTsMemory = stopAtTs;
-    this.phManagedActive = true;
-    await this.syncPhStopState();
-    const doseMl = this.calcDoseMlFromSec(sec);
-    await this.setStateAsync('status.ph.lastDoseDurationSec', sec, true);
-    await this.setStateAsync('status.ph.lastDoseTimestamp', Date.now(), true);
-    await this.setStateAsync('status.ph.lastDoseMl', doseMl, true);
-    const title = info.manual ? 'Poolsteuerung pH-Dosierung gestartet' : 'Poolsteuerung pH-Dosierung gestartet';
-    const text = info.manual
-      ? `${title} | pH manuell | Laufzeit ${sec}s`
-      : `${title} | pH ${info.phValue ?? '--'} | Laufzeit ${sec}s`;
-    await this.sendAlert('ph_start', text);
-    return true;
-  }
-
-  async stopDosePumpManaged(reason = '') {
-    if (!this.config.phPumpSocketStateId) return false;
-    try {
-      await this.forceSwitchOffCompat(this.config.phPumpSocketStateId);
-    } catch (e) {
-      this.log.warn('[PH] Stop fehlgeschlagen: ' + (e.message || e));
-    }
-    await this.setStateAsync('status.ph.stopAtTs', 0, true);
-    this.phDoseStopAtTsMemory = 0;
-    this.phManagedActive = false;
-    await this.syncPhStopState();
-    if (reason) {
-      await this.sendAlert('ph_stop', `Poolsteuerung pH-Dosierung beendet | ${reason}`);
-    }
-    return true;
-  }
-
-  calcDoseMlFromSec(sec) {
-    const flow = Math.max(0, parseNum(this.config.phPumpFlowMlPerMin || 60));
-    return Number(((flow / 60) * Math.max(0, Number(sec) || 0)).toFixed(1));
-  }
-
-  calcDoseSecFixed() {
-    return Math.max(1, parseNum(this.config.phDoseDurationSec || 30));
-  }
-
-  calcDoseSecByDelta(phValue, volume) {
-    const setpoint = parseNum(this.config.phSetpoint || 7.2);
-    const tol = parseNum(this.config.phDoseTolerance || 0.05);
-    const diff = Number(phValue) - setpoint;
-    if (!Number.isFinite(diff) || diff <= tol) return 0;
-    const per01 = Math.max(1, parseNum(this.config.phDoseSecondsPer01Per10m3 || 30));
-    const maxSec = Math.max(1, parseNum(this.config.phDoseMaxDurationSec || 180));
-    const sec = diff / 0.1 * (volume / 10) * per01;
-    return Math.min(maxSec, Math.max(1, Math.round(sec)));
-  }
-
-  calcDoseMlByDelta(phValue, volume) {
-    const setpoint = parseNum(this.config.phSetpoint || 7.2);
-    const tol = parseNum(this.config.phDoseTolerance || 0.05);
-    const diff = Number(phValue) - setpoint;
-    if (!Number.isFinite(diff) || diff <= tol) return 0;
-    const per01 = Math.max(1, parseNum(this.config.phDoseMlPer01Per10m3 || 100));
-    const ml = diff / 0.1 * (volume / 10) * per01;
-    return Math.max(0, Math.round(ml));
-  }
-
-  async computePhDoseValues(phValue) {
-    const volume = this.calcVolume();
-    const mode = String(this.config.phDoseMode || 'fixed');
-    let durationSec = 0;
-    let doseMl = 0;
-    if (mode === 'ml') {
-      doseMl = this.calcDoseMlByDelta(phValue, volume);
-      durationSec = Math.max(0, Math.round((doseMl / Math.max(1, parseNum(this.config.phPumpFlowMlPerMin || 60))) * 60));
-    } else if (mode === 'fixed') {
-      const setpoint = parseNum(this.config.phSetpoint || 7.2);
-      const tol = parseNum(this.config.phDoseTolerance || 0.05);
-      durationSec = Number(phValue) - setpoint > tol ? this.calcDoseSecFixed() : 0;
-      doseMl = this.calcDoseMlFromSec(durationSec);
-    } else {
-      durationSec = this.calcDoseSecByDelta(phValue, volume);
-      doseMl = this.calcDoseMlByDelta(phValue, volume);
-    }
-    await this.setStateAsync('status.ph.calculatedDoseSec', durationSec, true);
-    await this.setStateAsync('status.ph.calculatedDoseMl', doseMl, true);
-    await this.setStateAsync('status.ph.manualGranulateG', Math.round(doseMl * 0.88), true);
-    return { durationSec, doseMl, volume };
-  }
-
-  async runDosePumpOnce(durationSec, info = {}) {
-    const started = await this.startDosePumpManaged(durationSec, info);
-    if (!started) return false;
-    return true;
-  }
-
-  async updatePhDecision(phValue, now = new Date()) {
-    const enabled = await this.getControlBool('control.auto.ph', this.config.enablePhControl !== false);
-    if (!enabled) {
-      await this.setStateAsync('status.ph.lastReason', 'pH Freigabe AUS', true);
-      return 'pH Freigabe AUS';
-    }
-    if (this.config.standbyModeEnabled === true || await this.getControlBool('control.standby', this.config.standbyModeEnabled === true)) {
-      await this.setStateAsync('status.ph.lastReason', 'Standby aktiv', true);
-      return 'Standby aktiv';
-    }
-    const dailyCount = await this.resetDailyPhCounterIfNeeded(now);
-    const maxPerDay = Math.max(1, parseNum(this.config.phDoseMaxPerDay || 4));
-    if (dailyCount >= maxPerDay) {
-      const msg = `Poolsteuerung pH-Tageslimit erreicht (${dailyCount}/${maxPerDay})`;
-      await this.setStateAsync('status.ph.lastReason', msg, true);
-      await this.sendAlert('ph_limit', msg);
-      return msg;
-    }
-    const inWindow = this.inPhCheckWindow(now);
-    if (!inWindow) {
-      const times = String(this.config.phCheckTimes || '').trim();
-      const txt = times ? `warte auf Prüfzeit (${times})` : 'keine Prüfzeiten konfiguriert';
-      await this.setStateAsync('status.ph.lastReason', txt, true);
-      return txt;
-    }
-    const { durationSec, doseMl } = await this.computePhDoseValues(phValue);
-    const setpoint = parseNum(this.config.phSetpoint || 7.2);
-    const tol = parseNum(this.config.phDoseTolerance || 0.05);
-    if (!Number.isFinite(phValue)) {
-      const msg = 'pH-Wert ungültig';
-      await this.setStateAsync('status.ph.lastReason', msg, true);
-      await this.sendAlert('ph_invalid', `Poolsteuerung pH-Sensor ungültig`);
-      return msg;
-    }
-    if (Number(phValue) <= setpoint + tol) {
-      await this.setStateAsync('status.ph.lastReason', 'keine Dosierung nötig', true);
-      await this.setStateAsync('status.ph.calculatedDoseSec', 0, true);
-      await this.setStateAsync('status.ph.calculatedDoseMl', 0, true);
-      return 'keine Dosierung nötig';
-    }
-    if (durationSec <= 0) {
-      await this.setStateAsync('status.ph.lastReason', 'Berechnung ergab 0s', true);
-      return 'Berechnung ergab 0s';
-    }
-    const ok = await this.runDosePumpOnce(durationSec, { phValue: Number(phValue).toFixed(2), doseMl });
-    if (ok) {
-      await this.incrementTodayDoseCount(now);
-      const msg = `Dosierung gestartet ${durationSec}s / ${doseMl}ml`;
-      await this.setStateAsync('status.ph.lastReason', msg, true);
-      return msg;
-    }
-    const msg = 'Dosierung blockiert';
-    await this.setStateAsync('status.ph.lastReason', msg, true);
-    return msg;
-  }
-
-  async buildStableData() {
-    const now = new Date();
-    const poolTemp = this.fmt(await this.getNumber(this.config.poolTempStateId, 1), 1, '24.0');
-    const ph = this.fmt(await this.getNumber(this.config.phStateId, 2), 2, '7.20');
-    const orp = this.fmt(await this.getNumber(this.config.orpStateId, 0), 0, '730');
-    const outsideTemp = this.fmt(await this.getNumber(this.config.outsideTempStateId, 1), 1, '--');
+  async renderVis() {
+    const ph = this.fmt(await this.getNumber(this.config.phStateId, 2), 2);
+    const orp = this.fmt(await this.getNumber(this.config.orpStateId, 0), 0);
+    const poolTemp = this.fmt(await this.getNumber(this.config.waterTempStateId, 1), 1);
+    const outsideTemp = this.fmt(await this.getNumber(this.config.outsideTempStateId, 1), 1);
     const pv = this.fmt(await this.getNumber(this.config.pvPowerStateId, 0), 0, '0');
     const feedIn = this.fmt(await this.getNumber(this.config.gridFeedInStateId, 0), 0, '0');
     const gridSupply = this.fmt(await this.getNumber(this.config.gridSupplyStateId, 0), 0, '0');
@@ -1875,584 +1337,113 @@ class Poolsteuerung extends utils.Adapter {
     const standbyMode = await this.getControlBool('control.standby', this.config.standbyModeEnabled === true);
     const modeActive = standbyMode ? 'standby' : 'normal';
     const standbyNext = standbyMode ? this.getNextStandbyRun(new Date()) : null;
-    const pumpDecision = await this.getText('poolsteuerung.0.status.debug.lastPumpDecision', '--');
-    const chlorDecision = await this.getText('poolsteuerung.0.status.chlor.lastReason', '--');
-    const phDecision = await this.getText('poolsteuerung.0.status.ph.lastReason', '--');
-    const phCheckTimes = String(this.config.phCheckTimes || '').trim() || '--';
-    const phDailyCount = Math.max(0, Number((await this.getStateAsync('status.ph.dailyCount'))?.val || 0));
-    const phLastDoseDurationSec = Math.max(0, Number((await this.getStateAsync('status.ph.lastDoseDurationSec'))?.val || 0));
-    const phLastDoseMl = Math.max(0, Number((await this.getStateAsync('status.ph.lastDoseMl'))?.val || 0));
-    const phCalculatedDoseSec = Math.max(0, Number((await this.getStateAsync('status.ph.calculatedDoseSec'))?.val || 0));
-    const phCalculatedDoseMl = Math.max(0, Number((await this.getStateAsync('status.ph.calculatedDoseMl'))?.val || 0));
-    const manualGranulateText = this.formatManualGranulateText((await this.getStateAsync('status.ph.manualGranulateG'))?.val || 0);
-    const phNextCheck = (() => {
-      const next = this.getNextPhCheck(new Date());
-      if (!next) return '--';
-      return `${String(next.getDate()).padStart(2, '0')}.${String(next.getMonth() + 1).padStart(2, '0')}. ${String(next.getHours()).padStart(2, '0')}:${String(next.getMinutes()).padStart(2, '0')}`;
-    })();
-    const updated = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}, ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const pumpDecision = await this.getText('poolsteuerung.0.status.debug.lastPumpDecision', standbyMode ? 'Standby aktiv' : '--');
+    const phDecision = await this.getText('poolsteuerung.0.status.debug.lastPhDecision', '--');
+    const phDailyCount = await this.getText('poolsteuerung.0.status.phDose.dailyCount', '0');
+    const phLastDoseDurationSec = await this.getText('poolsteuerung.0.status.phDose.lastDoseDurationSec', '0');
+    const phCalculatedDoseSec = await this.getText('poolsteuerung.0.status.phDose.calculatedDoseSec', '0');
+    const phLastDoseTsRaw = await this.getNumber('poolsteuerung.0.status.phDose.lastDoseTs', 0);
+    const phLastDoseAt = phLastDoseTsRaw ? new Date(phLastDoseTsRaw).toLocaleString('de-DE') : '-';
+    const phLastStartInfo = await this.getText('poolsteuerung.0.status.debug.lastPhStartInfo', '');
+    const phInfoText = phLastStartInfo || phDecision || '--';
+    const nextPhCheck = standbyMode ? null : this.getNextPhCheck(new Date());
+    const phNextCheck = nextPhCheck ? nextPhCheck.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
+    const phFlowMlMinNum = parseNum(this.config.phPumpFlowMlPerMin);
+    const phFlowMlMin = this.fmt(phFlowMlMinNum, 0, '--');
+    const phCalculatedDoseMl = Number.isFinite(phFlowMlMinNum) ? this.fmt((parseNum(phCalculatedDoseSec) || 0) * phFlowMlMinNum / 60, 0, '0') : '--';
+    const phLastDoseMl = Number.isFinite(phFlowMlMinNum) ? this.fmt((parseNum(phLastDoseDurationSec) || 0) * phFlowMlMinNum / 60, 0, '0') : '--';
+    const phCurrentNum = parseNum(ph);
+    const phTargetNum = parseNum(this.config.phSetpoint);
+    const manualGranulateGNum = Number.isFinite(phCurrentNum) && Number.isFinite(phTargetNum) && phCurrentNum > phTargetNum
+      ? Math.round(((phCurrentNum - phTargetNum) / 0.1) * (this.calcVolume() / 10) * 100)
+      : 0;
+    const manualGranulateG = this.fmt(manualGranulateGNum, 0, '0');
+    const manualGranulateText = manualGranulateGNum > 0 ? `${manualGranulateG} g` : 'nicht nötig';
+    const infoLower = String(phInfoText || '').toLowerCase();
+    const phInfoLevel = infoLower.includes('block') || infoLower.includes('fehler') || infoLower.includes('ungültig')
+      ? 'warn'
+      : infoLower.includes('keine dosierung') || infoLower.includes('freigabe aus') || infoLower.includes('standby')
+        ? 'ok'
+        : 'info';
+    const phMlPer01Per10 = this.fmt(parseNum(this.config.phDoseMlPer01Per10m3), 0, '--');
+    const volume = this.fmt(this.calcVolume(), 2, '--');
 
-    const pumpState = await this.getStateSnapshot(this.config.circulationPumpSocketStateId);
-    const chlorState = await this.getStateSnapshot(this.config.chlorinatorSocketStateId);
-    const phPumpState = await this.getStateSnapshot(this.config.phPumpSocketStateId);
-    const heatState = await this.getStateSnapshot(this.config.heatpumpPowerStateId);
-    const pumpOn = !!(pumpState && pumpState.val);
-    const chlorOn = !!(chlorState && chlorState.val);
-    const phPumpOn = !!(phPumpState && phPumpState.val);
-    const heatpumpOn = !!(heatState && heatState.val);
+    const circulationEnabled = !standbyMode && await this.getControlBool('control.auto.circulation', this.config.enableCirculationControl !== false);
+    const phEnabledMaster = !standbyMode && await this.getControlBool('control.auto.ph', this.config.enablePhControl !== false);
+    const heatEnabledMaster = !standbyMode && await this.getControlBool('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
+    const chlorEnabledMaster = !standbyMode && await this.getControlBool('control.auto.chlor', this.config.enableChlorControl !== false);
 
-    const volume = this.fmt((await this.getStateAsync('info.poolVolume'))?.val || this.calcVolume(), 2, '0');
-    const phSet = this.fmt(parseNum(this.config.phSetpoint || 7.2), 2, '7.20');
-    const orpSet = this.fmt(parseNum(this.config.orpSetpoint || 730), 0, '730');
-    const pvThreshold = this.fmt(parseNum(this.config.heatEnableFeedInThresholdW || 1000), 0, '1000');
-    const orpOnThreshold = this.fmt(parseNum(this.config.orpOnThreshold || 725), 0, '725');
-    const orpOffThreshold = this.fmt(parseNum(this.config.orpOffThreshold || 750), 0, '750');
-    const phPumpFlowMlPerMin = this.fmt(parseNum(this.config.phPumpFlowMlPerMin || 60), 0, '60');
-    const phDoseMlPer01Per10m3 = this.fmt(parseNum(this.config.phDoseMlPer01Per10m3 || 100), 0, '100');
-    const heatpumpAuxIds = this.getDerivedHeatpumpAuxStateIds();
-    const heatpumpFanPercent = await this.getText(heatpumpAuxIds.speedId, '--');
-    const heatpumpMode = this.formatHeatpumpMode(await this.getText(heatpumpAuxIds.modeId, '--'));
-
-    const historyTrends = await this.getHistoryTrends();
-    const phTrend = historyTrends.phTrend || '→';
-    const orpTrend = historyTrends.orpTrend || '→';
-    const poolTempTrend = historyTrends.poolTempTrend || '→';
-    const outsideTempTrend = historyTrends.outsideTempTrend || '→';
-    const pvTrend = historyTrends.pvTrend || '→';
-    const feedInTrend = historyTrends.feedInTrend || '→';
-
-    const phNumStable = parseNum(ph);
-    const orpNumStable = parseNum(orp);
-    const phInRange = Number.isFinite(phNumStable) && phNumStable >= 7.1 && phNumStable <= 7.25;
-    const orpInRange = Number.isFinite(orpNumStable) && orpNumStable >= parseNum(orpOnThreshold) && orpNumStable <= parseNum(orpOffThreshold);
-
-    const stableData = {
-      namespace: this.namespace,
-      modeActive,
-      poolTemp,
-      ph,
-      orp,
-      outsideTemp,
-      pv,
-      feedIn,
-      gridSupply,
-      battery,
-      targetTemp,
-      updated,
-      standbyNext: standbyNext ? this.formatDateTimeShort(standbyNext) : '-',
-      standbyControl: standbyMode,
-      autoCirculation,
-      autoChlor,
-      autoPh,
-      autoHeatpump,
-      autoCirculationControl: autoCirculationState,
-      autoChlorControl: autoChlorState,
-      autoPhControl: autoPhState,
-      autoHeatpumpControl: autoHeatpumpState,
-      pumpOn,
-      chlorOn,
-      phPumpOn,
-      heatpumpOn,
-      heatDecision: heatReason,
-      chlorDecision,
-      phDecision,
-      phCheckTimes,
-      phDailyCount,
-      phLastDoseDurationSec,
-      phLastDoseMl: this.fmt(phLastDoseMl, 0, '0'),
-      phCalculatedDoseSec,
-      phCalculatedDoseMl: this.fmt(phCalculatedDoseMl, 0, '0'),
-      phNextCheck,
-      manualGranulateText,
-      volume,
-      phSet,
-      orpSet,
-      pvThreshold,
-      orpOnThreshold,
-      orpOffThreshold,
-      phPumpFlowMlPerMin,
-      phDoseMlPer01Per10m3,
-      heatpumpFanPercent,
-      heatpumpMode,
-      phTrend,
-      orpTrend,
-      poolTempTrend,
-      outsideTempTrend,
-      pvTrend,
-      feedInTrend,
-      phInRange,
-      orpInRange,
-      wallboxCharging,
-      wallboxChargingStatus,
-      wallboxPlugStatus,
-      wallboxSoc,
-      wallboxTargetSoc,
-      wallboxRangeKm,
-      wallboxPowerKw,
-      wallboxTimeToFull,
-      wallboxDatasetCreatedOn,
-      wallboxTibberLastSeen,
-      adapterVersion: 'v0.3.16hf13',
-      phManualDoseSec: Math.max(1, Number((await this.getStateAsync('control.ph.manualDoseSec'))?.val || parseNum(this.config.phDoseDurationSec || 30))),
-      heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || ''
-    };
-    return stableData;
-  }
-
-  async renderVis() {
-    if (this.isShuttingDown) return;
-    const data = await this.buildStableData();
-    const signature = JSON.stringify({
-      poolTemp: data.poolTemp,
-      ph: data.ph,
-      orp: data.orp,
-      outsideTemp: data.outsideTemp,
-      pv: data.pv,
-      feedIn: data.feedIn,
-      gridSupply: data.gridSupply,
-      battery: data.battery,
-      targetTemp: data.targetTemp,
-      modeActive: data.modeActive,
-      pumpOn: data.pumpOn,
-      chlorOn: data.chlorOn,
-      phPumpOn: data.phPumpOn,
-      heatpumpOn: data.heatpumpOn,
-      autoCirculationControl: data.autoCirculationControl,
-      autoChlorControl: data.autoChlorControl,
-      autoPhControl: data.autoPhControl,
-      autoHeatpumpControl: data.autoHeatpumpControl,
-      heatDecision: data.heatDecision,
-      chlorDecision: data.chlorDecision,
-      phDecision: data.phDecision,
-      phDailyCount: data.phDailyCount,
-      phLastDoseDurationSec: data.phLastDoseDurationSec,
-      phLastDoseMl: data.phLastDoseMl,
-      phCalculatedDoseSec: data.phCalculatedDoseSec,
-      phCalculatedDoseMl: data.phCalculatedDoseMl,
-      phNextCheck: data.phNextCheck,
-      manualGranulateText: data.manualGranulateText,
-      heatpumpFanPercent: data.heatpumpFanPercent,
-      heatpumpMode: data.heatpumpMode,
-      wallboxChargingStatus: data.wallboxChargingStatus,
-      wallboxPlugStatus: data.wallboxPlugStatus,
-      wallboxSoc: data.wallboxSoc,
-      wallboxTargetSoc: data.wallboxTargetSoc,
-      wallboxRangeKm: data.wallboxRangeKm,
-      wallboxPowerKw: data.wallboxPowerKw,
-      wallboxTimeToFull: data.wallboxTimeToFull,
-      wallboxTibberLastSeen: data.wallboxTibberLastSeen,
-      phTrend: data.phTrend,
-      orpTrend: data.orpTrend,
-      poolTempTrend: data.poolTempTrend,
-      outsideTempTrend: data.outsideTempTrend,
-      pvTrend: data.pvTrend,
-      feedInTrend: data.feedInTrend
-    });
-
-    const now = Date.now();
-    const shouldSkip = signature === this.lastRenderSignature && now - this.lastRenderAt < 60000 && !this.renderQueued;
-    if (shouldSkip) return;
-
-    const tabletHtml = this.buildTabletHtml(data);
-    const phoneHtml = this.buildPhoneHtml(data);
-    const tabletWidget = this.buildTabletWidget(data);
-    const phoneWidget = this.buildPhoneWidget(data);
-
-    try {
-      if (tabletHtml !== this.lastTabletHtml) {
-        await this.setStateAsync('vis.htmlTablet', tabletHtml, true);
-        this.lastTabletHtml = tabletHtml;
-      }
-      if (phoneHtml !== this.lastPhoneHtml) {
-        await this.setStateAsync('vis.htmlPhone', phoneHtml, true);
-        this.lastPhoneHtml = phoneHtml;
-      }
-      if (tabletWidget !== this.lastTabletWidget) {
-        await this.setStateAsync('vis.widgetTablet', tabletWidget, true);
-        this.lastTabletWidget = tabletWidget;
-      }
-      if (phoneWidget !== this.lastPhoneWidget) {
-        await this.setStateAsync('vis.widgetPhone', phoneWidget, true);
-        this.lastPhoneWidget = phoneWidget;
-      }
-      this.lastRenderSignature = signature;
-      this.lastRenderAt = now;
-    } catch (e) {
-      if (!this.isDbClosedError(e)) this.log.warn('VIS Render Fehler: ' + (e && e.stack ? e.stack : e));
-    }
-  }
-
-  queueDelayedRefresh(delayMs = 1200) {
-    if (this.isShuttingDown) return;
-    if (this.renderQueued) return;
-    this.renderQueued = true;
-    const handle = this.trackTimeout(setTimeout(async () => {
-      this.pendingTimeouts.delete(handle);
-      this.renderQueued = false;
-      try {
-        this.lastRenderSignature = '';
-        this.lastRenderAt = 0;
-        await this.renderVis();
-      } catch (e) {
-        if (!this.isDbClosedError(e)) this.log.warn('VIS Delayed Refresh Fehler: ' + (e && e.stack ? e.stack : e));
-      }
-    }, Math.max(250, Number(delayMs) || 1200)));
-  }
-
-  buildPhoneHtml(data) {
-    const poolTempNum = parseNum(data.poolTemp);
-    const tempScaleMin = 15;
-    const tempScaleMax = 32;
-    const tempPct = Number.isFinite(poolTempNum) ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
-    const targetTempNum = parseNum(data.targetTemp);
-    const targetPct = Number.isFinite(targetTempNum) ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
-
-    const quick = (label, value, trend = '', barHtml = '') => `<div class="quick-card"><div class="quick-label">${esc(label)}</div><div class="quick-value-row"><div class="quick-value">${esc(value)}</div>${trend ? `<div class="quick-trend ${trend === '↑' ? 'up' : trend === '↓' ? 'down' : 'flat'}">${esc(trend)}</div>` : ''}</div>${barHtml || ''}</div>`;
-    const autoBtn = (label, key, active) => `<button class="action-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
-    const deviceBtn = (label, key, active) => `<button class="action-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'EIN' : 'AUS'}</span></button>`;
-    const batteryPct = Math.max(0, Math.min(100, parseNum(data.battery)));
-    const batteryBar = `<div class="mini-bar"><div class="mini-fill battery-fill" style="width:${batteryPct}%"></div></div>`;
-
-    return `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>
-html,body{margin:0;padding:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),#0a1323;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
-.wrap{max-width:510px;margin:0 auto;padding:6px;display:grid;gap:8px}.card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:10px;box-shadow:0 8px 20px rgba(0,0,0,.18)}.hero{background:radial-gradient(circle at top right, rgba(85,200,255,.26), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
-.header{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.title{font-size:20px;font-weight:900}.ver{font-size:11px;font-weight:800;color:#b9d7ff;margin-left:8px}.meta{font-size:11px;color:#d2dded;text-align:right}.mode-badge{display:inline-flex;align-items:center;justify-content:center;padding:4px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(180deg,#334f84,#1b3158);font-weight:800;font-size:11px;color:#fff;cursor:pointer}
-.temp-row{display:flex;align-items:flex-end;gap:6px;margin:6px 0 8px}.temp{font-size:72px;font-weight:900;line-height:.9}.unit{font-size:22px;padding-bottom:10px;color:#d5e5f6}
-.scale{margin:4px 0 8px}.track{position:relative;height:10px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.target-mark{position:absolute;top:50%;left:${targetPct}%;width:4px;height:18px;border-radius:999px;background:#fff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.dot{position:absolute;top:50%;left:${tempPct}%;width:16px;height:16px;border-radius:50%;background:#fff;border:4px solid #314a72;transform:translate(-50%,-50%)}.scale-labels{display:flex;justify-content:space-between;margin-top:6px;font-size:12px;color:#e3edf9}.target-label{position:relative;height:16px;font-size:12px;color:#d2dded}.target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}
-.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:10px}.metric-label{font-size:13px;color:#d9e5f5}.metric-value{font-size:18px;font-weight:900;color:#fff;display:flex;align-items:center}.metric-sub{font-size:12px;color:#d9e5f5;margin-top:2px}.metric-badge{display:inline-flex;align-items:center;justify-content:center;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:800;margin-top:8px}.metric-badge.ok{background:rgba(93,212,111,.18);color:#90f3a3}.metric-badge.warn{background:rgba(255,176,103,.18);color:#ffd39e}
-.quick-grid,.auto-grid,.status-grid,.control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
-.ph-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.metric-label{font-size:10px;color:#d9e5f5}.metric-value{font-size:13px;font-weight:900;color:#fff}
-.section-title{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px}
-.quick-card{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.quick-label{font-size:9px;color:#64748b;font-weight:700;margin-bottom:3px}.quick-value-row{display:flex;align-items:center;gap:8px}.quick-value{font-size:12px;font-weight:900;color:#0f172a;line-height:1.08}.quick-trend{font-size:18px;font-weight:900;line-height:1}.quick-trend.up{color:#ffb36b}.quick-trend.down{color:#52b7ff}.quick-trend.flat{color:#8fa3bc}.mini-bar{margin-top:6px;height:8px;border-radius:999px;background:linear-gradient(90deg,#ff6b6b 0%,#f59e0b 35%,#84cc16 65%,#22c55e 100%);position:relative;overflow:hidden}.mini-fill{height:100%;border-radius:999px}.battery-fill{background:linear-gradient(90deg,rgba(255,255,255,.28),rgba(255,255,255,.12));box-shadow:inset 0 0 0 999px rgba(255,255,255,.10)}
-.action-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:7px 9px;border-radius:13px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}
-.action-name{font-size:12px;font-weight:800}.action-state{font-size:9px;font-weight:800}
-.action-btn.is-on .action-name,.action-btn.is-on .action-state{color:#67dd7c}
-.action-btn.is-off .action-name,.action-btn.is-off .action-state{color:#ff8d7b}
-.manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:7px 9px;border-radius:999px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}.manual-btn span{font-size:13px}.manual-btn small{font-size:10px;color:#dbeafe}
-.temp-btn{appearance:none;border:none;cursor:pointer;border-radius:12px;min-height:52px;padding:8px 10px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:16px}
-.temp-center{display:flex;flex-direction:column;justify-content:center;align-items:center;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.temp-center .quick-label{margin-bottom:2px}.temp-center .quick-value{font-size:16px}
-</style>
-</head><body><div class="wrap">
-  <div class="card hero">
-    <div class="header"><div class="title">Pool Manager <span class="ver">${esc(data.adapterVersion)}</span></div><div class="meta"><div class="mode-badge">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div></div>
-    <div class="temp-row"><div class="temp">${esc(data.poolTemp)}</div><div class="unit">°C</div></div>
-    <div class="scale"><div class="track"><div class="target-mark"></div><div class="dot"></div></div><div class="target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
-    <div class="metrics">
-      <div class="metric"><div class="metric-label">pH</div><div class="metric-value">${metricValue(data.ph, data.phTrend, data.phInRange)}</div></div>
-      <div class="metric"><div class="metric-label">ORP</div><div class="metric-value">${metricValue(data.orp, data.orpTrend, data.orpInRange)}</div></div>
-      <div class="metric"><div class="metric-label">Außen</div><div class="metric-value">${metricValue(`${data.outsideTemp}°C`, data.outsideTempTrend, false)}</div></div>
-      <div class="metric"><div class="metric-label">Soll</div><div class="metric-value">${esc(data.targetTemp)}°C</div></div>
-    </div>
-  </div>
-
-  <div class="card"><div class="section-title">Schnellzugriff</div><div class="control-grid">
-    <button type="button" class="action-btn js-standby-btn ${data.standbyControl ? 'is-on' : 'is-off'}" data-current="${data.standbyControl ? '1' : '0'}"><span class="action-name">Standby</span><span class="action-state">${data.standbyControl ? 'AKTIV' : 'AUS'}</span></button>
-    <div class="temp-center"><div class="quick-label">Poolsolltemperatur</div><div class="quick-value">${esc(data.targetTemp)}°C</div></div>
-    <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.phManualDoseSec || 30) || 30}" style="grid-column:1 / -1;"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
-  </div></div>
-
-  <div class="card"><div class="section-title">Automatik</div><div class="auto-grid">
-    ${autoBtn('Umwälzpumpe','circulation',!!data.autoCirculationControl)}
-    ${autoBtn('Chlor','chlor',!!data.autoChlorControl)}
-    ${autoBtn('pH','ph',!!data.autoPhControl)}
-    ${autoBtn('Wärmepumpe','heatpump',!!data.autoHeatpumpControl)}
-  </div></div>
-
-  <div class="card"><div class="section-title">Aktoren & Status</div><div class="status-grid">
-    ${deviceBtn('Umwälzpumpe','circulation',!!data.pumpOn)}
-    ${deviceBtn('Chlorinator','chlorinator',!!data.chlorOn)}
-    ${deviceBtn('pH-Dosierpumpe','phPump',!!data.phPumpOn)}
-    ${deviceBtn('Wärmepumpe','heatpump',!!data.heatpumpOn)}
-  </div></div>
-
-  <div class="card"><div class="section-title">Energie & Steuerung</div><div class="quick-grid">
-    ${quick('PV-Leistung', `${data.pv} W`, data.pvTrend || '→')}
-    ${quick('Einspeisung', `${data.feedIn} W`, data.feedInTrend || '→')}
-    ${quick('Batterie', `${data.battery} %`, '', batteryBar)}
-    ${quick('WP Freigabe', data.heatDecision)}
-    ${quick('WP Lüfter', String(data.heatpumpFanPercent ?? '--'))}
-    ${quick('WP Modus', data.heatpumpMode || '--')}
-    ${quick('Chlor Freigabe', data.chlorDecision)}
-    ${quick('pH Prüfung', data.phDecision)}
-  </div></div>
-
-  <div class="ps-card"><div class="ps-section">pH Info</div><div class="ps-quickGrid ps-phGrid">
-    ${quick('Berechnet', `${data.phCalculatedDoseSec} s / ${data.phCalculatedDoseMl} ml`)}
-    ${quick('Letzte Dosis', `${data.phLastDoseDurationSec} s / ${data.phLastDoseMl} ml`)}
-    ${quick('Heute dosiert', `${data.phDailyCount}x`)}
-    ${quick('Nächste Prüfung', data.phNextCheck)}
-    ${quick('Granulat manuell', data.manualGranulateText)}
-    <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.phManualDoseSec || 30) || 30}"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
-  </div></div>
-</div>
-<script>
-(function(){
-  function getVisApi(){
-    try{ if(window.vis) return window.vis; }catch(e){}
-    try{ if(window.parent&&window.parent.vis) return window.parent.vis; }catch(e){}
-    try{ if(window.top&&window.top.vis) return window.top.vis; }catch(e){}
-    return null;
-  }
-  function getConn(){
-    try{ const v=getVisApi(); if(v&&v.conn&&typeof v.conn.setState==='function') return v.conn; }catch(e){}
-    return null;
-  }
-  window.poolSetState = async function(id,val){
-    const v=getVisApi();
-    const conn=getConn();
-    try{
-      if(v && typeof v.setValue === 'function'){
-        const r=v.setValue(id,val);
-        if(r && typeof r.then==='function'){ await r; }
-        return true;
-      }
-    }catch(e){}
-    if(!conn) return false;
-    const attempts = [
-      () => conn.setState(id,val),
-      () => conn.setState(id,val,false),
-      () => conn.setState(id,val,()=>{}),
-      () => conn.setState(id,val,false,()=>{})
-    ];
-    for(const fn of attempts){
-      try{
-        const r=fn();
-        if(r && typeof r.then==='function'){ await r; }
-        return true;
-      }catch(e){}
-    }
-    return false;
-  };
-  window.poolToggleControl = async function(key,current){
-    const ns=${JSON.stringify(data.namespace)};
-    const ok=await window.poolSetState(ns+'.control.auto.'+key, !current);
-    if(!ok) alert('VIS setState nicht verfügbar');
-  };
-  window.poolToggleStandby = async function(current){
-    const ns=${JSON.stringify(data.namespace)};
-    const ok=await window.poolSetState(ns+'.control.standby', !current);
-    if(!ok) alert('VIS setState nicht verfügbar');
-  };
-  window.poolToggleState = async function(key,current){
-    const ns=${JSON.stringify(data.namespace)};
-    let ctrl='';
-    if(key==='circulation') ctrl='.control.device.circulation';
-    else if(key==='chlorinator') ctrl='.control.device.chlorinator';
-    else if(key==='phPump') ctrl='.control.device.phPump';
-    else if(key==='heatpump') ctrl='.control.device.heatpump';
-    if(!ctrl){ alert('Kein Control-Key hinterlegt'); return; }
-    const ok=await window.poolSetState(ns+ctrl, !current);
-    if(!ok) alert('VIS setState nicht verfügbar');
-  };
-  window.poolPhManualDose = async function(sec){
-    const ns=${JSON.stringify(data.namespace)};
-    await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30);
-    const ok=await window.poolSetState(ns + '.control.ph.manualStart', true);
-    if(!ok) alert('VIS setState nicht verfügbar');
-  };
-  window.poolAdjustSetTemp = async function(delta){
-    const ns=${JSON.stringify(data.namespace)};
-    const hpOn=${data.heatpumpOn ? 'true' : 'false'};
-    if(!hpOn){ alert('Solltemperatur nur bei laufender Wärmepumpe änderbar'); return; }
-    if(!${JSON.stringify(data.heatpumpSetTempStateId || '')}){ alert('Kein Solltemperatur-State hinterlegt'); return; }
-    const current=Number(${JSON.stringify(data.targetTemp)}.replace(',', '.'));
-    const next=Math.max(10, Math.min(40, Math.round((current + Number(delta))*10)/10));
-    const ok=await window.poolSetState(ns+'.control.heatpump.setTemp', next);
-    if(!ok) alert('VIS setState nicht verfügbar');
-  };
-  const bindOne = (selector, handler) => {
-    document.querySelectorAll(selector).forEach(el => {
-      const run = (ev) => {
-        try{ if(ev){ ev.preventDefault(); ev.stopPropagation(); } }catch(e){}
-        handler(el);
-        return false;
-      };
-      el.onclick = run;
-      try{ el.addEventListener('touchend', run, {passive:false}); }catch(e){}
-      try{ el.style.cursor = 'pointer'; }catch(e){}
-    });
-  };
-  const bind = () => {
-    bindOne('.js-auto-btn', el => window.poolToggleControl(el.dataset.key, el.dataset.current === '1'));
-    bindOne('.js-device-btn', el => window.poolToggleState(el.dataset.key || '', el.dataset.current === '1'));
-    bindOne('.js-standby-btn', el => window.poolToggleStandby(el.dataset.current === '1'));
-    bindOne('.js-manual-dose-btn', el => window.poolPhManualDose(Number(el.dataset.sec || 30)));
-  };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind); else bind();
-})();
-</script></body></html>`;
-  }
-
-  async applyControlLogic() {
-    const now = new Date();
-
-    const standbyMode = await this.getControlBool('control.standby', this.config.standbyModeEnabled === true);
-    const circulationEnabled = await this.getControlBool('control.auto.circulation', this.config.enableCirculationControl !== false);
-    const chlorEnabled = await this.getControlBool('control.auto.chlor', this.config.enableChlorControl !== false);
-    const phEnabled = await this.getControlBool('control.auto.ph', this.config.enablePhControl !== false);
-    const heatEnabledMaster = await this.getControlBool('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
-
-    const pumpId = this.config.circulationPumpSocketStateId;
-    const chlorId = this.config.chlorinatorSocketStateId;
-    const phPumpId = this.config.phPumpSocketStateId;
-    const heatpumpId = this.config.heatpumpPowerStateId;
-
-    const pumpScheduleActive = this.isWithinCirculationSchedule(now);
-    const pumpTarget = standbyMode ? this.isStandbyPumpActive(now) : (circulationEnabled ? this.isPumpScheduleActive(now) : false);
-    const pumpState = await this.getStateSnapshot(pumpId);
-    const pumpCurrent = !!(pumpState && pumpState.val);
-    this.updateCirculationPumpRuntime(pumpCurrent, pumpState && (pumpState.lc || pumpState.ts));
-
-    await this.ensureState('status.debug.lastPumpScheduleActive', 'boolean', 'indicator', false, false);
-    await this.ensureState('status.debug.lastPumpLoggedDecision', 'string', 'text', '', false);
-    const lastScheduleActive = this.lastPumpScheduleActiveMemory === null ? pumpTarget : this.lastPumpScheduleActiveMemory;
-    const scheduleEdge = pumpTarget !== lastScheduleActive;
-    const nowMs = now.getTime();
-
-    let pumpDecision = standbyMode ? (pumpTarget ? `Standby-Kurzlauf aktiv (${this.getStandbyDurationSec()}s)` : 'Standby aktiv') : (!circulationEnabled ? 'Steuerung deaktiviert' : (pumpTarget ? 'Zeitfenster aktiv' : 'Kein aktives Zeitfenster'));
-
-    if (standbyMode) {
-      await this.forceDependentDevicesOff('Standby aktiv');
-      if (this.config.simulateMode) {
-        pumpDecision = pumpTarget ? `würde EIN (Standby ${this.getStandbyDurationSec()}s, Simulationsmodus)` : 'Standby aktiv (Simulationsmodus)';
-      } else if (pumpId && pumpCurrent !== pumpTarget) {
-        try {
-          await (pumpTarget ? this.forceSwitchOnCompat(pumpId) : this.forceSwitchOffCompat(pumpId));
-          this.suppressOwnPumpLogUntil = Date.now() + 5000;
-          pumpDecision = pumpTarget ? `EIN via Standby-Kurzlauf (${this.getStandbyDurationSec()}s)` : 'AUS nach Standby-Kurzlauf';
-          this.log.info(pumpTarget
-            ? `[STANDBY] Umwälzpumpe EIN | Kurzlauf ${this.getStandbyDurationSec()}s`
-            : '[STANDBY] Umwälzpumpe AUS | Kurzlauf beendet');
-        } catch (e) {
-          pumpDecision = `Standby Schaltfehler: ${e.message || e}`;
-        }
-      }
-    } else if (!circulationEnabled) {
-      pumpDecision = pumpCurrent ? 'Manuell EIN (Steuerung deaktiviert)' : 'Steuerung deaktiviert';
-    } else if (scheduleEdge) {
-      if (this.config.simulateMode) {
-        pumpDecision = `würde ${pumpTarget ? 'EIN' : 'AUS'} (Zeitfensterwechsel, Simulationsmodus)`;
-      } else if (pumpId) {
-        try {
-          await (pumpTarget ? this.forceSwitchOnCompat(pumpId) : this.forceSwitchOffCompat(pumpId));
-          this.suppressOwnPumpLogUntil = Date.now() + 5000;
-          pumpDecision = `${pumpTarget ? 'EIN' : 'AUS'} via Zeitfensterwechsel`;
-        } catch (e) {
-          pumpDecision = `Schaltfehler: ${e.message || e}`;
-        }
-      }
-    } else if (!pumpCurrent && pumpTarget) {
-      if (this.config.simulateMode) {
-        pumpDecision = 'würde EIN (Auto innerhalb aktivem Zeitfenster, Simulationsmodus)';
-      } else if (pumpId) {
-        try {
-          await this.forceSwitchOnCompat(pumpId);
-          this.suppressOwnPumpLogUntil = Date.now() + 5000;
-          pumpDecision = 'EIN via Auto innerhalb aktivem Zeitfenster';
-        } catch (e) {
-          pumpDecision = `Schaltfehler: ${e.message || e}`;
-        }
-      }
-    } else if (pumpCurrent && !pumpTarget) {
-      if (this.config.simulateMode) {
-        pumpDecision = 'würde AUS (Auto außerhalb Zeitfenster, Simulationsmodus)';
-      } else if (pumpId) {
-        try {
-          await this.forceSwitchOffCompat(pumpId);
-          this.suppressOwnPumpLogUntil = Date.now() + 5000;
-          pumpDecision = 'AUS außerhalb Zeitfenster';
-        } catch (e) {
-          pumpDecision = `Schaltfehler: ${e.message || e}`;
-        }
-      }
-    } else {
-      pumpDecision = standbyMode
-        ? (pumpTarget ? `Standby-Kurzlauf aktiv (${this.getStandbyDurationSec()}s)` : 'Standby aktiv')
-        : (!circulationEnabled
-            ? (pumpCurrent ? 'Manuell EIN (Steuerung deaktiviert)' : 'Steuerung deaktiviert')
-            : (pumpTarget ? `Zeitfenster aktiv (${this.getCirculationScheduleLabel(now)})` : `Außerhalb Zeitfenster (${this.getCirculationScheduleLabel(now)})`));
-    }
-
-    this.lastPumpScheduleActiveMemory = pumpTarget;
-    await this.setStateAsync('status.debug.lastPumpScheduleActive', pumpTarget, true);
-    if (!this.isControlTransitionActive() && Date.now() >= this.suppressOwnPumpLogUntil) {
-      const lastLogged = (await this.getStateAsync('status.debug.lastPumpLoggedDecision'))?.val || '';
-      if (String(lastLogged) !== String(pumpDecision)) {
-        await this.setStateAsync('status.debug.lastPumpLoggedDecision', pumpDecision, true);
-      }
-    }
-    await this.setStateAsync('status.pump.lastRuntimeSec', this.getPumpOnForSec(nowMs), true);
-    await this.setStateAsync('status.pump.lastDecision', pumpDecision, true);
-
-    const pumpOn = this.config.circulationPumpSocketStateId ? await this.getBool(this.config.circulationPumpSocketStateId) : pumpCurrent;
-    const circulationHeartbeat = await this.evaluateHeartbeat('Umwälzpumpe', this.config.circulationPumpHeartbeatStateId, this.config.circulationPumpHeartbeatMaxAgeMin);
-    const chlorHeartbeat = await this.evaluateHeartbeat('Chlorinator', this.config.chlorinatorHeartbeatStateId, this.config.chlorinatorHeartbeatMaxAgeMin);
-    const phHeartbeat = await this.evaluateHeartbeat('pH-Dosierpumpe', this.config.phPumpHeartbeatStateId, this.config.phPumpHeartbeatMaxAgeMin);
-    const heatHeartbeat = await this.evaluateHeartbeat('Wärmepumpe', this.config.heatpumpHeartbeatStateId, this.config.heatpumpHeartbeatMaxAgeMin);
-
-    const circulationHeartbeatOkDisplay = this.config.circulationPumpHeartbeatStateId && Number(this.config.circulationPumpHeartbeatMaxAgeMin) > 0 ? circulationHeartbeat.ok : pumpOn;
-
-    const orp = await this.getNumber(this.config.orpStateId);
-    const ph = await this.getNumber(this.config.phStateId);
-    const poolTemp = await this.getNumber(this.config.poolTempStateId);
-    const outsideTemp = await this.getNumber(this.config.outsideTempStateId);
-    const feedIn = await this.getNumber(this.config.gridFeedInStateId);
+    const pumpOn = await this.getBool(this.config.circulationPumpSocketStateId);
+    const pumpScheduleActive = standbyMode ? this.isStandbyPumpActive(new Date()) : (typeof this.isPumpScheduleActive === 'function' ? this.isPumpScheduleActive(new Date()) : false);
+    const chlorOnRaw = await this.getBool(this.config.chlorinatorSocketStateId);
+    let phPumpOn = await this.getBool(this.config.phPumpSocketStateId);
     const threshold = parseNum(this.config.heatEnableFeedInThresholdW || 1000);
+    if (!phEnabledMaster && !pumpOn && phPumpOn) {
+      try { await this.setSwitchStateCompat(this.config.phPumpSocketStateId, false); } catch (e) { this.log.warn('pH-Pumpe konnte nicht wegen Pumpenstop ausgeschaltet werden: ' + e); }
+      phPumpOn = false;
+    }
+
     const orpOnThreshold = parseNum(this.config.orpOnThreshold || 725);
     const orpOffThreshold = parseNum(this.config.orpOffThreshold || 750);
-    const targetTemp = this.config.heatpumpSetTempStateId
-      ? ((await this.getNumber(this.config.heatpumpSetTempStateId)) ?? parseNum(this.config.heatpumpTargetTemp))
-      : parseNum(this.config.heatpumpTargetTemp);
 
-    let chlorDesired = this.config.chlorinatorSocketStateId ? await this.getBool(this.config.chlorinatorSocketStateId) : false;
-    let chlorDecision = 'Steuerung deaktiviert';
+    let chlorDesired = chlorOnRaw;
+    let chlorDecision = '';
+    if (standbyMode) {
+      chlorDesired = false;
+      chlorDecision = 'Standby aktiv';
+    } else if (!chlorEnabledMaster) {
+      chlorDesired = chlorOnRaw;
+      chlorDecision = `Steuerung deaktiviert${chlorOnRaw ? ' · manuell EIN' : ' · manuell AUS'}`;
+    }
+    const orpNum = parseNum(orp);
     const chlorDelaySec = Math.max(0, parseNum(this.config.chlorPumpStartDelaySec || 0));
-    const pumpOnForSec = this.getPumpOnForSec(nowMs);
-    const chlorDelayActive = chlorDelaySec > 0 && pumpOn && pumpOnForSec < chlorDelaySec;
-    const chlorCurrent = chlorDesired;
+    const pumpOnForSec = this.getPumpOnForSec();
 
-    if (!chlorEnabled) {
-      chlorDesired = pumpOn ? chlorCurrent : false;
-      chlorDecision = pumpOn
-        ? (chlorCurrent ? 'Manuell EIN (Auto AUS)' : 'Steuerung deaktiviert · manuell AUS')
-        : (chlorCurrent ? 'Sicherheits-AUS: Umwälzpumpe AUS' : 'Steuerung deaktiviert · Pumpe AUS');
+    if (!chlorEnabledMaster) {
+      if (!pumpOn && chlorOnRaw) {
+        chlorDesired = false;
+        chlorDecision = 'Manuell blockiert: Pumpe AUS';
+      } else {
+        chlorDecision = chlorOnRaw ? 'Manuell EIN (Auto AUS)' : 'Steuerung deaktiviert · manuell AUS';
+      }
     } else if (!pumpOn) {
       chlorDesired = false;
       chlorDecision = 'Pumpe AUS';
-    } else if (chlorDelayActive) {
+    } else if (chlorDelaySec > 0 && pumpOnForSec < chlorDelaySec) {
       chlorDesired = false;
       chlorDecision = `Verzögert nach Pumpenstart (${Math.max(0, chlorDelaySec - pumpOnForSec)}s Rest)`;
-    } else if (!chlorHeartbeat.ok && this.config.chlorinatorHeartbeatStateId && Number(this.config.chlorinatorHeartbeatMaxAgeMin) > 0) {
-      chlorDesired = false;
-      chlorDecision = 'Gerät nicht erreichbar';
-    } else if (!Number.isFinite(orp)) {
+    } else if (!Number.isFinite(orpNum)) {
       chlorDesired = false;
       chlorDecision = 'ORP ungültig';
+    } else if (orpNum <= orpOnThreshold) {
+      chlorDesired = true;
+      chlorDecision = `ORP niedrig (${orpNum} <= ${orpOnThreshold})`;
+    } else if (orpNum > orpOffThreshold) {
+      chlorDesired = false;
+      chlorDecision = `ORP hoch (${orpNum} > ${orpOffThreshold})`;
     } else {
-      if (chlorCurrent) {
-        chlorDesired = orp <= orpOffThreshold;
-        chlorDecision = chlorDesired ? `Hysterese (${orp} <= ${orpOffThreshold})` : `ORP hoch (${orp} > ${orpOffThreshold})`;
-      } else {
-        chlorDesired = orp <= orpOnThreshold;
-        chlorDecision = chlorDesired ? `ORP niedrig (${orp} <= ${orpOnThreshold})` : `Hysterese (${orp} > ${orpOnThreshold})`;
-      }
+      chlorDecision = `Hysterese (${orpOnThreshold}-${orpOffThreshold})`;
     }
 
-    if (this.config.chlorinatorSocketStateId && chlorDesired !== chlorCurrent) {
+    if (this.config.chlorinatorSocketStateId && chlorDesired !== chlorOnRaw) {
       try {
         await (chlorDesired ? this.forceSwitchOnCompat(this.config.chlorinatorSocketStateId) : this.forceSwitchOffCompat(this.config.chlorinatorSocketStateId));
       } catch (e) {
         this.log.warn('Chlorinator konnte nicht gesetzt werden: ' + e);
       }
     }
-    await this.setStateAsync('status.chlor.lastReason', chlorDecision, true);
 
-    const phDecision = await this.updatePhDecision(ph, now);
-
-    const heatpumpOnRaw = this.config.heatpumpPowerStateId ? await this.getBool(this.config.heatpumpPowerStateId) : false;
+    const chlorOn = chlorEnabledMaster ? (pumpOn ? chlorDesired : false) : chlorOnRaw;
+    let heatDecision = '';
+    const circulationHeartbeatOkDisplay = await this.getHeartbeatOk('status.checks.circulationPump');
+    const heatpumpOnRaw = await this.getBool(this.config.heatpumpPowerStateId);
     const heatLock = this.getHeatpumpLockState();
-    let heatDecision = 'Steuerung deaktiviert';
+    if (heatLock.state === null) {
+      heatLock.state = heatpumpOnRaw;
+      if (heatpumpOnRaw) heatLock.lastOnTs = Date.now();
+      else heatLock.lastOffTs = Date.now();
+    }
+
     let heatDesired = heatpumpOnRaw;
     let allowHeatpumpWrite = true;
 
@@ -2525,49 +1516,9 @@ html,body{margin:0;padding:0;background:radial-gradient(circle at top left, rgba
     const heatpumpMode = this.formatHeatpumpMode(await this.getText(heatpumpAuxIds.modeId, '--'));
 
     const stableData = {
-      namespace: this.namespace,
-      modeActive: standbyMode ? 'standby' : 'normal',
-      poolTemp: this.fmt(poolTemp, 1, '24.0'),
-      ph: this.fmt(ph, 2, '7.20'),
-      orp: this.fmt(orp, 0, '730'),
-      outsideTemp: this.fmt(outsideTemp, 1, '--'),
-      pv: this.fmt(await this.getNumber(this.config.pvPowerStateId, 0), 0, '0'),
-      feedIn: this.fmt(feedIn, 0, '0'),
-      gridSupply: this.fmt(await this.getNumber(this.config.gridSupplyStateId, 0), 0, '0'),
-      battery: this.fmt(await this.getNumber(this.config.batterySocStateId, 0), 0, '0'),
-      targetTemp: this.fmt(targetTemp, 1, '24.0'),
-      updated: `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}, ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
-      standbyNext: standbyMode ? this.formatDateTimeShort(this.getNextStandbyRun(now)) : '-',
-      standbyControl: standbyMode,
-      autoCirculationControl: circulationEnabled,
-      autoChlorControl: chlorEnabled,
-      autoPhControl: phEnabled,
-      autoHeatpumpControl: heatEnabledMaster,
-      pumpOn,
-      chlorOn: chlorDesired,
-      phPumpOn: this.config.phPumpSocketStateId ? await this.getBool(this.config.phPumpSocketStateId) : false,
-      heatpumpOn,
-      heatDecision,
-      chlorDecision,
-      phDecision,
-      phCheckTimes: String(this.config.phCheckTimes || '').trim() || '--',
-      phDailyCount: Math.max(0, Number((await this.getStateAsync('status.ph.dailyCount'))?.val || 0)),
-      phLastDoseDurationSec: Math.max(0, Number((await this.getStateAsync('status.ph.lastDoseDurationSec'))?.val || 0)),
-      phLastDoseMl: this.fmt(Math.max(0, Number((await this.getStateAsync('status.ph.lastDoseMl'))?.val || 0)), 0, '0'),
-      phCalculatedDoseSec: Math.max(0, Number((await this.getStateAsync('status.ph.calculatedDoseSec'))?.val || 0)),
-      phCalculatedDoseMl: this.fmt(Math.max(0, Number((await this.getStateAsync('status.ph.calculatedDoseMl'))?.val || 0)), 0, '0'),
-      phNextCheck: (() => { const next = this.getNextPhCheck(now); return next ? `${String(next.getDate()).padStart(2, '0')}.${String(next.getMonth() + 1).padStart(2, '0')}. ${String(next.getHours()).padStart(2, '0')}:${String(next.getMinutes()).padStart(2, '0')}` : '--'; })(),
-      manualGranulateText: this.formatManualGranulateText((await this.getStateAsync('status.ph.manualGranulateG'))?.val || 0),
-      volume: this.fmt((await this.getStateAsync('info.poolVolume'))?.val || this.calcVolume(), 2, '0'),
-      phSet: this.fmt(parseNum(this.config.phSetpoint || 7.2), 2, '7.20'),
-      orpSet: this.fmt(parseNum(this.config.orpSetpoint || 730), 0, '730'),
-      pvThreshold: this.fmt(parseNum(this.config.heatEnableFeedInThresholdW || 1000), 0, '1000'),
-      orpOnThreshold: this.fmt(parseNum(this.config.orpOnThreshold || 725), 0, '725'),
-      orpOffThreshold: this.fmt(parseNum(this.config.orpOffThreshold || 750), 0, '750'),
-      phPumpFlowMlPerMin: this.fmt(parseNum(this.config.phPumpFlowMlPerMin || 60), 0, '60'),
-      phDoseMlPer01Per10m3: this.fmt(parseNum(this.config.phDoseMlPer01Per10m3 || 100), 0, '100'),
-      heatpumpFanPercent,
-      heatpumpMode,
+      ph, orp, poolTemp, outsideTemp, pv, feedIn, gridSupply, battery, targetTemp, heatReason, volume, modeActive,
+      autoCirculation, autoChlor, autoPh, autoHeatpump,
+      phSet: this.fmt(parseNum(this.config.phSetpoint), 2, '--'),
       phTrend,
       orpTrend,
       poolTempTrend,
@@ -2576,47 +1527,191 @@ html,body{margin:0;padding:0;background:radial-gradient(circle at top left, rgba
       feedInTrend,
       phInRange,
       orpInRange,
-      wallboxCharging: false,
-      wallboxChargingStatus: 'GETRENNT',
-      wallboxPlugStatus: 'unknown',
-      wallboxSoc: '--',
-      wallboxTargetSoc: '--',
-      wallboxRangeKm: '--',
-      wallboxPowerKw: '--',
-      wallboxTimeToFull: '--',
-      wallboxDatasetCreatedOn: '--',
-      wallboxTibberLastSeen: '--',
-      adapterVersion: 'v0.3.16hf13',
-      phManualDoseSec: Math.max(1, Number((await this.getStateAsync('control.ph.manualDoseSec'))?.val || parseNum(this.config.phDoseDurationSec || 30))),
-      heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || ''
+      phTimes: standbyMode ? '-' : (this.config.phCheckTimes || '-'),
+      standbyNext: standbyNext ? `${standbyNext.toLocaleDateString('de-DE')}, ${String(standbyNext.getHours()).padStart(2,'0')}:${String(standbyNext.getMinutes()).padStart(2,'0')}` : '-',
+      pumpDecision,
+      phDecision,
+      phDailyCount,
+      phLastDoseDurationSec,
+      phCalculatedDoseSec,
+      phCalculatedDoseMl,
+      phLastDoseAt,
+      phLastDoseMl,
+      manualGranulateG,
+      manualGranulateText,
+      phInfoText,
+      phInfoLevel,
+      phNextCheck,
+      phFlowMlMin,
+      phMlPer01Per10,
+      orpSet: this.fmt(parseNum(this.config.orpSetpoint), 0, '--'),
+      threshold: this.fmt(threshold, 0, '1000'),
+      orpOnThreshold: this.fmt(orpOnThreshold, 0, '725'),
+      orpOffThreshold: this.fmt(orpOffThreshold, 0, '750'),
+      pumpOn,
+      pumpScheduleActive,
+      chlorOn,
+      phPumpOn,
+      chlorDecision,
+      heatpumpOn,
+      heatDecision,
+      pvRounded: Math.round(parseNum(pv) / 100) * 100,
+      feedInRounded: Math.round(parseNum(feedIn) / 100) * 100,
+      gridSupplyRounded: Math.round(parseNum(gridSupply) / 100) * 100,
+      batteryRounded: Math.round(parseNum(battery)),
+      wallboxCharging,
+      wallboxChargingStatus,
+      wallboxPlugStatus,
+      wallboxSoc,
+      wallboxTargetSoc,
+      wallboxRangeKm,
+      wallboxPowerKw,
+      wallboxTimeToFull,
+      namespace: this.namespace,
+      standbyControl: standbyMode,
+      autoCirculationControl: await this.getControlBool('control.auto.circulation', circulationEnabled),
+      autoChlorControl: await this.getControlBool('control.auto.chlor', chlorEnabledMaster),
+      autoPhControl: await this.getControlBool('control.auto.ph', phEnabledMaster),
+      autoHeatpumpControl: await this.getControlBool('control.auto.heatpump', heatEnabledMaster),
+      circulationPumpStateId: this.config.circulationPumpSocketStateId || '',
+      chlorinatorStateId: this.config.chlorinatorSocketStateId || '',
+      phPumpStateId: this.config.phPumpSocketStateId || '',
+      heatpumpStateId: this.config.heatpumpPowerStateId || '',
+      heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
+      heatpumpFanPercent,
+      heatpumpMode,
+      phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
+      adapterVersion: 'v0.3.16hf14'
     };
 
-    if (this.config.wallboxChargingStatusStateId || this.config.wallboxPlugStatusStateId || this.config.wallboxSocStateId || this.config.wallboxPowerKwStateId) {
-      const wbChargingStatusRaw = await this.getText(this.config.wallboxChargingStatusStateId, '--');
-      const wbPlugStatusRaw = await this.getText(this.config.wallboxPlugStatusStateId, '--');
-      const wbSocNum = await this.getNumber(this.config.wallboxSocStateId, NaN);
-      const wbTargetSocNum = await this.getNumber(this.config.wallboxTargetSocStateId, NaN);
-      const wbTimeFullNum = await this.getNumber(this.config.wallboxTimeToFullStateId, NaN);
-      const wbRangeKmNum = await this.getNumber(this.config.wallboxRangeKmStateId, NaN);
-      const wbPowerKwNum = await this.getNumber(this.config.wallboxPowerKwStateId, NaN);
-      const wbChargingRawText = String(wbChargingStatusRaw || '').trim().toLowerCase();
-      const wbPlugRawText = String(wbPlugStatusRaw || '').trim().toLowerCase();
-      const wbIsConnected = ['connected', 'verbunden'].includes(wbPlugRawText);
-      const wbPowerForStatus = (wbIsConnected && Number.isFinite(wbPowerKwNum) && wbPowerKwNum >= 0.3) ? wbPowerKwNum : 0;
-      const wbCharging = ['charging','laden','lädt','charge_state_charging_hv_battery'].includes(wbChargingRawText) || wbPowerForStatus >= 0.3;
-      stableData.wallboxCharging = wbCharging;
-      stableData.wallboxChargingStatus = wbIsConnected ? (wbCharging ? 'LÄDT' : (wbChargingRawText === 'idle' ? 'BEREIT' : String(wbChargingStatusRaw || '--'))) : 'GETRENNT';
-      stableData.wallboxPlugStatus = wbIsConnected ? 'Verbunden' : (wbPlugRawText === 'disconnected' ? 'Getrennt' : String(wbPlugStatusRaw || '--'));
-      stableData.wallboxSoc = this.fmt(wbSocNum, 0, '--');
-      stableData.wallboxTargetSoc = this.fmt(wbTargetSocNum, 0, '--');
-      stableData.wallboxRangeKm = this.fmt(wbRangeKmNum, 0, '--');
-      stableData.wallboxPowerKw = this.fmt(wbPowerForStatus, 1, '--');
-      stableData.wallboxTimeToFull = wbCharging ? this.formatDurationHours(wbTimeFullNum, '--') : '--';
-      stableData.wallboxTibberLastSeen = await this.getFormattedDateTimeFromState('vw-connect.0.WVGZZZE23TE055069.statustibber.rawData.status.lastSeen', '--');
+    const now = Date.now();
+    const signature = JSON.stringify(stableData);
+
+    if (signature === this.lastRenderSignature && now - this.lastRenderAt < 300000) {
+      return;
     }
 
-    await this.setStateAsync('status.heatpump.lastReason', heatDecision, true);
-    return stableData;
+    this.lastRenderSignature = signature;
+    this.lastRenderAt = now;
+
+    const renderStamp = new Date();
+    const updatedText = `${renderStamp.toLocaleDateString('de-DE')}, ${String(renderStamp.getHours()).padStart(2,'0')}:${String(renderStamp.getMinutes()).padStart(2,'0')}`;
+    const data = {
+      updated: updatedText,
+      ...stableData,
+    };
+
+    const tablet = this.buildTabletHtml(data);
+    const phone = this.buildPhoneHtml(data);
+    const tabletWidget = this.buildTabletWidget(data);
+    const phoneWidget = this.buildPhoneWidget(data);
+
+    await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
+    await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
+    await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
+    await this.ensureState('vis.widgetPhone', 'string', 'html', '', false);
+    if (tablet !== this.lastTabletHtml) {
+      await this.setStateIfChanged('vis.htmlTablet', tablet, true);
+      this.lastTabletHtml = tablet;
+    }
+    if (phone !== this.lastPhoneHtml) {
+      await this.setStateIfChanged('vis.htmlPhone', phone, true);
+      this.lastPhoneHtml = phone;
+    }
+    if (tabletWidget !== this.lastTabletWidget) {
+      await this.setStateIfChanged('vis.widgetTablet', tabletWidget, true);
+      this.lastTabletWidget = tabletWidget;
+    }
+    if (phoneWidget !== this.lastPhoneWidget) {
+      await this.setStateIfChanged('vis.widgetPhone', phoneWidget, true);
+      this.lastPhoneWidget = phoneWidget;
+    }
+    await this.ensureState('status.debug.lastVisUpdate', 'string', 'text', '', false);
+    await this.setStateIfChanged('status.debug.lastVisUpdate', data.updated, true);
+    await this.ensureState('status.debug.lastDecision', 'string', 'text', '', false);
+    await this.setStateAsync('status.debug.lastDecision', `WP: ${data.heatpumpOn ? 'EIN' : 'AUS'} | ${data.heatDecision} || Chlor: ${data.chlorOn ? 'EIN' : 'AUS'} | ${data.chlorDecision}`, true);
+
+  }
+
+  queueRender() {
+    if (this.renderQueued || this.isShuttingDown) return;
+    this.renderQueued = true;
+    const handle = this.trackTimeout(setTimeout(async () => {
+      this.pendingTimeouts.delete(handle);
+      this.renderQueued = false;
+      if (this.isShuttingDown) return;
+      try {
+        await this.setStateIfChanged('control.device.circulation', await this.getBool(this.config.circulationPumpSocketStateId), true);
+        await this.setStateIfChanged('control.device.chlorinator', await this.getBool(this.config.chlorinatorSocketStateId), true);
+        await this.setStateIfChanged('control.device.phPump', await this.getBool(this.config.phPumpSocketStateId), true);
+        await this.setStateIfChanged('control.device.heatpump', await this.getBool(this.config.heatpumpPowerStateId), true);
+        await this.updateComputedStates();
+        await this.syncControlStates();
+        await this.syncDeviceControlStates();
+        await this.renderVis();
+      } catch (e) {
+        if (!this.isDbClosedError(e)) this.log.warn('VIS Render Fehler: ' + (e && e.stack ? e.stack : e));
+      }
+    }, 1800));
+  }
+
+  queueDelayedRefresh(delayMs = 1800) {
+    if (this.isShuttingDown) return;
+    const handle = this.trackTimeout(setTimeout(async () => {
+      this.pendingTimeouts.delete(handle);
+      if (this.isShuttingDown) return;
+      try {
+        await this.updateComputedStates();
+        if (typeof this.applyControlLogic === 'function') {
+          await this.applyControlLogic();
+        }
+        await this.syncControlStates();
+        await this.syncDeviceControlStates();
+        this.lastRenderSignature = '';
+        this.lastRenderAt = 0;
+        await this.renderVis();
+      } catch (e) {
+        if (!this.isDbClosedError(e)) this.log.warn('VIS Delayed Refresh Fehler: ' + (e && e.stack ? e.stack : e));
+      }
+    }, delayMs));
+  }
+
+
+  getDependencyRules() {
+    const rules = Array.isArray(this.config.dependencyRules) ? this.config.dependencyRules : [];
+    return rules
+      .map((rule, index) => ({
+        index,
+        enabled: rule && rule.enabled === true,
+        name: String((rule && rule.name) || '').trim(),
+        compareStateId: String((rule && rule.compareStateId) || '').trim(),
+        operator: String((rule && rule.operator) || 'eq').trim(),
+        compareValue: rule && rule.compareValue !== undefined && rule.compareValue !== null ? rule.compareValue : '',
+        targetStateId: String((rule && rule.targetStateId) || '').trim(),
+        thenValue: rule && rule.thenValue !== undefined && rule.thenValue !== null ? rule.thenValue : '',
+        elseValue: rule && rule.elseValue !== undefined && rule.elseValue !== null ? rule.elseValue : '',
+        logEnabled: rule && rule.logEnabled === true
+      }))
+      .filter(rule => rule.enabled && rule.compareStateId && rule.targetStateId);
+  }
+
+  parseRuleValue(raw) {
+    if (raw === undefined || raw === null) return '';
+    if (typeof raw === 'boolean' || typeof raw === 'number') return raw;
+    const s = String(raw).trim();
+    if (s === '') return '';
+    const lower = s.toLowerCase();
+    if (lower === 'true') return true;
+    if (lower === 'false') return false;
+    if (/^-?\d+(?:[\.,]\d+)?$/.test(s)) return Number(s.replace(',', '.'));
+    return s;
+  }
+
+  toTruthy(value) {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value !== 0;
+    const s = String(value ?? '').trim().toLowerCase();
+    return ['true', '1', 'on', 'ein', 'yes', 'ja'].includes(s);
   }
 
   getHeatpumpLockState() {
@@ -2669,163 +1764,1384 @@ html,body{margin:0;padding:0;background:radial-gradient(circle at top left, rgba
     return { desiredOn: nextDesired, reason: nextReason };
   }
 
-  isPumpScheduleActive(now = new Date()) {
-    return this.isWithinCirculationSchedule(now);
+  valuesEqual(a, b) {
+    if (typeof a === 'number' && typeof b === 'number') return a === b;
+    if (typeof a === 'boolean' || typeof b === 'boolean') return this.toTruthy(a) === this.toTruthy(b);
+    return String(a ?? '') === String(b ?? '');
   }
 
-  async onStateChange(id, state) {
-    if (!state || this.isShuttingDown) return;
-    try {
-      if (id === `${this.namespace}.control.standby`) {
-        this.beginControlTransition(10000);
-        await this.resetManualBlockers('Standby gewechselt');
-        this.clearPendingRenderTimeouts('Standby gewechselt');
-        this.resetHeatpumpLocks('Standby gewechselt');
-        if (!!state.val === true) {
-          await this.setStateIfChanged('control.auto.circulation', false, false);
-          await this.setStateIfChanged('control.auto.chlor', false, false);
-          await this.setStateIfChanged('control.auto.ph', false, false);
-          await this.setStateIfChanged('control.auto.heatpump', false, false);
-          await this.forceDependentDevicesOff('Standby aktiv');
-          try {
-            if (this.config.circulationPumpSocketStateId) {
-              await this.forceSwitchOffCompat(this.config.circulationPumpSocketStateId);
-              await this.setStateIfChanged('control.device.circulation', false, true);
-            }
-          } catch {}
-        }
-        await this.forceImmediateRender();
-        this.queueDelayedRefresh(1800);
-        return;
-      }
+  evaluateRuleCondition(actualRaw, operator, expectedRaw) {
+    const expected = this.parseRuleValue(expectedRaw);
+    const actual = typeof expected === 'number'
+      ? Number(String(actualRaw).replace(',', '.'))
+      : typeof expected === 'boolean'
+        ? this.toTruthy(actualRaw)
+        : actualRaw;
 
-      const standbyActiveNow = await this.getControlBool('control.standby', this.config.standbyModeEnabled === true);
-      const autoIds = [
-        `${this.namespace}.control.auto.circulation`,
-        `${this.namespace}.control.auto.chlor`,
-        `${this.namespace}.control.auto.ph`,
-        `${this.namespace}.control.auto.heatpump`
-      ];
-      if (autoIds.includes(id)) {
-        this.beginControlTransition(3500);
-        const key = id.replace(`${this.namespace}.control.auto.`, '');
-        if (!!state.val === true) {
-          if (standbyActiveNow) {
-            await this.setStateIfChanged('control.standby', false, false);
-          }
-          await this.resetManualBlockers(`Auto ${key} EIN`);
-        } else {
-          if (key === 'chlor') await this.setStateIfChanged('control.device.chlorinator', false, true);
-          if (key === 'ph') await this.setStateIfChanged('control.device.phPump', false, true);
-          if (key === 'heatpump') await this.setStateIfChanged('control.device.heatpump', false, true);
-        }
-        await this.forceImmediateRender();
-        this.queueDelayedRefresh(1500);
-        return;
-      }
-
-      if (id === `${this.namespace}.control.heatpump.resetLock` && !!state.val === true) {
-        this.beginControlTransition(10000);
-        this.clearPendingRenderTimeouts('WP Reset');
-        this.resetHeatpumpLocks('manueller Reset');
-        await this.setStateIfChanged('control.heatpump.resetLock', false, false);
-        await this.forceImmediateRender();
-        this.queueDelayedRefresh(1000);
-        return;
-      }
-
-      if (id === `${this.namespace}.control.ph.manualStart` && !!state.val === true) {
-        this.beginControlTransition(3500);
-        const manualSecState = await this.getStateAsync('control.ph.manualDoseSec');
-        const manualSec = Math.max(1, Number(manualSecState && manualSecState.val) || 30);
-        const ok = await this.runDosePumpOnce(manualSec, { checkTime: 'MANUELL', phValue: 'manuell', manual: true });
-        if (ok) {
-          await this.incrementTodayDoseCount(new Date());
-        }
-        await this.setStateIfChanged('control.ph.manualStart', false, false);
-        await this.applyControlLogic();
-        await this.forceImmediateRender();
-        this.queueDelayedRefresh(1200);
-        return;
-      }
-
-      if (id === `${this.namespace}.control.heatpump.setTemp` && state.ack === false) {
-        this.beginControlTransition(3500);
-        const val = Number(String(state.val).replace(',', '.'));
-        if (Number.isFinite(val) && this.config.heatpumpSetTempStateId) {
-          try {
-            await this.setForeignStateAsync(this.config.heatpumpSetTempStateId, val, false);
-          } catch (e) {
-            this.log.warn('Wärmepumpen-Solltemperatur konnte nicht gesetzt werden: ' + (e.message || e));
-          }
-        }
-        await this.forceImmediateRender();
-        this.queueDelayedRefresh(1500);
-        return;
-      }
-
-      const ownDeviceIds = [
-        `${this.namespace}.control.device.circulation`,
-        `${this.namespace}.control.device.chlorinator`,
-        `${this.namespace}.control.device.phPump`,
-        `${this.namespace}.control.device.heatpump`
-      ];
-      if (ownDeviceIds.includes(id) && state.ack === false) {
-        this.beginControlTransition(3500);
-        const key = id.split('.').slice(-1)[0];
-        if (!!state.val === true) {
-          if (standbyActiveNow) {
-            await this.setStateIfChanged('control.standby', false, false);
-          }
-          if (key === 'circulation') await this.setStateIfChanged('control.auto.circulation', false, false);
-          if (key === 'chlorinator') await this.setStateIfChanged('control.auto.chlor', false, false);
-          if (key === 'phPump') await this.setStateIfChanged('control.auto.ph', false, false);
-          if (key === 'heatpump') await this.setStateIfChanged('control.auto.heatpump', false, false);
-        }
-        let realId = '';
-        if (key === 'circulation') realId = this.config.circulationPumpSocketStateId;
-        if (key === 'chlorinator') realId = this.config.chlorinatorSocketStateId;
-        if (key === 'phPump') realId = this.config.phPumpSocketStateId;
-        if (key === 'heatpump') realId = this.config.heatpumpPowerStateId;
-        if (realId) {
-          try {
-            await (state.val ? this.forceSwitchOnCompat(realId) : this.forceSwitchOffCompat(realId));
-          } catch (e) {
-            this.log.warn('Aktor manuell schalten fehlgeschlagen: ' + (e.message || e));
-          }
-        }
-        await this.forceImmediateRender();
-        this.queueDelayedRefresh(1500);
-        return;
-      }
-
-      if (id === this.config.circulationPumpSocketStateId || id === this.config.chlorinatorSocketStateId || id === this.config.phPumpSocketStateId || id === this.config.heatpumpPowerStateId) {
-        await this.syncDeviceControlStates();
-        if (id === this.config.circulationPumpSocketStateId) {
-          const on = !!state.val;
-          this.updateCirculationPumpRuntime(on, state.lc || state.ts);
-          if (Date.now() >= this.suppressOwnPumpLogUntil) {
-            const currentDecision = (await this.getStateAsync('status.debug.lastPumpLoggedDecision'))?.val || '';
-            const txt = `[PUMPE] Realzustand ${on ? 'EIN' : 'AUS'} | ${currentDecision || 'ohne Entscheidungs-Text'}`;
-            this.log.info(txt);
-          }
-        }
-        await this.applyControlLogic();
-        await this.forceImmediateRender();
-        this.queueDelayedRefresh(1500);
-      }
-    } catch (e) {
-      if (!this.isDbClosedError(e)) this.log.warn('Control-State konnte nicht angewendet werden: ' + (e && e.stack ? e.stack : e));
+    switch (operator) {
+      case 'istrue': return this.toTruthy(actualRaw) === true;
+      case 'isfalse': return this.toTruthy(actualRaw) === false;
+      case 'eq': return this.valuesEqual(actual, expected);
+      case 'neq': return !this.valuesEqual(actual, expected);
+      case 'gt': return Number(actual) > Number(expected);
+      case 'gte': return Number(actual) >= Number(expected);
+      case 'lt': return Number(actual) < Number(expected);
+      case 'lte': return Number(actual) <= Number(expected);
+      default: return this.valuesEqual(actual, expected);
     }
   }
 
-  onUnload(callback) {
+  async writeRuleTarget(targetStateId, rawValue, ruleName = '') {
+    const obj = await this.getForeignObjectAsync(targetStateId);
+    const common = obj && obj.common ? obj.common : {};
+    let value = this.parseRuleValue(rawValue);
+
+    if (common.type === 'boolean') {
+      value = this.toTruthy(value);
+    } else if (common.type === 'number') {
+      const num = Number(String(value).replace(',', '.'));
+      if (!Number.isFinite(num)) throw new Error('Zielwert ist keine gültige Zahl');
+      value = num;
+    } else if (common.type === 'string') {
+      value = String(value);
+    }
+
+    const cur = await this.getForeignStateAsync(targetStateId);
+    const curVal = cur ? cur.val : undefined;
+    if (this.valuesEqual(curVal, value)) return false;
+    await this.setForeignStateAsync(targetStateId, value, false);
+    return true;
+  }
+
+  async applyDependencyRules(changedId = '') {
+    if (this.config.adapterEnabled === false) return;
+    const rules = this.getDependencyRules();
+    if (!rules.length) return;
+
+    for (const rule of rules) {
+      if (changedId && rule.compareStateId !== changedId) continue;
+      try {
+        const state = await this.getForeignStateAsync(rule.compareStateId);
+        if (!state) continue;
+        const matched = this.evaluateRuleCondition(state.val, rule.operator, rule.compareValue);
+        const hasElse = String(rule.elseValue ?? '').trim() !== '';
+        const valueToSet = matched ? rule.thenValue : (hasElse ? rule.elseValue : undefined);
+        if (valueToSet === undefined) continue;
+        const changed = await this.writeRuleTarget(rule.targetStateId, valueToSet, rule.name);
+        if (rule.logEnabled && changed) {
+          this.log.info(`[REGEL] ${rule.name || `Regel ${rule.index + 1}`} | ${matched ? 'THEN' : 'ELSE'} -> ${rule.targetStateId} = ${valueToSet}`);
+        }
+      } catch (e) {
+        this.log.warn(`[REGEL] ${rule.name || `Regel ${rule.index + 1}`} fehlgeschlagen: ${e.message || e}`);
+      }
+    }
+  }
+
+  async subscribeConfiguredStates() {
+    const ruleIds = this.getDependencyRules().map(rule => rule.compareStateId).filter(Boolean);
+    this.ruleCompareIds = [...new Set(ruleIds)];
+
+    const ids = [
+      this.config.phStateId,
+      this.config.orpStateId,
+      this.config.waterTempStateId,
+      this.config.outsideTempStateId,
+      this.config.pvPowerStateId,
+      this.config.gridFeedInStateId,
+      this.config.gridSupplyStateId,
+      this.config.batterySocStateId,
+      this.config.phPumpSocketStateId,
+      this.config.phDoseEnableStateId,
+      this.config.chlorinatorSocketStateId,
+      this.config.circulationPumpSocketStateId,
+      this.config.heatpumpPowerStateId,
+      'poolsteuerung.0.status.heatpump.lastReason',
+      ...this.ruleCompareIds
+    ].filter(Boolean);
+
+    this.monitoredIds = [...new Set(ids)];
+    for (const id of this.monitoredIds) {
+      try { this.subscribeForeignStates(id); } catch {}
+    }
+  }
+
+  async handleManualPhPumpStateChange(id, state) {
+    if (!this.config.phPumpSocketStateId || id !== this.config.phPumpSocketStateId || !state) return;
+
+    const current = !!state.val;
+    const prev = !!this.lastPhPumpOn;
+    const ts = Number(state.lc || state.ts || Date.now()) || Date.now();
+    this.lastPhPumpOn = current;
+
+    if (current && !prev) {
+      if (!this.phManagedActive) {
+        this.phManualStartedAt = ts;
+      }
+      return;
+    }
+
+    if (!current && prev) {
+      if (!this.phManagedActive && this.phManualStartedAt) {
+        const durationSec = Math.max(1, Math.round((ts - this.phManualStartedAt) / 1000));
+        await this.setPhDoseHistory(this.phManualStartedAt, durationSec);
+        const newCount = await this.incrementTodayDoseCount(new Date(ts));
+        const msg = `[PH] Manuell dosiert | Laufzeit=${durationSec}s | Tag ${newCount}`;
+        await this.setStateAsync('status.debug.lastPhStartInfo', msg, true);
+        if (this.config.debugMode) this.log.info(msg);
+      }
+      this.phManualStartedAt = 0;
+    }
+  }
+
+
+  parseHHMM(value) {
+    const m = String(value || '').trim().match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    const hh = Number(m[1]), mm = Number(m[2]);
+    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+    return hh * 60 + mm;
+  }
+
+  getStandbyDurationSec() {
+    return Math.max(1, parseNum(this.config.standbyPumpDurationSec || 30));
+  }
+
+  getStandbyRunWindow(now = new Date()) {
+    const mins = this.parseHHMM(this.config.standbyRunTime || '12:00');
+    if (mins === null) return null;
+    const start = new Date(now);
+    start.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
+    const end = new Date(start.getTime() + this.getStandbyDurationSec() * 1000);
+    return { start, end };
+  }
+
+  matchesPumpScheduleDay(ruleDays, now = new Date()) {
+    const day = now.getDay(); // 0=So,1=Mo,...6=Sa
+    const days = String(ruleDays || '').trim().toLowerCase();
+    if (!days || days === 'daily') return true;
+    if (days === 'mon_fri') return day >= 1 && day <= 5;
+    if (days === 'sat_sun') return day === 0 || day === 6;
+    if (days === 'mon') return day === 1;
+    if (days === 'tue') return day === 2;
+    if (days === 'wed') return day === 3;
+    if (days === 'thu') return day === 4;
+    if (days === 'fri') return day === 5;
+    if (days === 'sat') return day === 6;
+    if (days === 'sun') return day === 0;
+    return false;
+  }
+
+  getCirculationWindowsForDate(now = new Date()) {
+    const tableRules = Array.isArray(this.config.pumpSchedules) ? this.config.pumpSchedules : [];
+    const fromTable = tableRules
+      .filter(rule => !!rule && rule.enabled !== false)
+      .filter(rule => this.matchesPumpScheduleDay(rule.days, now))
+      .map(rule => [rule.start, rule.end])
+      .filter(([start, end]) => String(start || '').trim() && String(end || '').trim());
+
+    if (fromTable.length) return fromTable;
+
+    return [
+      [this.config.pumpWindow1Start, this.config.pumpWindow1End],
+      [this.config.pumpWindow2Start, this.config.pumpWindow2End],
+    ];
+  }
+
+  isWithinCirculationSchedule(now = new Date()) {
+    return this.getCirculationWindowsForDate(now).some(([start, end]) => inWindow(now, start, end));
+  }
+
+  getCirculationScheduleLabel(now = new Date()) {
+    const tableRules = Array.isArray(this.config.pumpSchedules) ? this.config.pumpSchedules : [];
+    const matching = tableRules
+      .filter(rule => !!rule && rule.enabled !== false)
+      .filter(rule => this.matchesPumpScheduleDay(rule.days, now));
+
+    if (matching.length) {
+      const days = String(matching[0].days || '').trim().toLowerCase();
+      const map = {
+        daily: 'Täglich',
+        mon_fri: 'Mo-Fr',
+        sat_sun: 'Sa-So',
+        mon: 'Mo',
+        tue: 'Di',
+        wed: 'Mi',
+        thu: 'Do',
+        fri: 'Fr',
+        sat: 'Sa',
+        sun: 'So',
+      };
+      return map[days] || 'Zeitplan';
+    }
+
+    return 'Standard';
+  }
+
+  isStandbyPumpActive(now = new Date()) {
+    if (this.config.standbyModeEnabled !== true) return false;
+    const window = this.getStandbyRunWindow(now);
+    if (!window) return false;
+    return now >= window.start && now < window.end;
+  }
+
+  getNextStandbyRun(now = new Date()) {
+    const mins = this.parseHHMM(this.config.standbyRunTime || '12:00');
+    if (mins === null) return null;
+    const next = new Date(now);
+    next.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
+    if (next <= now) next.setDate(next.getDate() + 1);
+    return next;
+  }
+
+  isWindowActive(startText, endText, now = new Date()) {
+    const start = this.parseHHMM(startText);
+    const end = this.parseHHMM(endText);
+    if (start === null || end === null) return false;
+    if (start === 0 && end === 0) return false;
+    if (start === end) return false;
+    const cur = now.getHours() * 60 + now.getMinutes();
+    if (start < end) return cur >= start && cur < end;
+    return cur >= start || cur < end;
+  }
+
+  isPumpScheduleActive(now = new Date()) {
+    return this.isWindowActive(this.config.pumpWindow1Start, this.config.pumpWindow1End, now) ||
+           this.isWindowActive(this.config.pumpWindow2Start, this.config.pumpWindow2End, now);
+  }
+
+  isPhCheckDue(now = new Date()) {
+    const list = String(this.config.phCheckTimes || '').split(',').map(v => v.trim()).filter(Boolean);
+    const current = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    return list.includes(current);
+  }
+
+
+  getTodayKey(now = new Date()) {
+    return now.toISOString().slice(0, 10);
+  }
+
+  async getTodayDoseCount(now = new Date()) {
+    await this.ensureState('status.phDose.dayKey', 'string', 'text', '', false);
+    await this.ensureState('status.phDose.dailyCount', 'number', 'value', 0, false);
+    const dayKeyState = await this.getStateAsync('status.phDose.dayKey');
+    const countState = await this.getStateAsync('status.phDose.dailyCount');
+    const today = this.getTodayKey(now);
+    let count = Number(countState && countState.val) || 0;
+    if (!dayKeyState || dayKeyState.val !== today) {
+      count = 0;
+      await this.setStateAsync('status.phDose.dayKey', today, true);
+      await this.setStateAsync('status.phDose.dailyCount', 0, true);
+    }
+    return count;
+  }
+
+  async incrementTodayDoseCount(now = new Date()) {
+    const count = await this.getTodayDoseCount(now);
+    await this.setStateAsync('status.phDose.dayKey', this.getTodayKey(now), true);
+    await this.setStateAsync('status.phDose.dailyCount', count + 1, true);
+    return count + 1;
+  }
+
+
+  calcPhDoseDurationSec(phValue, phSet, tolerance) {
+    const delta = Number(phValue) - (Number(phSet) + Number(tolerance));
+    if (!Number.isFinite(delta) || delta <= 0) return 0;
+
+    const volume = this.calcVolume();
+    const flowMlPerMin = Math.max(1, parseNum(this.config.phPumpFlowMlPerMin || 60));
+    const mlPer01Per10m3 = parseNum(this.config.phDoseMlPer01Per10m3 || 0);
+    const baseSec = parseNum(this.config.phDoseSecondsPer01Per10m3 || 30);
+    const maxSec = Math.max(1, parseNum(this.config.phDoseMaxDurationSec || 180));
+
+    let sec = 0;
+
+    if (mlPer01Per10m3 > 0) {
+      const mlNeeded = (delta / 0.1) * (volume / 10) * mlPer01Per10m3;
+      sec = Math.round((mlNeeded / flowMlPerMin) * 60);
+    } else {
+      sec = Math.round((delta / 0.1) * (volume / 10) * baseSec);
+    }
+
+    if (!Number.isFinite(sec) || sec < 0) return 0;
+    return Math.min(sec, maxSec);
+  }
+
+  async runDosePumpOnce(seconds, context = {}) {
+    const pumpId = this.config.phPumpSocketStateId;
+    const circulationId = this.config.circulationPumpSocketStateId;
+    const sec = Math.max(1, Number(seconds) || 1);
+    if (!pumpId || sec <= 0) return false;
+
+    await this.ensureState('status.phDose.stopAtTs', 'number', 'value.time', 0, false);
+    await this.ensureState('status.phDose.lastDoseTs', 'number', 'value.time', 0, false);
+    await this.ensureState('status.phDose.lastDoseDurationSec', 'number', 'value.interval', 0, false);
+    await this.ensureState('status.debug.lastPhStartInfo', 'string', 'text', '', false);
+
+    const circulationOn = circulationId ? await this.getBool(circulationId) : false;
+    const isManualStart = context && context.manual === true;
+    const circulationHeartbeatOk = isManualStart ? true : await this.getHeartbeatOk('status.checks.circulationPump');
+    const phPumpHeartbeatOk = isManualStart ? true : await this.getHeartbeatOk('status.checks.phPump');
+    if (!circulationOn) {
+      await this.setPhStopAtTs(0, 'Start abgebrochen: Umwälzpumpe AUS');
+      if (this.config.debugMode) this.log.info('[PH] Dosierung nicht gestartet: Umwälzpumpe AUS');
+      return false;
+    }
+    if (!circulationHeartbeatOk) {
+      await this.setPhStopAtTs(0, 'Start blockiert: Umwälzpumpe nicht erreichbar');
+      this.log.warn('[PH] Dosierung blockiert: Umwälzpumpe nicht erreichbar');
+      return false;
+    }
+    if (!phPumpHeartbeatOk) {
+      await this.setPhStopAtTs(0, 'Start blockiert: pH-Dosierpumpe nicht erreichbar');
+      this.log.warn('[PH] Dosierung blockiert: pH-Dosierpumpe nicht erreichbar');
+      return false;
+    }
+
+    const stopAtTs = Date.now() + sec * 1000;
+    this.phDoseStopAtTsMemory = stopAtTs;
+
+    if (this.config.simulateMode) {
+      this.phManagedActive = true;
+      await this.setPhStopAtTs(stopAtTs, 'Start Simulationsmodus');
+      await this.setPhDoseHistory(Date.now(), sec);
+      const msg = `[PH] würde dosieren | Prüfzeit ${context.checkTime || '-'} | pH=${context.phValue ?? '-'} | Laufzeit=${sec}s | Stop um ${new Date(stopAtTs).toLocaleTimeString('de-DE')}`;
+      await this.setStateAsync('status.debug.lastPhStartInfo', msg, true);
+      if (this.config.debugMode) this.log.info(msg);
+      return true;
+    }
+
+    this.phManagedActive = true;
+    const onOk = await this.forceSwitchOnCompat(pumpId);
+    if (!onOk) {
+      this.phManagedActive = false;
+      this.log.warn('[PH] Dosierpumpe ließ sich nicht sicher einschalten');
+      return false;
+    }
+
+    await this.setPhStopAtTs(stopAtTs, 'PH-Start erfolgreich');
+    await this.setPhDoseHistory(Date.now(), sec);
+
+
+    const msg = `[PH] Dosierpumpe EIN | Prüfzeit ${context.checkTime || '-'} | pH=${context.phValue ?? '-'} | Laufzeit=${sec}s | Stop um ${new Date(stopAtTs).toLocaleTimeString('de-DE')}`;
+    await this.setStateAsync('status.debug.lastPhStartInfo', msg, true);
+    if (this.config.debugMode) this.log.info(msg);
+    if (this.config.alertOnPhDoseStarted) {
+      await this.sendAlert('ph_dose_started', 'info', `Poolsteuerung: pH-Dosierung gestartet | pH ${context.phValue ?? '-'} | Laufzeit ${sec}s`);
+    }
+
+    const stopLater = async () => { if (!this.isShuttingDown) await this.enforcePhStopIfDue(); };
+    this.trackTimeout(setTimeout(stopLater, sec * 1000));
+    this.trackTimeout(setTimeout(stopLater, sec * 1000 + 1500));
+    this.trackTimeout(setTimeout(stopLater, sec * 1000 + 4000));
+    this.trackTimeout(setTimeout(stopLater, sec * 1000 + 8000));
+
+    return true;
+  }
+
+  async applyControlLogic() {
+    const now = new Date();
+    const pumpId = this.config.circulationPumpSocketStateId;
+    const standbyMode = await this.getControlBool('control.standby', this.config.standbyModeEnabled === true);
+    const circulationEnabled = !standbyMode && await this.getControlBool('control.auto.circulation', this.config.enableCirculationControl !== false);
+    const phEnabledMaster = !standbyMode && await this.getControlBool('control.auto.ph', this.config.enablePhControl !== false);
+    const heatEnabledMaster = !standbyMode && await this.getControlBool('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
+    const chlorEnabledMaster = !standbyMode && await this.getControlBool('control.auto.chlor', this.config.enableChlorControl !== false);
+    const pumpTarget = standbyMode ? this.isStandbyPumpActive(now) : (circulationEnabled ? this.isPumpScheduleActive(now) : false);
+    const pumpState = await this.getStateSnapshot(pumpId);
+    const pumpCurrent = !!(pumpState && pumpState.val);
+    this.updateCirculationPumpRuntime(pumpCurrent, pumpState && (pumpState.lc || pumpState.ts));
+
+    await this.ensureState('status.debug.lastPumpScheduleActive', 'boolean', 'indicator', false, false);
+    await this.ensureState('status.debug.lastPumpLoggedDecision', 'string', 'text', '', false);
+    const lastScheduleActive = this.lastPumpScheduleActiveMemory === null ? pumpTarget : this.lastPumpScheduleActiveMemory;
+    const scheduleEdge = pumpTarget !== lastScheduleActive;
+    const nowMs = now.getTime();
+
+    let pumpDecision = standbyMode ? (pumpTarget ? `Standby-Kurzlauf aktiv (${this.getStandbyDurationSec()}s)` : 'Standby aktiv') : (!circulationEnabled ? 'Steuerung deaktiviert' : (pumpTarget ? 'Zeitfenster aktiv' : 'Kein aktives Zeitfenster'));
+
+    if (standbyMode) {
+      await this.forceDependentDevicesOff('Standby aktiv');
+      if (this.config.simulateMode) {
+        pumpDecision = pumpTarget ? `würde EIN (Standby ${this.getStandbyDurationSec()}s, Simulationsmodus)` : 'Standby aktiv (Simulationsmodus)';
+      } else if (pumpId && pumpCurrent !== pumpTarget) {
+        try {
+          await (pumpTarget ? this.forceSwitchOnCompat(pumpId) : this.forceSwitchOffCompat(pumpId));
+          this.suppressOwnPumpLogUntil = Date.now() + 5000;
+          pumpDecision = pumpTarget ? `EIN via Standby-Kurzlauf (${this.getStandbyDurationSec()}s)` : 'AUS nach Standby-Kurzlauf';
+          this.log.info(pumpTarget
+            ? `[STANDBY] Umwälzpumpe EIN | Kurzlauf ${this.getStandbyDurationSec()}s`
+            : '[STANDBY] Umwälzpumpe AUS | Kurzlauf beendet');
+        } catch (e) {
+          pumpDecision = `Standby Schaltfehler: ${e.message || e}`;
+        }
+      }
+    } else if (!circulationEnabled) {
+      pumpDecision = pumpCurrent ? 'Manuell EIN (Steuerung deaktiviert)' : 'Steuerung deaktiviert';
+    } else if (scheduleEdge) {
+      if (this.config.simulateMode) {
+        pumpDecision = `würde ${pumpTarget ? 'EIN' : 'AUS'} (Zeitfensterwechsel, Simulationsmodus)`;
+      } else if (pumpId) {
+        try {
+          await (pumpTarget ? this.forceSwitchOnCompat(pumpId) : this.forceSwitchOffCompat(pumpId));
+          this.suppressOwnPumpLogUntil = Date.now() + 5000;
+          pumpDecision = `${pumpTarget ? 'EIN' : 'AUS'} via Zeitfensterwechsel`;
+        } catch (e) {
+          pumpDecision = `Schaltfehler: ${e.message || e}`;
+        }
+      }
+    } else if (!pumpCurrent && pumpTarget) {
+      if (this.config.simulateMode) {
+        pumpDecision = 'würde EIN (Auto innerhalb aktivem Zeitfenster, Simulationsmodus)';
+      } else if (pumpId) {
+        try {
+          await this.forceSwitchOnCompat(pumpId);
+          this.suppressOwnPumpLogUntil = Date.now() + 5000;
+          pumpDecision = 'EIN via Auto innerhalb aktivem Zeitfenster';
+        } catch (e) {
+          pumpDecision = `Schaltfehler: ${e.message || e}`;
+        }
+      }
+    } else if (pumpCurrent && !pumpTarget) {
+      pumpDecision = circulationEnabled ? 'EIN außerhalb Zeitfenster' : 'Manueller Override aktiv';
+    } else if (pumpCurrent && pumpTarget) {
+      pumpDecision = 'EIN (Zeitfenster aktiv)';
+    } else {
+      pumpDecision = 'AUS (kein Zeitfenster)';
+    }
+
+    this.lastPumpScheduleActiveMemory = pumpTarget;
+    await this.setStateAsync('status.debug.lastPumpScheduleActive', pumpTarget, true);
+    await this.ensureState('status.mode.active', 'string', 'text', 'normal', false);
+    await this.setStateAsync('status.mode.active', standbyMode ? 'standby' : 'normal', true);
+    await this.ensureState('status.auto.circulation', 'string', 'text', '', false);
+    await this.ensureState('status.auto.chlor', 'string', 'text', '', false);
+    await this.ensureState('status.auto.ph', 'string', 'text', '', false);
+    await this.ensureState('status.auto.heatpump', 'string', 'text', '', false);
+    await this.setStateAsync('status.auto.circulation', standbyMode ? 'STANDBY' : (circulationEnabled ? 'AKTIV' : 'AUS'), true);
+    await this.setStateAsync('status.auto.chlor', standbyMode ? 'STANDBY' : (chlorEnabledMaster ? 'AKTIV' : 'AUS'), true);
+    await this.setStateAsync('status.auto.ph', standbyMode ? 'STANDBY' : (phEnabledMaster ? 'AKTIV' : 'AUS'), true);
+    await this.setStateAsync('status.auto.heatpump', standbyMode ? 'STANDBY' : (heatEnabledMaster ? 'AKTIV' : 'AUS'), true);
+    await this.ensureState('status.standby.nextRun', 'string', 'text', '', false);
+    await this.ensureState('status.standby.lastRun', 'number', 'value.time', 0, false);
+    await this.ensureState('status.standby.lastDurationSec', 'number', 'value.interval', 0, false);
+    if (standbyMode) {
+      const standbyNext = this.getNextStandbyRun(now);
+      await this.setStateAsync('status.standby.nextRun', standbyNext ? standbyNext.toLocaleString('de-DE') : 'ungültige Uhrzeit', true);
+      if (pumpTarget) {
+        await this.setStateAsync('status.standby.lastRun', now.getTime(), true);
+        await this.setStateAsync('status.standby.lastDurationSec', this.getStandbyDurationSec(), true);
+      }
+    }
+
+    const orpValue = await this.getNumber(this.config.orpStateId, 0);
+    const chlorId = this.config.chlorinatorSocketStateId;
+    const chlorCurrent = await this.getBool(chlorId);
+    const orpOnThreshold = parseNum(this.config.orpOnThreshold || 725);
+    const orpOffThreshold = parseNum(this.config.orpOffThreshold || 750);
+    const chlorDelaySec = Math.max(0, parseNum(this.config.chlorPumpStartDelaySec || 0));
+    const pumpOnForSec = this.getPumpOnForSec(nowMs);
+    let chlorDecision = 'keine Prüfung';
+    let chlorTarget = chlorCurrent;
+    const circulationHeartbeatOk = await this.getHeartbeatOk('status.checks.circulationPump');
+    const chlorHeartbeatOk = await this.getHeartbeatOk('status.checks.chlorinator');
+
+    if (!chlorEnabledMaster) {
+      chlorDecision = chlorCurrent ? 'Steuerung deaktiviert (bleibt EIN)' : 'Steuerung deaktiviert';
+    } else if (!pumpCurrent) {
+      chlorTarget = false;
+      chlorDecision = 'Pumpe AUS';
+    } else if (!circulationHeartbeatOk) {
+      chlorTarget = false;
+      chlorDecision = 'Blockiert: Umwälzpumpe nicht erreichbar';
+    } else if (!chlorHeartbeatOk) {
+      chlorTarget = false;
+      chlorDecision = 'Blockiert: Chlorinator nicht erreichbar';
+    } else if (chlorDelaySec > 0 && pumpOnForSec < chlorDelaySec) {
+      chlorTarget = false;
+      chlorDecision = `Verzögert nach Pumpenstart (${Math.max(0, chlorDelaySec - pumpOnForSec)}s Rest)`;
+    } else if (orpValue === null || !Number.isFinite(orpValue)) {
+      chlorTarget = false;
+      chlorDecision = 'ORP ungültig';
+    } else if (orpValue <= orpOnThreshold) {
+      chlorTarget = true;
+      chlorDecision = `ORP niedrig (${orpValue} <= ${orpOnThreshold})`;
+    } else if (orpValue > orpOffThreshold) {
+      chlorTarget = false;
+      chlorDecision = `ORP hoch (${orpValue} > ${orpOffThreshold})`;
+    } else {
+      chlorDecision = `Hysterese (${orpOnThreshold}-${orpOffThreshold})`;
+    }
+
+    if (!this.config.simulateMode && chlorId && chlorTarget !== chlorCurrent) {
+      try {
+        await this.setSwitchStateCompat(chlorId, chlorTarget);
+      } catch (e) {
+        chlorDecision = `Chlor Schaltfehler: ${e.message || e}`;
+        this.log.warn('Chlorinator konnte nicht gesetzt werden: ' + (e.message || e));
+      }
+    }
+
+    await this.ensureState('status.debug.lastChlorDecision', 'string', 'text', '', false);
+    await this.setStateAsync('status.debug.lastChlorDecision', chlorDecision, true);
+
+    const heatpumpId = this.config.heatpumpPowerStateId;
+    const currentHeat = await this.getBool(heatpumpId);
+    const feedIn = await this.getNumber(this.config.gridFeedInStateId, 0);
+    const poolTemp = await this.getNumber(this.config.waterTempStateId, 1);
+    const targetTemp = parseNum(this.config.heatpumpTargetTemp || 24);
+    const heatThreshold = parseNum(this.config.heatEnableFeedInThresholdW || 1000);
+    let heatReason = 'keine Prüfung';
+    let shouldHeat = currentHeat;
+
+    if (standbyMode) {
+      shouldHeat = false;
+      heatReason = 'Standby aktiv';
+    } else if (!heatEnabledMaster) {
+      shouldHeat = currentHeat;
+      heatReason = currentHeat ? 'Manuell EIN (Auto AUS)' : 'Steuerung deaktiviert';
+    } else if (!pumpCurrent) {
+      shouldHeat = false;
+      heatReason = 'Umwälzpumpe AUS';
+    } else if (!circulationHeartbeatOk) {
+      shouldHeat = false;
+      heatReason = 'Umwälzpumpe nicht erreichbar';
+    } else if (feedIn === null || !Number.isFinite(feedIn)) {
+      shouldHeat = false;
+      heatReason = 'Netzeinspeisung ungültig';
+    } else if (poolTemp !== null && Number.isFinite(poolTemp) && Number.isFinite(targetTemp) && poolTemp >= targetTemp) {
+      shouldHeat = false;
+      heatReason = `Temperaturregelung durch WP (${poolTemp}°C >= ${targetTemp}°C)`;
+    } else if (feedIn < heatThreshold) {
+      shouldHeat = false;
+      heatReason = `PV zu gering (${feedIn}W < ${heatThreshold}W)`;
+    } else {
+      shouldHeat = true;
+      heatReason = `PV OK (${feedIn}W >= ${heatThreshold}W)`;
+    }
+
+    if (!this.config.simulateMode && heatpumpId && shouldHeat !== currentHeat) {
+      try {
+        await this.setSwitchStateCompat(heatpumpId, shouldHeat);
+      } catch (e) {
+        heatReason = `WP Schaltfehler: ${e.message || e}`;
+        this.log.warn('Wärmepumpe konnte nicht gesetzt werden: ' + (e.message || e));
+      }
+    }
+
+    await this.ensureState('status.heatpump.lastReason', 'string', 'text', '', false);
+    await this.setStateAsync('status.heatpump.lastReason', heatReason, true);
+
+    if (standbyMode) {
+      if (!this.config.simulateMode) {
+        if (chlorId && chlorCurrent) {
+          try { await this.forceSwitchOffCompat(chlorId); } catch {}
+        }
+        if (heatpumpId && currentHeat) {
+          try { await this.forceSwitchOffCompat(heatpumpId); } catch {}
+        }
+      }
+    }
+
+    const phValue = await this.getNumber(this.config.phStateId, 2);
+    const phSet = parseNum(this.config.phSetpoint || 7.2);
+    const phTolerance = parseNum(this.config.phDoseTolerance || 0.05);
+    const phEnabledState = this.config.phDoseEnableStateId ? await this.getBool(this.config.phDoseEnableStateId) : true;
+    const phEnabled = phEnabledMaster && phEnabledState;
+    const phPumpId = this.config.phPumpSocketStateId;
+    const phPumpCurrent = await this.getBool(phPumpId);
+    await this.ensureState('status.phDose.stopAtTs', 'number', 'value.time', 0, false);
+    await this.ensureState('status.debug.lastPhStartInfo', 'string', 'text', '', false);
+    const stopAtTs = await this.getEffectivePhStopAtTs(phPumpCurrent);
+    const phDoseActive = !!stopAtTs && Date.now() < stopAtTs;
+
+    if (!this.config.simulateMode && standbyMode && (phPumpCurrent || phDoseActive)) {
+      try {
+        await this.forceSwitchOffCompat(phPumpId);
+        await this.setPhStopAtTs(0, 'PH-AUS bestätigt wegen Standby aktiv');
+        this.phDoseStopAtTsMemory = 0;
+        this.lastWrittenPhStopAtTs = 0;
+      } catch {}
+    } else if (!this.config.simulateMode && (phPumpCurrent || phDoseActive) && (!pumpCurrent || (stopAtTs && Date.now() >= stopAtTs))) {
+      await this.enforcePhStopIfDue();
+    }
+
+    const fallbackDoseDurationSec = Math.max(1, parseNum(this.config.phDoseDurationSec || 30));
+    const doseLockMinutes = Math.max(0, parseNum(this.config.phDoseLockMinutes || 60));
+    const doseMaxPerDay = Math.max(1, parseNum(this.config.phDoseMaxPerDay || 4));
+    await this.ensureState('status.phDose.lastDoseTs', 'number', 'value.time', 0, false);
+    await this.ensureState('status.phDose.lastDoseDurationSec', 'number', 'value.interval', 0, false);
+    await this.ensureState('status.phDose.currentPhValue', 'string', 'text', '--', false);
+    await this.ensureState('status.phDose.calculatedDoseSec', 'number', 'value.interval', 0, false);
+    const lastDoseState = await this.getStateAsync('status.phDose.lastDoseTs');
+    const lastDoseTs = Number(lastDoseState && lastDoseState.val) || 0;
+    const lockRemainingMs = Math.max(0, (lastDoseTs + doseLockMinutes * 60000) - nowMs);
+    const dailyCount = await this.getTodayDoseCount(now);
+    const calcDoseSec = this.calcPhDoseDurationSec(phValue, phSet, phTolerance) || fallbackDoseDurationSec;
+    await this.setStateIfChanged('status.phDose.currentPhValue', phValue === null || !Number.isFinite(phValue) ? '--' : String(phValue), true);
+    await this.setStateIfChanged('status.phDose.calculatedDoseSec', Number(calcDoseSec) || 0, true);
+    const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    let phDecision = 'keine Prüfung';
+    if (standbyMode) {
+      phDecision = 'Standby aktiv';
+    } else if (!phEnabled) {
+      phDecision = 'pH Freigabe AUS';
+    } else if (!pumpCurrent) {
+      phDecision = (phPumpCurrent || phDoseActive) ? 'PH-Dosierung gestoppt (Umwälzpumpe AUS)' : 'Pumpe AUS';
+    } else if (!(await this.getHeartbeatOk('status.checks.circulationPump'))) {
+      phDecision = 'Blockiert: Umwälzpumpe nicht erreichbar';
+    } else if (!(await this.getHeartbeatOk('status.checks.phPump'))) {
+      phDecision = 'Blockiert: pH-Dosierpumpe nicht erreichbar';
+    } else if (!this.isPhCheckDue(now)) {
+      phDecision = `warte auf Prüfzeit (${this.config.phCheckTimes || '-'})`;
+    } else if (phValue === null || !Number.isFinite(phValue)) {
+      phDecision = 'pH ungültig';
+      if (this.config.alertOnSensorError) {
+        await this.sendAlert('ph_sensor_invalid', 'warn', 'Poolsteuerung: pH-Sensorwert ist ungültig oder fehlt.');
+      }
+    } else if (dailyCount >= doseMaxPerDay) {
+      phDecision = `Tageslimit erreicht (${dailyCount}/${doseMaxPerDay})`;
+      if (this.config.alertOnPhDailyLimit) {
+        await this.sendAlert('ph_daily_limit', 'warn', `Poolsteuerung: Tageslimit pH-Dosierung erreicht (${dailyCount}/${doseMaxPerDay}).`);
+      }
+    } else if (lockRemainingMs > 0) {
+      phDecision = `Sperrzeit aktiv (${Math.ceil(lockRemainingMs / 60000)} min)`;
+    } else if (phValue <= (phSet + phTolerance)) {
+      phDecision = `pH OK (${phValue} <= ${this.fmt(phSet + phTolerance, 2, '--')})`;
+    } else if (phPumpCurrent) {
+      if (!stopAtTs && this.config.debugMode) {
+        // stopAtTs may be held in memory fallback; do not spam logs here.
+      }
+      phDecision = stopAtTs ? `Dosierpumpe läuft bis ${new Date(stopAtTs).toLocaleTimeString('de-DE')}` : 'Dosierpumpe läuft bereits';
+    } else {
+      const ok = await this.runDosePumpOnce(calcDoseSec, { checkTime: currentHHMM, phValue });
+      if (ok) {
+        const newCount = await this.incrementTodayDoseCount(now);
+        phDecision = `${this.config.simulateMode ? 'würde dosieren' : 'dosiert'} ${calcDoseSec}s | pH ${phValue} > ${phSet}+${phTolerance} | Tag ${newCount}/${doseMaxPerDay}`;
+      } else {
+        phDecision = 'Dosierung fehlgeschlagen';
+      }
+    }
+
+    await this.ensureState('status.debug.lastPumpDecision', 'string', 'text', '', false);
+    await this.ensureState('status.debug.lastPhDecision', 'string', 'text', '', false);
+    await this.setStateAsync('status.debug.lastPumpDecision', pumpDecision, true);
+    const lastPumpLoggedDecisionState = await this.getStateAsync('status.debug.lastPumpLoggedDecision');
+    const lastPumpLoggedDecision = lastPumpLoggedDecisionState && lastPumpLoggedDecisionState.val ? String(lastPumpLoggedDecisionState.val) : '';
+    const ownWriteSuppressed = Date.now() < (this.suppressOwnPumpLogUntil || 0);
+    const shouldLogPump = !ownWriteSuppressed && (scheduleEdge || pumpDecision !== lastPumpLoggedDecision || pumpDecision.startsWith('Schaltfehler'));
+    if (shouldLogPump) {
+      this.debug(`Pumpenentscheidung: ${pumpDecision} | zeitfenster=${pumpTarget ? 'aktiv' : 'inaktiv'} | ist=${pumpCurrent ? 'ein' : 'aus'} | edge=${scheduleEdge ? 'ja' : 'nein'}`);
+      await this.setStateAsync('status.debug.lastPumpLoggedDecision', pumpDecision, true);
+    }
+    await this.setStateAsync('status.debug.lastPhDecision', phDecision, true);
+  }
+
+
+
+  async setPhStopAtTs(value, reason = '') {
+    const num = Number(value) || 0;
+    await this.ensureState('status.phDose.stopAtTs', 'number', 'value.time', 0, false);
+    const currentState = await this.getStateAsync('status.phDose.stopAtTs');
+    const currentNum = Number(currentState && currentState.val) || 0;
+
+    if (this.lastWrittenPhStopAtTs === null) {
+      this.lastWrittenPhStopAtTs = currentNum;
+    }
+
+    this.phDoseStopAtTsMemory = num;
+
+    if (num === 0 && currentNum === 0 && this.lastWrittenPhStopAtTs === 0) {
+      return;
+    }
+
+    if (this.lastWrittenPhStopAtTs === num && currentNum === num) {
+      return;
+    }
+
+    if (currentNum !== num) {
+      await this.setStateAsync('status.phDose.stopAtTs', num, true);
+    }
+
+    this.lastWrittenPhStopAtTs = num;
+
+    if (this.config.debugMode) {
+      this.log.info(`[PH] stopAtTs ${num ? 'gesetzt' : 'auf 0 gesetzt'}${reason ? ' | ' + reason : ''}${num ? ' | ' + num : ''}`);
+    }
+  }
+
+
+
+  async setPhDoseHistory(ts, durationSec) {
+    const tsNum = Number(ts) || 0;
+    const durNum = Number(durationSec) || 0;
+    this.phLastDoseTsMemory = tsNum;
+    this.phLastDoseDurationSecMemory = durNum;
+    await this.ensureState('status.phDose.lastDoseTs', 'number', 'value.time', 0, false);
+    await this.ensureState('status.phDose.lastDoseDurationSec', 'number', 'value.interval', 0, false);
+    await this.setStateIfChanged('status.phDose.lastDoseTs', tsNum, true);
+    await this.setStateIfChanged('status.phDose.lastDoseDurationSec', durNum, true);
+  }
+
+  async getEffectivePhStopAtTs(phPumpCurrent = false) {
+    await this.ensureState('status.phDose.stopAtTs', 'number', 'value.time', 0, false);
+    const s = await this.getStateAsync('status.phDose.stopAtTs');
+    const stateTs = Number(s && s.val) || 0;
+    const memTs = Number(this.phDoseStopAtTsMemory) || 0;
+
+    if (phPumpCurrent && memTs) {
+      return memTs;
+    }
+    return Math.max(stateTs, memTs);
+  }
+
+
+
+  async resetPhDoseState(reason = '') {
+    await this.setPhStopAtTs(0, reason || 'resetPhDoseState');
+  }
+
+  async enforcePhStopIfDue() {
+    try {
+      const phPumpId = this.config.phPumpSocketStateId;
+      if (!phPumpId) return;
+
+      const phPumpCurrent = await this.getBool(phPumpId);
+      const stopAtTs = await this.getEffectivePhStopAtTs(phPumpCurrent);
+      if (!stopAtTs && !this.phDoseStopAtTsMemory) return;
+
+      const pumpCurrent = this.config.circulationPumpSocketStateId
+        ? await this.getBool(this.config.circulationPumpSocketStateId)
+        : false;
+      const circulationHeartbeatOk = await this.getHeartbeatOk('status.checks.circulationPump');
+      const phPumpHeartbeatOk = await this.getHeartbeatOk('status.checks.phPump');
+
+      if ((phPumpCurrent || (this.phDoseStopAtTsMemory && Date.now() < this.phDoseStopAtTsMemory + 60000))
+          && (!pumpCurrent || !circulationHeartbeatOk || !phPumpHeartbeatOk || Date.now() >= stopAtTs)) {
+        const offOk = await this.forceSwitchOffCompat(phPumpId);
+        if (offOk) {
+          const stopReason = !pumpCurrent
+            ? 'Umwälzpumpe AUS'
+            : !circulationHeartbeatOk
+              ? 'Umwälzpumpe nicht erreichbar'
+              : !phPumpHeartbeatOk
+                ? 'pH-Dosierpumpe nicht erreichbar'
+                : 'Sollzeit erreicht';
+          await this.setPhStopAtTs(0, `PH-AUS bestätigt wegen ${stopReason}`);
+          this.phDoseStopAtTsMemory = 0;
+          this.lastWrittenPhStopAtTs = 0;
+          this.phManagedActive = false;
+          this.log.info(`[PH] Dosierpumpe AUS | Grund ${stopReason}`);
+          if ((stopReason === 'Umwälzpumpe AUS' || stopReason === 'Umwälzpumpe nicht erreichbar' || stopReason === 'pH-Dosierpumpe nicht erreichbar') && this.config.alertOnPhDoseAborted) {
+            await this.sendAlert('ph_dose_aborted', 'warn', `Poolsteuerung: pH-Dosierung abgebrochen, Grund: ${stopReason}.`);
+          } else if (stopReason === 'Sollzeit erreicht' && this.config.alertOnPhDoseStopped) {
+            await this.sendAlert('ph_dose_stopped', 'info', 'Poolsteuerung: pH-Dosierung beendet.');
+          }
+        } else if (this.config.debugMode) {
+          this.log.warn(`[PH] Dosierpumpe AUS fehlgeschlagen | Grund ${!pumpCurrent ? 'Umwälzpumpe AUS' : 'Sollzeit erreicht'}`);
+        }
+      }
+    } catch (e) {
+      this.log.warn('[PH] Stop-Überwachung fehlgeschlagen: ' + (e.message || e));
+    }
+  }
+
+
+
+
+  async ensureAlertStates() {
+    await this.ensureState('status.alerts.lastMessage', 'string', 'text', '', false);
+    await this.ensureState('status.alerts.lastSeverity', 'string', 'text', '', false);
+    await this.ensureState('status.alerts.lastKey', 'string', 'text', '', false);
+    await this.ensureState('status.alerts.lastSentTs', 'number', 'value.time', 0, false);
+  }
+
+  alertsEnabled() {
+    return this.config.adapterEnabled !== false && this.config.enableAlerts === true;
+  }
+
+  async shouldSendAlert(key) {
+    if (!this.alertsEnabled()) return false;
+    const lockMin = Math.max(0, Number(this.config.alertRepeatLockMin) || 0);
+    const now = Date.now();
+    const last = Number(this.alertLockMemory[key]) || 0;
+    if (lockMin > 0 && last && now - last < lockMin * 60000) return false;
+    this.alertLockMemory[key] = now;
+    return true;
+  }
+
+  async dispatchWhatsappAlert(message) {
+    if (!this.config.alertWhatsappEnabled) return false;
+    const instance = String(this.config.alertWhatsappInstance || '').trim();
+    const to = String(this.config.alertWhatsappTo || '').trim();
+    if (!instance || !to) return false;
+    try {
+      await this.sendToAsync(instance, 'send', { to, text: message });
+      return true;
+    } catch (e) {
+      this.log.warn('[ALERT] WhatsApp Versand fehlgeschlagen: ' + (e.message || e));
+      return false;
+    }
+  }
+
+  async dispatchTelegramAlert(message) {
+    if (!this.config.alertTelegramEnabled) return false;
+    const instance = String(this.config.alertTelegramInstance || '').trim();
+    const to = String(this.config.alertTelegramTo || '').trim();
+    if (!instance || !to) return false;
+    try {
+      await this.sendToAsync(instance, 'send', { user: to, text: message });
+      return true;
+    } catch (e) {
+      try {
+        await this.sendToAsync(instance, 'send', { chatId: to, text: message });
+        return true;
+      } catch (e2) {
+        this.log.warn('[ALERT] Telegram Versand fehlgeschlagen: ' + ((e2 && e2.message) || e2 || (e.message || e)));
+        return false;
+      }
+    }
+  }
+
+  async dispatchEmailAlert(message) {
+    if (!this.config.alertEmailEnabled) return false;
+    const instance = String(this.config.alertEmailInstance || '').trim();
+    const to = String(this.config.alertEmailTo || '').trim();
+    if (!instance || !to) return false;
+    try {
+      await this.sendToAsync(instance, 'send', {
+        to,
+        subject: 'Poolsteuerung Alert',
+        text: message
+      });
+      return true;
+    } catch (e) {
+      this.log.warn('[ALERT] E-Mail Versand fehlgeschlagen: ' + (e.message || e));
+      return false;
+    }
+  }
+
+  async sendAlert(key, severity, message) {
+    await this.ensureAlertStates();
+    if (!(await this.shouldSendAlert(key))) return false;
+
+    let sent = false;
+    sent = (await this.dispatchWhatsappAlert(message)) || sent;
+    sent = (await this.dispatchTelegramAlert(message)) || sent;
+    sent = (await this.dispatchEmailAlert(message)) || sent;
+
+    await this.setStateIfChanged('status.alerts.lastMessage', message, true);
+    await this.setStateIfChanged('status.alerts.lastSeverity', severity, true);
+    await this.setStateIfChanged('status.alerts.lastKey', key, true);
+    await this.setStateIfChanged('status.alerts.lastSentTs', Date.now(), true);
+
+    if (sent) {
+      this.log.info(`[ALERT] ${message}`);
+    } else if (this.alertsEnabled()) {
+      this.log.warn(`[ALERT] Kein aktiver Versandkanal oder Versand fehlgeschlagen: ${message}`);
+    }
+    return sent;
+  }
+
+
+  async ensureControlState(id, def) {
+    await this.ensureState(id, 'boolean', 'switch.enable', def, true);
+    const cur = await this.getStateAsync(id);
+    if (!cur || cur.val === null || cur.val === undefined) {
+      await this.setStateAsync(id, !!def, true);
+    }
+  }
+
+  async getControlBool(id, fallback) {
+    const state = await this.getStateAsync(id);
+    if (!state || state.val === null || state.val === undefined) return !!fallback;
+    return !!state.val;
+  }
+
+  getTrendSymbol(current, prev, epsilon = 0) {
+    const c = parseNum(current);
+    const p = parseNum(prev);
+    if (!Number.isFinite(c) || !Number.isFinite(p)) return '→';
+    if (c > p + epsilon) return '↑';
+    if (c < p - epsilon) return '↓';
+    return '→';
+  }
+
+  avgFromHistoryValues(values) {
+    const nums = (Array.isArray(values) ? values : [])
+      .map(v => parseNum(v && v.val !== undefined ? v.val : v))
+      .filter(v => Number.isFinite(v));
+    if (!nums.length) return null;
+    return nums.reduce((a, b) => a + b, 0) / nums.length;
+  }
+
+  async fetchHistoryValues(stateId, startTs, endTs) {
+    const instance = String(this.config.trendHistoryInstance || 'history.0').trim() || 'history.0';
+    if (!stateId || !instance) return [];
+    try {
+      const res = await this.sendToAsync(instance, 'getHistory', {
+        id: stateId,
+        options: {
+          start: startTs,
+          end: endTs,
+          aggregate: 'none',
+          count: 500,
+          ignoreNull: true
+        }
+      });
+      if (Array.isArray(res)) return res;
+      if (res && Array.isArray(res.result)) return res.result;
+      return [];
+    } catch (e) {
+      if (this.config.debugMode) this.log.debug(`[TREND] History für ${stateId} fehlgeschlagen: ${e.message || e}`);
+      return [];
+    }
+  }
+
+  async getHistoryTrendArrow(stateId, tolerance, nowTs = Date.now()) {
+    const windowMin = Math.max(10, Number(this.config.trendWindowMin) || 60);
+    const smoothMin = Math.max(1, Number(this.config.trendSmoothMin) || 5);
+    const endRecent = nowTs;
+    const startRecent = endRecent - smoothMin * 60000;
+    const endPast = nowTs - (windowMin - smoothMin) * 60000;
+    const startPast = nowTs - windowMin * 60000;
+
+    const [recentValues, pastValues] = await Promise.all([
+      this.fetchHistoryValues(stateId, startRecent, endRecent),
+      this.fetchHistoryValues(stateId, startPast, endPast)
+    ]);
+
+    const recentAvg = this.avgFromHistoryValues(recentValues);
+    const pastAvg = this.avgFromHistoryValues(pastValues);
+
+    if (!Number.isFinite(recentAvg) || !Number.isFinite(pastAvg)) return '→';
+    const delta = recentAvg - pastAvg;
+    const eps = Number(tolerance) || 0;
+    if (delta > eps) return '↑';
+    if (delta < -eps) return '↓';
+    return '→';
+  }
+
+  async getHistoryTrends() {
+    const now = Date.now();
+    if (this.trendCache && this.trendCache.data && (now - this.trendCache.ts) < 120000) {
+      return this.trendCache.data;
+    }
+    const trends = {
+      phTrend: '→',
+      orpTrend: '→',
+      poolTempTrend: '→',
+      outsideTempTrend: '→',
+      pvTrend: '→',
+      feedInTrend: '→'
+    };
+    const tolPh = parseNum(this.config.trendTolerancePh || 0.03) || 0.03;
+    const tolOrp = parseNum(this.config.trendToleranceOrp || 15) || 15;
+    const tolTemp = parseNum(this.config.trendToleranceTemp || 0.3) || 0.3;
+
+    try {
+      trends.phTrend = await this.getHistoryTrendArrow(this.config.phStateId, tolPh, now);
+      trends.orpTrend = await this.getHistoryTrendArrow(this.config.orpStateId, tolOrp, now);
+      trends.poolTempTrend = await this.getHistoryTrendArrow(this.config.waterTempStateId, tolTemp, now);
+      trends.outsideTempTrend = await this.getHistoryTrendArrow(this.config.outsideTempStateId, tolTemp, now);
+      trends.pvTrend = await this.getHistoryTrendArrow(this.config.pvPowerStateId, 150, now);
+      trends.feedInTrend = await this.getHistoryTrendArrow(this.config.gridFeedInStateId, 100, now);
+    } catch (e) {
+      if (this.config.debugMode) this.log.debug('[TREND] Berechnung fehlgeschlagen: ' + (e.message || e));
+    }
+
+    this.trendCache = { ts: now, data: trends };
+    return trends;
+  }
+
+  async enforceManualPrerequisite(deviceName, turningOn) {
+    if (!turningOn) return true;
+    const pumpOn = await this.getBool(this.config.circulationPumpSocketStateId);
+    if (pumpOn) return true;
+    const msg = `${deviceName} manuell blockiert: Umwälzpumpe läuft nicht`;
+    try { await this.setStateAsync('status.debug.lastStartupError', msg, true); } catch {}
+    this.log.info(msg);
+    return false;
+  }
+
+  async forceDependentDevicesOff(reason = '') {
+    const suffix = reason ? ` (${reason})` : '';
+    try {
+      if (this.config.chlorinatorSocketStateId && await this.getBool(this.config.chlorinatorSocketStateId)) {
+        await this.forceSwitchOffCompat(this.config.chlorinatorSocketStateId);
+      }
+    } catch (e) {
+      this.log.warn('Chlorinator AUS fehlgeschlagen' + suffix + ': ' + (e.message || e));
+    }
+    try {
+      if (this.config.phPumpSocketStateId && await this.getBool(this.config.phPumpSocketStateId)) {
+        await this.forceSwitchOffCompat(this.config.phPumpSocketStateId);
+      }
+    } catch (e) {
+      this.log.warn('pH-Pumpe AUS fehlgeschlagen' + suffix + ': ' + (e.message || e));
+    }
+    try {
+      if (this.config.heatpumpPowerStateId && await this.getBool(this.config.heatpumpPowerStateId)) {
+        await this.forceSwitchOffCompat(this.config.heatpumpPowerStateId);
+      }
+    } catch (e) {
+      this.log.warn('Wärmepumpe AUS fehlgeschlagen' + suffix + ': ' + (e.message || e));
+    }
+    await this.setStateIfChanged('control.device.chlorinator', false, true);
+    await this.setStateIfChanged('control.device.phPump', false, true);
+    await this.setStateIfChanged('control.device.heatpump', false, true);
+  }
+
+  async resetManualBlockers(reason = '') {
+    const suffix = reason ? ` (${reason})` : '';
+    try { await this.setStateIfChanged('control.device.circulation', false, true); } catch (e) { this.log.warn('Reset control.device.circulation fehlgeschlagen' + suffix + ': ' + (e.message || e)); }
+    try { await this.setStateIfChanged('control.device.chlorinator', false, true); } catch (e) { this.log.warn('Reset control.device.chlorinator fehlgeschlagen' + suffix + ': ' + (e.message || e)); }
+    try { await this.setStateIfChanged('control.device.phPump', false, true); } catch (e) { this.log.warn('Reset control.device.phPump fehlgeschlagen' + suffix + ': ' + (e.message || e)); }
+    try { await this.setStateIfChanged('control.device.heatpump', false, true); } catch (e) { this.log.warn('Reset control.device.heatpump fehlgeschlagen' + suffix + ': ' + (e.message || e)); }
+    try { await this.setStateIfChanged('control.ph.manualStart', false, true); } catch {}
+  }
+
+  async syncDeviceControlStates() {
+    try { await this.setStateIfChanged('control.device.circulation', await this.getBool(this.config.circulationPumpSocketStateId), true); } catch {}
+    try { await this.setStateIfChanged('control.device.chlorinator', await this.getBool(this.config.chlorinatorSocketStateId), true); } catch {}
+    try { await this.setStateIfChanged('control.device.phPump', await this.getBool(this.config.phPumpSocketStateId), true); } catch {}
+    try { await this.setStateIfChanged('control.device.heatpump', await this.getBool(this.config.heatpumpPowerStateId), true); } catch {}
+  }
+
+
+  async syncControlStates() {
+    const standby = await this.getControlBool('control.standby', this.config.standbyModeEnabled === true);
+    if (standby) {
+      const autoIds = [
+        'control.auto.circulation',
+        'control.auto.chlor',
+        'control.auto.ph',
+        'control.auto.heatpump'
+      ];
+      for (const id of autoIds) {
+        try {
+          await this.setStateIfChanged(id, false, true);
+        } catch (e) {
+          this.log.warn(`Control-State ${id} konnte nicht synchronisiert werden: ${e.message || e}`);
+        }
+      }
+    }
+    try { await this.setStateAsync('status.auto.circulation', (await this.getControlBool('control.auto.circulation', this.config.enableCirculationControl !== false)) ? 'AKTIV' : 'AUS', true); } catch {}
+    try { await this.setStateAsync('status.auto.chlor', (await this.getControlBool('control.auto.chlor', this.config.enableChlorControl !== false)) ? 'AKTIV' : 'AUS', true); } catch {}
+    try { await this.setStateAsync('status.auto.ph', (await this.getControlBool('control.auto.ph', this.config.enablePhControl !== false)) ? 'AKTIV' : 'AUS', true); } catch {}
+    try { await this.setStateAsync('status.auto.heatpump', (await this.getControlBool('control.auto.heatpump', this.config.enableHeatpumpControl !== false)) ? 'AKTIV' : 'AUS', true); } catch {}
+  }
+
+  async onReady() {
+    try {
+      await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
+      await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
+      await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
+      await this.ensureAlertStates();
+      await this.ensureControlState('control.standby', this.config.standbyModeEnabled === true);
+      await this.ensureControlState('control.auto.circulation', this.config.enableCirculationControl !== false);
+      await this.ensureControlState('control.auto.chlor', this.config.enableChlorControl !== false);
+      await this.ensureControlState('control.auto.ph', this.config.enablePhControl !== false);
+      await this.ensureControlState('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
+      await this.ensureState('control.ph.manualDoseSec', 'number', 'value.interval', 30, true);
+      await this.ensureState('control.ph.manualStart', 'boolean', 'button', false, true);
+      await this.ensureState('control.device.circulation', 'boolean', 'switch', false, true);
+      await this.ensureState('control.device.chlorinator', 'boolean', 'switch', false, true);
+      await this.ensureState('control.device.phPump', 'boolean', 'switch', false, true);
+      await this.ensureState('control.device.heatpump', 'boolean', 'switch', false, true);
+      await this.ensureState('control.heatpump.setTemp', 'number', 'level.temperature', 0, true);
+      await this.ensureState('control.heatpump.resetLock', 'boolean', 'button', false, true);
+      await this.resetManualBlockers('Adapterstart');
+      this.clearPendingRenderTimeouts('Adapterstart');
+      this.resetHeatpumpLocks('Adapterstart');
+      await this.forceDependentDevicesOff('Adapterstart Recovery');
+      await this.setStateAsync('info.connection', true, true);
+      await this.subscribeConfiguredStates();
+      try { this.subscribeStates('control.*'); } catch {}
+      try { this.subscribeStates('control.device.*'); } catch {}
+      try { this.subscribeStates('control.heatpump.*'); } catch {}
+      try { this.subscribeStates('control.ph.*'); } catch {}
+      this.beginControlTransition(4000);
+      await this.applyControlLogic();
+      await this.syncControlStates();
+      await this.syncDeviceControlStates();
+      if (this.config.circulationPumpSocketStateId) {
+        const initialPumpState = await this.getStateSnapshot(this.config.circulationPumpSocketStateId);
+        this.updateCirculationPumpRuntime(!!(initialPumpState && initialPumpState.val), initialPumpState && (initialPumpState.lc || initialPumpState.ts));
+      }
+      if (this.config.phPumpSocketStateId) {
+        const initialPhPumpState = await this.getStateSnapshot(this.config.phPumpSocketStateId);
+        this.lastPhPumpOn = !!(initialPhPumpState && initialPhPumpState.val);
+        this.phManualStartedAt = this.lastPhPumpOn ? Number((initialPhPumpState && (initialPhPumpState.lc || initialPhPumpState.ts)) || Date.now()) : 0;
+      }
+      await this.updateComputedStates();
+      await this.runHeartbeatChecks();
+      await this.applyDependencyRules();
+      await this.renderVis();
+      await this.logStartupSummary();
+      const pollMin = Math.max(1, Number(this.config.pollIntervalMin) || 1);
+      if (this.phStopWatcher) clearInterval(this.phStopWatcher);
+    this.phStopWatcher = setInterval(async () => {
+      await this.enforcePhStopIfDue();
+      if (this.config.standbyModeEnabled === true && typeof this.applyControlLogic === 'function' && !this.isControlTransitionActive()) {
+        await this.applyControlLogic();
+      }
+    }, 1000);
+
+    this.timer = setInterval(async () => {
+        try {
+          await this.setStateAsync('status.debug.lastCycle', new Date().toISOString(), true);
+          await this.updateComputedStates();
+          await this.runHeartbeatChecks();
+          if (typeof this.applyControlLogic === 'function') {
+            await this.applyControlLogic();
+          }
+          await this.applyDependencyRules();
+          await this.renderVis();
+        } catch (e) {
+          this.log.error(`Poll-Fehler: ${e && e.stack ? e.stack : e}`);
+          await this.setStateAsync('status.debug.lastStartupError', String(e && e.message ? e.message : e), true);
+          if (this.config.alertOnPollError) {
+            await this.sendAlert('poll_error', 'error', `Poolsteuerung: Poll-Fehler - ${e && e.message ? e.message : e}`);
+          }
+        }
+      }, pollMin * 60000);
+      this.debug(`VIS-HTML aktiv: poolsteuerung.0.vis.htmlTablet / htmlPhone, Poll=${pollMin}min`);
+    } catch (e) {
+      this.log.error(`Startfehler: ${e && e.stack ? e.stack : e}`);
+      try { await this.setStateAsync('status.debug.lastStartupError', String(e && e.message ? e.message : e), true); } catch {}
+      try { if (this.config.alertOnPollError) await this.sendAlert('startup_error', 'error', `Poolsteuerung: Startfehler - ${e && e.message ? e.message : e}`); } catch {}
+    }
+  }
+
+  async onStateChange(id, state) {
+    if (!state) return;
+    if (id && id.startsWith(`${this.namespace}.control.`)) {
+      if (state.ack === true) {
+        return;
+      }
+      try {
+        const standbyActiveNow = await this.getControlBool('control.standby', this.config.standbyModeEnabled === true);
+
+        if (id === `${this.namespace}.control.standby`) {
+          this.beginControlTransition(10000);
+          await this.resetManualBlockers('Standby gewechselt');
+          this.clearPendingRenderTimeouts('Standby gewechselt');
+          this.resetHeatpumpLocks('Standby gewechselt');
+          if (!!state.val === true) {
+            await this.setStateIfChanged('control.auto.circulation', false, false);
+            await this.setStateIfChanged('control.auto.chlor', false, false);
+            await this.setStateIfChanged('control.auto.ph', false, false);
+            await this.setStateIfChanged('control.auto.heatpump', false, false);
+            await this.forceDependentDevicesOff('Standby aktiv');
+            try {
+              if (this.config.circulationPumpSocketStateId) {
+                await this.forceSwitchOffCompat(this.config.circulationPumpSocketStateId);
+                await this.setStateIfChanged('control.device.circulation', false, true);
+              }
+            } catch {}
+          }
+          await this.forceImmediateRender();
+          this.queueDelayedRefresh(1800);
+          return;
+        }
+
+        const autoIds = [
+          `${this.namespace}.control.auto.circulation`,
+          `${this.namespace}.control.auto.chlor`,
+          `${this.namespace}.control.auto.ph`,
+          `${this.namespace}.control.auto.heatpump`
+        ];
+        if (autoIds.includes(id)) {
+          this.beginControlTransition(3500);
+          const key = id.replace(`${this.namespace}.control.auto.`, '');
+          if (!!state.val === true) {
+            if (standbyActiveNow) {
+              await this.setStateIfChanged('control.standby', false, false);
+            }
+            await this.resetManualBlockers(`Auto ${key} EIN`);
+          } else {
+            if (key === 'chlor') await this.setStateIfChanged('control.device.chlorinator', false, true);
+            if (key === 'ph') await this.setStateIfChanged('control.device.phPump', false, true);
+            if (key === 'heatpump') await this.setStateIfChanged('control.device.heatpump', false, true);
+          }
+          await this.forceImmediateRender();
+          this.queueDelayedRefresh(1500);
+          return;
+        }
+
+        if (id === `${this.namespace}.control.heatpump.resetLock` && !!state.val === true) {
+          this.beginControlTransition(10000);
+          this.clearPendingRenderTimeouts('WP Reset');
+          this.resetHeatpumpLocks('manueller Reset');
+          await this.setStateIfChanged('control.heatpump.resetLock', false, false);
+          await this.forceImmediateRender();
+          this.queueDelayedRefresh(1000);
+          return;
+        }
+
+        if (id === `${this.namespace}.control.ph.manualStart` && !!state.val === true) {
+          this.beginControlTransition(3500);
+          const manualSecState = await this.getStateAsync('control.ph.manualDoseSec');
+          const manualSec = Math.max(1, Number(manualSecState && manualSecState.val) || 30);
+          const ok = await this.runDosePumpOnce(manualSec, { checkTime: 'MANUELL', phValue: 'manuell', manual: true });
+          if (ok) {
+            await this.incrementTodayDoseCount(new Date());
+          }
+          await this.setStateIfChanged('control.ph.manualStart', false, false);
+          await this.applyControlLogic();
+          await this.forceImmediateRender();
+          this.queueDelayedRefresh(1200);
+          return;
+        }
+
+        if (id === `${this.namespace}.control.device.circulation`) {
+          this.beginControlTransition(3500);
+          if (standbyActiveNow) {
+            await this.resetManualBlockers('Standby blockiert manuell');
+          } else {
+            await this.setStateIfChanged('control.auto.circulation', false, false);
+            const ok = !!state.val ? await this.forceSwitchOnCompat(this.config.circulationPumpSocketStateId) : await this.forceSwitchOffCompat(this.config.circulationPumpSocketStateId);
+            await this.setStateIfChanged('control.device.circulation', !!ok && !!state.val, true);
+            if (!state.val) {
+              await this.forceDependentDevicesOff('Umwälzpumpe AUS');
+            }
+          }
+          await this.forceImmediateRender();
+          this.queueDelayedRefresh(1200);
+          return;
+        }
+
+        if (id === `${this.namespace}.control.device.chlorinator`) {
+          this.beginControlTransition(3500);
+          if (standbyActiveNow) {
+            await this.resetManualBlockers('Standby blockiert manuell');
+          } else {
+            await this.setStateIfChanged('control.auto.chlor', false, false);
+            const allowed = await this.enforceManualPrerequisite('Chlorinator', !!state.val);
+            if (!allowed) {
+              await this.setStateIfChanged('control.device.chlorinator', false, true);
+            } else {
+              const ok = !!state.val ? await this.forceSwitchOnCompat(this.config.chlorinatorSocketStateId) : await this.forceSwitchOffCompat(this.config.chlorinatorSocketStateId);
+              await this.setStateIfChanged('control.device.chlorinator', !!state.val, true);
+            }
+          }
+          await this.applyControlLogic();
+          await this.syncControlStates();
+          await this.syncDeviceControlStates();
+          this.queueDelayedRefresh(1200);
+          await this.renderVis();
+          return;
+        }
+
+        if (id === `${this.namespace}.control.device.phPump`) {
+          this.beginControlTransition(3500);
+          if (standbyActiveNow) {
+            await this.resetManualBlockers('Standby blockiert manuell');
+          } else {
+            await this.setStateIfChanged('control.auto.ph', false, false);
+            const allowed = await this.enforceManualPrerequisite('pH-Dosierpumpe', !!state.val);
+            if (!allowed) {
+              await this.setStateIfChanged('control.device.phPump', false, true);
+            } else {
+              const ok = !!state.val ? await this.forceSwitchOnCompat(this.config.phPumpSocketStateId) : await this.forceSwitchOffCompat(this.config.phPumpSocketStateId);
+              await this.setStateIfChanged('control.device.phPump', !!state.val, true);
+            }
+          }
+          await this.applyControlLogic();
+          await this.syncControlStates();
+          await this.syncDeviceControlStates();
+          this.queueDelayedRefresh(1200);
+          await this.renderVis();
+          return;
+        }
+
+        if (id === `${this.namespace}.control.device.heatpump`) {
+          this.beginControlTransition(3500);
+          if (standbyActiveNow) {
+            await this.resetManualBlockers('Standby blockiert manuell');
+          } else {
+            await this.setStateIfChanged('control.auto.heatpump', false, false);
+            const allowed = await this.enforceManualPrerequisite('Wärmepumpe', !!state.val);
+            if (!allowed) {
+              await this.setStateIfChanged('control.device.heatpump', false, true);
+            } else {
+              const ok = !!state.val ? await this.forceSwitchOnCompat(this.config.heatpumpPowerStateId) : await this.forceSwitchOffCompat(this.config.heatpumpPowerStateId);
+              await this.setStateIfChanged('control.device.heatpump', !!state.val, true);
+            }
+          }
+          await this.applyControlLogic();
+          await this.syncControlStates();
+          await this.syncDeviceControlStates();
+          this.queueDelayedRefresh(1200);
+          await this.renderVis();
+          return;
+        }
+
+        if (id === `${this.namespace}.control.heatpump.setTemp`) {
+          this.beginControlTransition(3500);
+          const hpOn = await this.getBool(this.config.heatpumpPowerStateId);
+          if (!hpOn) {
+            await this.setStateAsync('status.debug.lastStartupError', 'Solltemperatur nur bei laufender Wärmepumpe änderbar', true);
+          } else if (this.config.heatpumpSetTempStateId) {
+            const setVal = Math.max(10, Math.min(40, Number(state.val) || 0));
+            await this.setForeignStateAsync(this.config.heatpumpSetTempStateId, setVal, false);
+          }
+          await this.applyControlLogic();
+          await this.syncControlStates();
+          await this.syncDeviceControlStates();
+          this.queueDelayedRefresh(1200);
+          await this.renderVis();
+          return;
+        }
+
+        await this.applyControlLogic();
+        await this.syncControlStates();
+        await this.syncDeviceControlStates();
+        await this.renderVis();
+      } catch (e) {
+        this.log.warn(`Control-State konnte nicht angewendet werden: ${e.message || e}`);
+      }
+      return;
+    }
+    if (this.ruleCompareIds && this.ruleCompareIds.includes(id)) {
+      await this.applyDependencyRules(id);
+    }
+    await this.handleManualPhPumpStateChange(id, state);
+    if (this.monitoredIds.includes(id)) {
+      this.debug(`State geändert: ${id}`);
+      this.queueRender();
+      const delayedRefreshIds = [
+        this.config.circulationPumpSocketStateId,
+        this.config.chlorinatorSocketStateId,
+        this.config.phPumpSocketStateId,
+        this.config.heatpumpPowerStateId
+      ].filter(Boolean);
+      if (delayedRefreshIds.includes(id)) {
+        const boolVal = await this.getBool(id);
+        if (id === this.config.circulationPumpSocketStateId) await this.setStateIfChanged('control.device.circulation', boolVal, true);
+        if (id === this.config.chlorinatorSocketStateId) await this.setStateIfChanged('control.device.chlorinator', boolVal, true);
+        if (id === this.config.phPumpSocketStateId) await this.setStateIfChanged('control.device.phPump', boolVal, true);
+        if (id === this.config.heatpumpPowerStateId) await this.setStateIfChanged('control.device.heatpump', boolVal, true);
+        if (!this.isControlTransitionActive()) {
+          await this.applyControlLogic();
+          await this.syncControlStates();
+          await this.syncDeviceControlStates();
+        }
+        this.queueDelayedRefresh(this.isControlTransitionActive() ? 2600 : 1800);
+      }
+    }
+  }
+
+  async onUnload(callback) {
     try {
       this.isShuttingDown = true;
       if (this.timer) clearInterval(this.timer);
-      if (this.phStopWatcher) clearInterval(this.phStopWatcher);
-      this.clearPendingRenderTimeouts('Unload');
-      this.resetHeatpumpLocks('Unload');
+      for (const h of Array.from(this.pendingTimeouts)) {
+        try { clearTimeout(h); } catch {}
+      }
+      this.pendingTimeouts.clear();
+      try { await this.setStateAsync('info.connection', false, true); } catch {}
       callback();
     } catch {
       callback();
