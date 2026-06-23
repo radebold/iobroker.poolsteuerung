@@ -821,7 +821,7 @@ body{
       <div class="section energy">Schnellzugriff</div>
       <div class="mini-list">
         ${mini('Poolsolltemperatur', `${data.targetTemp} °C`, 'info')}
-        <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.phManualDoseSec || 30) || 30}" style="min-height:64px;"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
+        <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.phManualDoseSec || 30) || 30}" style="min-height:64px;"><span>PH Manuell</span></button>
       </div>
     </div>
     <div class="card">
@@ -904,29 +904,29 @@ body{
 :root{--bg:#08111f;--bg2:#10203a;--line:rgba(15,23,42,.08);--text:#0f172a;--muted:#66758a}
 *{box-sizing:border-box}
 body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,var(--bg2),var(--bg));font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:var(--text)}
-.wrap{width:100%;max-width:510px;min-height:100vh;overflow:visible;margin:0 auto;padding:2px 2px 64px;display:grid;gap:3px}
-.card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid var(--line);border-radius:14px;padding:5px;box-shadow:0 6px 14px rgba(0,0,0,.13)}
+.wrap{width:100%;max-width:510px;min-height:100vh;overflow:visible;margin:0 auto;padding:2px 2px 54px;display:grid;gap:2px;align-content:start}
+.card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid var(--line);border-radius:12px;padding:3px;box-shadow:0 4px 10px rgba(0,0,0,.10)}
 .hero{background:radial-gradient(circle at top right, rgba(85,200,255,.24), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
-.header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}
-.title{font-size:15px;font-weight:900}.ver{font-size:9px;font-weight:800;color:#b9d7ff;margin-left:6px}
-.meta{font-size:9px;color:#d2dded;text-align:right}.mode-badge{display:inline-flex;align-items:center;justify-content:center;padding:3px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(180deg,#334f84,#1b3158);font-size:9px;font-weight:900;color:#fff;margin-bottom:4px}
-.temp-row{display:flex;align-items:flex-end;gap:5px;margin:4px 0 4px}.temp{font-size:42px;font-weight:900;line-height:.9}.unit{font-size:16px;padding-bottom:4px;color:#d5e5f6}
-.scale{margin:2px 0 5px}.track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.target-mark{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#ffffff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.target-label{position:relative;height:12px;font-size:9px;color:#d2dded}.target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}.scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}
-.metrics,.quick-grid,.auto-grid,.status-grid,.control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px}
+.header{display:flex;justify-content:space-between;gap:4px;align-items:flex-start}
+.title{font-size:14px;font-weight:900}.ver{font-size:8px;font-weight:800;color:#b9d7ff;margin-left:4px}
+.meta{font-size:8px;color:#d2dded;text-align:right;line-height:1.0}.mode-badge{display:inline-flex;align-items:center;justify-content:center;padding:2px 7px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(180deg,#334f84,#1b3158);font-size:8px;font-weight:900;color:#fff;margin-bottom:2px}
+.temp-row{display:flex;align-items:flex-end;gap:4px;margin:2px 0 2px}.temp{font-size:40px;font-weight:900;line-height:.9}.unit{font-size:14px;padding-bottom:4px;color:#d5e5f6}
+.scale{margin:1px 0 3px}.track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.target-mark{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#ffffff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.target-label{position:relative;height:12px;font-size:9px;color:#d2dded}.target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}.scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}
+.metrics,.quick-grid,.auto-grid,.status-grid,.control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px}
 .ph-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 .metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.metric-label{font-size:10px;color:#d9e5f5}.metric-value{font-size:13px;font-weight:900;color:#fff}
-.section-title{font-size:11px;font-weight:900;color:#0f172a;margin-bottom:2px}
-.quick-card{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:11px;padding:5px}.quick-label{font-size:8px;color:#64748b;font-weight:700;margin-bottom:2px}.quick-value-row{display:flex;align-items:center;gap:6px}.quick-value{font-size:11px;font-weight:900;color:#0f172a;line-height:1.02}.quick-trend{font-size:15px;font-weight:900;line-height:1}.quick-trend.up{color:#ffb36b}.quick-trend.down{color:#52b7ff}.quick-trend.flat{color:#8fa3bc}.mini-bar{margin-top:4px;height:6px;border-radius:999px;background:linear-gradient(90deg,#ff6b6b 0%,#f59e0b 35%,#84cc16 65%,#22c55e 100%);position:relative;overflow:hidden}.mini-fill{height:100%;border-radius:999px}.battery-fill{background:linear-gradient(90deg,rgba(255,255,255,.28),rgba(255,255,255,.12));box-shadow:inset 0 0 0 999px rgba(255,255,255,.10)}
-.action-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:6px 8px;border-radius:12px;min-height:38px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 6px 14px rgba(6,24,44,.22);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:2px}
-.action-name{font-size:11px;font-weight:800}.action-state{font-size:8px;font-weight:800}
+.section-title{font-size:10px;font-weight:900;color:#0f172a;margin-bottom:1px;line-height:1.0}
+.quick-card{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:9px;padding:3px}.quick-label{font-size:7px;color:#64748b;font-weight:700;margin-bottom:1px}.quick-value-row{display:flex;align-items:center;gap:4px}.quick-value{font-size:9px;font-weight:900;color:#0f172a;line-height:1.0}.quick-trend{font-size:12px;font-weight:900;line-height:1}.quick-trend.up{color:#ffb36b}.quick-trend.down{color:#52b7ff}.quick-trend.flat{color:#8fa3bc}.mini-bar{margin-top:2px;height:4px;border-radius:999px;background:linear-gradient(90deg,#ff6b6b 0%,#f59e0b 35%,#84cc16 65%,#22c55e 100%);position:relative;overflow:hidden}.mini-fill{height:100%;border-radius:999px}.battery-fill{background:linear-gradient(90deg,rgba(255,255,255,.28),rgba(255,255,255,.12));box-shadow:inset 0 0 0 999px rgba(255,255,255,.10)}
+.action-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:4px 6px;border-radius:9px;min-height:28px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 4px 10px rgba(6,24,44,.16);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:1px}
+.action-name{font-size:9px;font-weight:800}.action-state{font-size:7px;font-weight:800}
 .action-btn.is-on .action-name,.action-btn.is-on .action-state{color:#67dd7c}
 .action-btn.is-off .action-name,.action-btn.is-off .action-state{color:#ff8d7b}
-.manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:7px 9px;border-radius:999px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}
-.manual-btn span{font-size:13px}.manual-btn small{font-size:10px;color:#dbeafe}
+.manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:4px 6px;border-radius:999px;min-height:28px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 4px 10px rgba(6,24,44,.16);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}
+.manual-btn span{font-size:10px}.manual-btn small{font-size:7px;color:#dbeafe}
 .temp-btn{appearance:none;border:none;cursor:pointer;border-radius:12px;min-height:52px;padding:8px 10px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:16px}
-.temp-center{display:flex;flex-direction:column;justify-content:center;align-items:center;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}
-.temp-center .quick-label{margin-bottom:2px}
-.temp-center .quick-value{font-size:16px}
+.temp-center{display:flex;flex-direction:column;justify-content:center;align-items:center;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:9px;padding:3px}
+.temp-center .quick-label{margin-bottom:0}
+.temp-center .quick-value{font-size:11px}
 </style>
 </head><body><div class="wrap">
   <div class="card hero">
@@ -944,7 +944,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   <div class="card"><div class="section-title">Schnellzugriff</div><div class="control-grid">
     <button type="button" class="action-btn js-standby-btn ${data.standbyControl ? 'is-on' : 'is-off'}" data-current="${data.standbyControl ? '1' : '0'}"><span class="action-name">Standby</span><span class="action-state">${data.standbyControl ? 'AKTIV' : 'AUS'}</span></button>
     <div class="temp-center"><div class="quick-label">Poolsolltemperatur</div><div class="quick-value">${esc(data.targetTemp)}°C</div></div>
-    <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.phManualDoseSec || 30) || 30}" style="grid-column:1 / -1;"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
+    <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.phManualDoseSec || 30) || 30}" style="grid-column:1 / -1;min-height:24px;"><span>PH Manuell</span></button>
   </div></div>
 
   <div class="card"><div class="section-title">Automatik</div><div class="auto-grid">
@@ -1264,7 +1264,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Heute dosiert', `${data.phDailyCount}x`)}
     ${quick('Nächste Prüfung', data.phNextCheck)}
     ${quick('Granulat manuell', data.manualGranulateText)}
-    <button class="manual-btn js-manual-dose-btn" data-sec="${Number(data.phManualDoseSec || 30) || 30}"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
+    <button class="manual-btn js-manual-dose-btn" data-sec="${Number(data.phManualDoseSec || 30) || 30}"><span>PH Manuell</span></button>
   </div></div>
 </div>
 <script>
@@ -1583,7 +1583,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.16hf22'
+      adapterVersion: 'v0.3.16hf23'
     };
 
     const now = Date.now();
