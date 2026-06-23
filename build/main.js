@@ -1036,7 +1036,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   window.poolPhManualDose = async function(sec){
     const ns=${JSON.stringify(data.namespace)};
     await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30);
-    const ok=await window.poolSetState(ns + '.control.ph.manualStart', true);
+    const ok=await window.poolSetState(ns + '.control.ph.manualTrigger', Date.now());
     if(!ok) alert('VIS setState nicht verfügbar');
   };
   window.poolAdjustSetTemp = async function(delta){
@@ -1057,7 +1057,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         return false;
       };
       el.onclick = run;
-      try{ el.addEventListener('touchend', run, {passive:false}); }catch(e){}
       try{ el.style.cursor = 'pointer'; }catch(e){}
     });
   };
@@ -1584,7 +1583,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.16hf21'
+      adapterVersion: 'v0.3.16hf22'
     };
 
     const now = Date.now();
@@ -2965,8 +2964,22 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           return;
         }
 
-        if (id === `${this.namespace}.control.ph.manualStart` && !!state.val === true) {
+        if ((id === `${this.namespace}.control.ph.manualStart` && !!state.val === true) || (id === `${this.namespace}.control.ph.manualTrigger` && Number(state.val) > 0)) {
           this.beginControlTransition(3500);
+          const nowTs = Date.now();
+          this.lastManualPhTriggerTs = this.lastManualPhTriggerTs || 0;
+          if (nowTs - this.lastManualPhTriggerTs < 1500) {
+            await this.setStateIfChanged('control.ph.manualStart', false, false);
+            await this.setStateIfChanged('control.ph.manualTrigger', 0, false);
+            return;
+          }
+          if (this.phManagedActive) {
+            if (this.config.debugMode) this.log.info('[PH] Manueller Start ignoriert: Dosierung läuft bereits');
+            await this.setStateIfChanged('control.ph.manualStart', false, false);
+            await this.setStateIfChanged('control.ph.manualTrigger', 0, false);
+            return;
+          }
+          this.lastManualPhTriggerTs = nowTs;
           const manualSecState = await this.getStateAsync('control.ph.manualDoseSec');
           const manualSec = Math.max(1, Number(manualSecState && manualSecState.val) || 30);
           const ok = await this.runDosePumpOnce(manualSec, { checkTime: 'MANUELL', phValue: 'manuell', manual: true });
@@ -2974,6 +2987,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
             await this.incrementTodayDoseCount(new Date());
           }
           await this.setStateIfChanged('control.ph.manualStart', false, false);
+          await this.setStateIfChanged('control.ph.manualTrigger', 0, false);
           await this.applyControlLogic();
           await this.forceImmediateRender();
           this.queueDelayedRefresh(1200);
