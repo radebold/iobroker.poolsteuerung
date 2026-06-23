@@ -972,12 +972,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('pH Prüfung', data.phDecision)}
   </div></div>
 
-  <div class="card"><div class="section-title">pH Info</div><div class="quick-grid ph-grid">
-    ${quick('Berechnet', `${data.phCalculatedDoseSec} s / ${data.phCalculatedDoseMl} ml`)}
-    ${quick('Letzte Dosis', `${data.phLastDoseDurationSec} s / ${data.phLastDoseMl} ml`)}
-    ${quick('Heute dosiert', `${data.phDailyCount}x`)}
-    ${quick('Nächste Prüfung', data.phNextCheck)}
-  </div></div>
+
 </div>
 <script>
 (function(){
@@ -1589,7 +1584,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.16hf19'
+      adapterVersion: 'v0.3.16hf20'
     };
 
     const now = Date.now();
