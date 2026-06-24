@@ -676,6 +676,8 @@ class Poolsteuerung extends utils.Adapter {
       </div>`;
 
     const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
+    const phClass = phBadge && phBadge.cls ? phBadge.cls : '';
+    const orpClass = orpBadge && orpBadge.cls ? orpBadge.cls : '';
     const metric = (label, value, sub = '', badge = null, accent = '', trend = '', trendOk = false, trendBad = false) => `
       <div class="metric ${accent}">
         <div class="metric-label">${esc(label)}</div>
@@ -810,8 +812,8 @@ body{
         <div class="scale-row"><span>15 °C</span><span>Aktuell: ${esc(data.poolTemp)} °C</span><span>32 °C</span></div>
       </div>
       <div class="metrics">
-        ${metric('pH', data.ph, `Soll ${data.phSet}`, phBadge, 'warn', data.phTrend || '→', phBadge && phBadge.cls === 'ok', phBadge && (phBadge.cls === 'low' || phBadge.cls === 'high'))}
-        ${metric('ORP', data.orp, `Soll ${data.orpSet}`, orpBadge, 'warn', data.orpTrend || '→', orpBadge && orpBadge.cls === 'ok', orpBadge && (orpBadge.cls === 'low' || orpBadge.cls === 'high'))}
+        ${metric('pH', data.ph, `Soll ${data.phSet}`, phBadge, 'warn', data.phTrend || '→', phClass === 'ok', phClass === 'low' || phClass === 'high')}
+        ${metric('ORP', data.orp, `Soll ${data.orpSet}`, orpBadge, 'warn', data.orpTrend || '→', orpClass === 'ok', orpClass === 'low' || orpClass === 'high')}
         ${metric('Außen', `${data.outsideTemp}°C`, 'Außen', null, 'cool', data.outsideTempTrend || '→', false)}
         ${metric('Solltemp', `${data.targetTemp}°C`, 'Soll', null, 'metric-target')}
       </div>
@@ -1695,7 +1697,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf35'
+      adapterVersion: 'v0.3.16hf36'
     };
 
     const now = Date.now();
