@@ -976,6 +976,8 @@ body{
     const autoBtn = (label, key, active) => `<button type="button" class="action-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
     const deviceBtn = (label, key, active, syncCls = 'warn', syncLabel = '?') => `<button type="button" class="action-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="action-sync ${esc(syncCls)}">${esc(syncLabel)}</span><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'EIN' : 'AUS'}</span></button>`;
     const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
+    const phClass = data.phBadge && data.phBadge.cls ? data.phBadge.cls : '';
+    const orpClass = data.orpBadge && data.orpBadge.cls ? data.orpBadge.cls : '';
     const quick = (label, value, trend = '', barHtml = '') => `
       <div class="quick-card">
         <div class="quick-label">${esc(label)}</div>
@@ -1697,7 +1699,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf36'
+      adapterVersion: 'v0.3.16hf37'
     };
 
     const now = Date.now();
