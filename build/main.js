@@ -1182,6 +1182,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     };
     const phClass = badgeClass(data.ph, 7.1, 7.25);
     const orpClass = badgeClass(data.orp, Number(data.orpOnThreshold || 725), Number(data.orpOffThreshold || 750));
+    const metricTextClass = cls => cls === 'good' ? 'metric-good' : (cls === 'warn' || cls === 'bad' ? 'metric-bad' : '');
     const autoBtn = (label, key, active) => `
       <button class="ps-action-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}">
         <span class="ps-action-name">${esc(label)}</span>
@@ -1694,7 +1695,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf33'
+      adapterVersion: 'v0.3.16hf34'
     };
 
     const now = Date.now();
