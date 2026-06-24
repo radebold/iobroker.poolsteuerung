@@ -1053,10 +1053,15 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     document.querySelectorAll(selector).forEach(el => {
       const run = (ev) => {
         try{ if(ev){ ev.preventDefault(); ev.stopPropagation(); } }catch(e){}
+        const now = Date.now();
+        const last = Number(el.dataset.lastTapTs || 0);
+        if (now - last < 700) return false;
+        el.dataset.lastTapTs = String(now);
         handler(el);
         return false;
       };
-      el.onclick = run;
+      try{ el.addEventListener('touchend', run, {passive:false}); }catch(e){}
+      try{ el.addEventListener('click', run, false); }catch(e){}
       try{ el.style.cursor = 'pointer'; }catch(e){}
     });
   };
@@ -1583,7 +1588,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.16hf25'
+      adapterVersion: 'v0.3.16hf26'
     };
 
     const now = Date.now();
