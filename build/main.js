@@ -1027,8 +1027,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     <div class="temp-row"><div class="temp">${esc(data.poolTemp)}</div><div class="unit">°C</div></div>
     <div class="scale"><div class="track"><div class="target-mark"></div><div class="dot"></div></div><div class="target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="metrics">
-      <div class="metric"><div class="metric-label">pH</div><div class="metric-value">${metricValue(data.ph, data.phTrend, phClass === 'good' ? 'ok' : ((phClass === 'warn' || phClass === 'bad') ? 'bad' : ''))}</div></div>
-      <div class="metric"><div class="metric-label">ORP</div><div class="metric-value">${metricValue(data.orp, data.orpTrend, orpClass === 'good' ? 'ok' : ((orpClass === 'warn' || orpClass === 'bad') ? 'bad' : ''))}</div></div>
+      <div class="metric"><div class="metric-label">pH</div><div class="metric-value">${metricValue(data.ph, data.phTrend, ((data.phBadge && data.phBadge.cls) === 'ok' ? 'ok' : ((((data.phBadge && data.phBadge.cls) === 'warn') || ((data.phBadge && data.phBadge.cls) === 'bad')) ? 'bad' : '')))}</div></div>
+      <div class="metric"><div class="metric-label">ORP</div><div class="metric-value">${metricValue(data.orp, data.orpTrend, ((data.orpBadge && data.orpBadge.cls) === 'ok' ? 'ok' : ((((data.orpBadge && data.orpBadge.cls) === 'warn') || ((data.orpBadge && data.orpBadge.cls) === 'bad')) ? 'bad' : '')))}</div></div>
       <div class="metric"><div class="metric-label">Außen</div><div class="metric-value">${metricValue(`${data.outsideTemp}°C`, data.outsideTempTrend, false)}</div></div>
       <div class="metric"><div class="metric-label">Soll</div><div class="metric-value">${esc(data.targetTemp)}°C</div></div>
     </div>
@@ -1226,8 +1226,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
     <div class="ps-scale"><div class="ps-track"><div class="ps-target"></div><div class="ps-dot"></div></div><div class="ps-target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="ps-metrics">
-      <div class="ps-metric"><div class="ps-k">pH</div><div class="ps-v">${metricValue(data.ph, data.phTrend, phClass === 'good' ? 'ok' : ((phClass === 'warn' || phClass === 'bad') ? 'bad' : ''))}</div><div class="ps-s">Soll ${esc(data.phSet)}</div><div class="ps-chip ${phClass}">${phClass === 'good' ? 'OK' : phClass === 'warn' ? 'Niedrig' : 'Hoch'}</div></div>
-      <div class="ps-metric"><div class="ps-k">ORP</div><div class="ps-v">${metricValue(data.orp, data.orpTrend, orpClass === 'good' ? 'ok' : ((orpClass === 'warn' || orpClass === 'bad') ? 'bad' : ''))}</div><div class="ps-s">Soll ${esc(data.orpSet)}</div><div class="ps-chip ${orpClass}">${orpClass === 'good' ? 'OK' : orpClass === 'warn' ? 'Niedrig' : 'Hoch'}</div></div>
+      <div class="ps-metric"><div class="ps-k">pH</div><div class="ps-v">${metricValue(data.ph, data.phTrend, ((data.phBadge && data.phBadge.cls) === 'ok' ? 'ok' : ((((data.phBadge && data.phBadge.cls) === 'warn') || ((data.phBadge && data.phBadge.cls) === 'bad')) ? 'bad' : '')))}</div><div class="ps-s">Soll ${esc(data.phSet)}</div><div class="ps-chip ${phClass}">${phClass === 'good' ? 'OK' : phClass === 'warn' ? 'Niedrig' : 'Hoch'}</div></div>
+      <div class="ps-metric"><div class="ps-k">ORP</div><div class="ps-v">${metricValue(data.orp, data.orpTrend, ((data.orpBadge && data.orpBadge.cls) === 'ok' ? 'ok' : ((((data.orpBadge && data.orpBadge.cls) === 'warn') || ((data.orpBadge && data.orpBadge.cls) === 'bad')) ? 'bad' : '')))}</div><div class="ps-s">Soll ${esc(data.orpSet)}</div><div class="ps-chip ${orpClass}">${orpClass === 'good' ? 'OK' : orpClass === 'warn' ? 'Niedrig' : 'Hoch'}</div></div>
       <div class="ps-metric"><div class="ps-k">Außen</div><div class="ps-v">${metricValue(`${data.outsideTemp}°C`, data.outsideTempTrend, false)}</div></div>
       <div class="ps-metric"><div class="ps-k">Solltemp</div><div class="ps-v">${esc(data.targetTemp)}°C</div></div>
     </div>
@@ -1331,8 +1331,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
     <div class="ps-scale"><div class="ps-track"><div class="ps-target"></div><div class="ps-dot"></div></div><div class="ps-target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="ps-metrics">
-      <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${metricValue(data.ph, data.phTrend, phClass === 'good' ? 'ok' : ((phClass === 'warn' || phClass === 'bad') ? 'bad' : ''))}</div></div>
-      <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${metricValue(data.orp, data.orpTrend, orpClass === 'good' ? 'ok' : ((orpClass === 'warn' || orpClass === 'bad') ? 'bad' : ''))}</div></div>
+      <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${metricValue(data.ph, data.phTrend, ((data.phBadge && data.phBadge.cls) === 'ok' ? 'ok' : ((((data.phBadge && data.phBadge.cls) === 'warn') || ((data.phBadge && data.phBadge.cls) === 'bad')) ? 'bad' : '')))}</div></div>
+      <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${metricValue(data.orp, data.orpTrend, ((data.orpBadge && data.orpBadge.cls) === 'ok' ? 'ok' : ((((data.orpBadge && data.orpBadge.cls) === 'warn') || ((data.orpBadge && data.orpBadge.cls) === 'bad')) ? 'bad' : '')))}</div></div>
       <div class="ps-metric"><div class="ps-ml">Außen</div><div class="ps-mv">${metricValue(`${data.outsideTemp}°C`, data.outsideTempTrend, false)}</div></div>
       <div class="ps-metric"><div class="ps-ml">Soll</div><div class="ps-mv">${esc(data.targetTemp)}°C</div></div>
     </div>
@@ -1699,7 +1699,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf37'
+      adapterVersion: 'v0.3.16hf38'
     };
 
     const now = Date.now();
