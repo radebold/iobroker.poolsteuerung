@@ -676,12 +676,12 @@ class Poolsteuerung extends utils.Adapter {
       </div>`;
 
     const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
-    const metric = (label, value, sub = '', badge = null, accent = '', trend = '', trendOk = false) => `
+    const metric = (label, value, sub = '', badge = null, accent = '', trend = '', trendOk = false, trendBad = false) => `
       <div class="metric ${accent}">
         <div class="metric-label">${esc(label)}</div>
         <div class="metric-value">
-          <span class="metric-main ${trendOk ? 'ok' : ''}">${esc(value)}</span>
-          ${trend ? `<span class="metric-trend ${trendClass(trend)} ${trendOk ? 'ok' : ''}">${esc(trend)}</span>` : ''}
+          <span class="metric-main ${trendOk ? 'ok' : (trendBad ? 'bad' : '')}">${esc(value)}</span>
+          ${trend ? `<span class="metric-trend ${trendClass(trend)} ${trendOk ? 'ok' : (trendBad ? 'bad' : '')}">${esc(trend)}</span>` : ''}
         </div>
         ${sub ? `<div class="metric-sub">${esc(sub)}</div>` : ''}
         ${badge ? `<div class="badge ${badge.cls}">${badge.txt}</div>` : ''}
@@ -746,9 +746,9 @@ body{
 .metric-target{background:linear-gradient(180deg,rgba(86,217,120,.10),rgba(255,255,255,.05))}
 .metric-label{font-size:12px;color:#c8d4e6;font-weight:800;margin-bottom:6px}
 .metric-value{font-size:17px;font-weight:900;line-height:1.05;display:flex;align-items:center;gap:8px}
-.metric-main.ok{color:#67dd7c}
+.metric-main.ok{color:#67dd7c}.metric-main.bad{color:#ff7a6a}
 .metric-trend{display:inline-flex;min-width:18px;justify-content:center;font-size:20px;font-weight:900;line-height:1;margin-left:10px}
-.metric-trend.up{color:#ffb36b}.metric-trend.down{color:#7dd3fc}.metric-trend.flat{color:#d5e4f8}.metric-trend.ok{color:#67dd7c}
+.metric-trend.up{color:#ffb36b}.metric-trend.down{color:#7dd3fc}.metric-trend.flat{color:#d5e4f8}.metric-trend.ok{color:#67dd7c}.metric-trend.bad{color:#ff7a6a}
 .metric-sub{font-size:10px;color:#aebed5;margin-top:4px}
 .badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;margin-top:8px;font-size:11px;font-weight:900}
 .badge.ok{background:rgba(64,196,99,.18);color:#9ff5b3}
@@ -810,8 +810,8 @@ body{
         <div class="scale-row"><span>15 °C</span><span>Aktuell: ${esc(data.poolTemp)} °C</span><span>32 °C</span></div>
       </div>
       <div class="metrics">
-        ${metric('pH', data.ph, `Soll ${data.phSet}`, phBadge, 'warn', data.phTrend || '→', !!data.phInRange)}
-        ${metric('ORP', data.orp, `Soll ${data.orpSet}`, orpBadge, 'warn', data.orpTrend || '→', !!data.orpInRange)}
+        ${metric('pH', data.ph, `Soll ${data.phSet}`, phBadge, 'warn', data.phTrend || '→', phBadge && phBadge.cls === 'ok', phBadge && (phBadge.cls === 'low' || phBadge.cls === 'high'))}
+        ${metric('ORP', data.orp, `Soll ${data.orpSet}`, orpBadge, 'warn', data.orpTrend || '→', orpBadge && orpBadge.cls === 'ok', orpBadge && (orpBadge.cls === 'low' || orpBadge.cls === 'high'))}
         ${metric('Außen', `${data.outsideTemp}°C`, 'Außen', null, 'cool', data.outsideTempTrend || '→', false)}
         ${metric('Solltemp', `${data.targetTemp}°C`, 'Soll', null, 'metric-target')}
       </div>
@@ -1023,8 +1023,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     <div class="temp-row"><div class="temp">${esc(data.poolTemp)}</div><div class="unit">°C</div></div>
     <div class="scale"><div class="track"><div class="target-mark"></div><div class="dot"></div></div><div class="target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="metrics">
-      <div class="metric"><div class="metric-label">pH</div><div class="metric-value">${metricValue(data.ph, data.phTrend, data.phInRange)}</div></div>
-      <div class="metric"><div class="metric-label">ORP</div><div class="metric-value">${metricValue(data.orp, data.orpTrend, data.orpInRange)}</div></div>
+      <div class="metric"><div class="metric-label">pH</div><div class="metric-value">${metricValue(data.ph, data.phTrend, phClass === 'good' ? 'ok' : ((phClass === 'warn' || phClass === 'bad') ? 'bad' : ''))}</div></div>
+      <div class="metric"><div class="metric-label">ORP</div><div class="metric-value">${metricValue(data.orp, data.orpTrend, orpClass === 'good' ? 'ok' : ((orpClass === 'warn' || orpClass === 'bad') ? 'bad' : ''))}</div></div>
       <div class="metric"><div class="metric-label">Außen</div><div class="metric-value">${metricValue(`${data.outsideTemp}°C`, data.outsideTempTrend, false)}</div></div>
       <div class="metric"><div class="metric-label">Soll</div><div class="metric-value">${esc(data.targetTemp)}°C</div></div>
     </div>
@@ -1195,7 +1195,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       </button>`;
     const decisionValue = v => `<div class="ps-v ps-wrap">${esc(v)}</div>`;
     const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
-    const metricValue = (value, trend = '→', ok = false) => `<span class="ps-mmain ${ok ? 'ok' : ''}">${esc(value)}</span><span class="ps-trend ${trendClass(trend)} ${ok ? 'ok' : ''}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>`;
+    const metricValue = (value, trend = '→', stateCls = '') => `<span class="ps-mmain ${stateCls}">${esc(value)}</span><span class="ps-trend ${trendClass(trend)} ${stateCls}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>`;
     const batteryPct = Math.max(0, Math.min(100, parseNum(data.battery)));
     const batteryBar = `<div class="ps-bbar"><div class="ps-bfill" style="width:${batteryPct}%"></div></div>`;
     return `
@@ -1222,8 +1222,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
     <div class="ps-scale"><div class="ps-track"><div class="ps-target"></div><div class="ps-dot"></div></div><div class="ps-target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="ps-metrics">
-      <div class="ps-metric"><div class="ps-k">pH</div><div class="ps-v">${metricValue(data.ph, data.phTrend, data.phInRange)}</div><div class="ps-s">Soll ${esc(data.phSet)}</div><div class="ps-chip ${phClass}">${phClass === 'good' ? 'OK' : phClass === 'warn' ? 'Niedrig' : 'Hoch'}</div></div>
-      <div class="ps-metric"><div class="ps-k">ORP</div><div class="ps-v">${metricValue(data.orp, data.orpTrend, data.orpInRange)}</div><div class="ps-s">Soll ${esc(data.orpSet)}</div><div class="ps-chip ${orpClass}">${orpClass === 'good' ? 'OK' : orpClass === 'warn' ? 'Niedrig' : 'Hoch'}</div></div>
+      <div class="ps-metric"><div class="ps-k">pH</div><div class="ps-v">${metricValue(data.ph, data.phTrend, phClass === 'good' ? 'ok' : ((phClass === 'warn' || phClass === 'bad') ? 'bad' : ''))}</div><div class="ps-s">Soll ${esc(data.phSet)}</div><div class="ps-chip ${phClass}">${phClass === 'good' ? 'OK' : phClass === 'warn' ? 'Niedrig' : 'Hoch'}</div></div>
+      <div class="ps-metric"><div class="ps-k">ORP</div><div class="ps-v">${metricValue(data.orp, data.orpTrend, orpClass === 'good' ? 'ok' : ((orpClass === 'warn' || orpClass === 'bad') ? 'bad' : ''))}</div><div class="ps-s">Soll ${esc(data.orpSet)}</div><div class="ps-chip ${orpClass}">${orpClass === 'good' ? 'OK' : orpClass === 'warn' ? 'Niedrig' : 'Hoch'}</div></div>
       <div class="ps-metric"><div class="ps-k">Außen</div><div class="ps-v">${metricValue(`${data.outsideTemp}°C`, data.outsideTempTrend, false)}</div></div>
       <div class="ps-metric"><div class="ps-k">Solltemp</div><div class="ps-v">${esc(data.targetTemp)}°C</div></div>
     </div>
@@ -1304,7 +1304,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const deviceBtn = (label, key, active) => `<button class="ps-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'EIN' : 'AUS'}</span></button>`;
     const quick = (l, v, trend = '', barHtml = '') => `<div class="ps-q"><div class="ps-ql">${esc(l)}</div><div class="ps-qvr"><div class="ps-qv">${esc(v)}</div>${trend ? `<div class="ps-qtrend ${trendClass(trend)}">${esc(trend)}</div>` : ''}</div>${barHtml || ''}</div>`;
     const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
-    const metricValue = (value, trend = '→', ok = false) => `<span class="ps-mmain ${ok ? 'ok' : ''}">${esc(value)}</span><span class="ps-trend ${trendClass(trend)} ${ok ? 'ok' : ''}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>`;
+    const metricValue = (value, trend = '→', stateCls = '') => `<span class="ps-mmain ${stateCls}">${esc(value)}</span><span class="ps-trend ${trendClass(trend)} ${stateCls}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>`;
     const batteryPct = Math.max(0, Math.min(100, parseNum(data.battery)));
     const batteryBar = `<div class="ps-bbar"><div class="ps-bfill" style="width:${batteryPct}%"></div></div>`;
     return `<!-- phone-render:${esc(data.updated)} -->
@@ -1316,7 +1316,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-tempRow{display:flex;align-items:flex-end;gap:5px;margin:4px 0 4px}.ps-temp{font-size:42px;font-weight:900;line-height:.9}.ps-unit{font-size:16px;padding-bottom:4px;color:#d5e5f6}
 .ps-scale{margin:2px 0 5px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-target{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#fff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}.ps-target-label{position:relative;height:12px;font-size:9px;color:#d2dded}.ps-target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}
 .ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.ps-phGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
-.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.ps-ml{font-size:10px;color:#d9e5f5}.ps-mv{font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center}.ps-ms{display:none}.ps-mmain.ok{color:#67dd7c}.ps-trend{font-size:18px;font-weight:900;color:#c9d7ee;line-height:1;display:inline-flex;min-width:18px;justify-content:center;margin-left:10px}.ps-trend.up{color:#ffb36b}.ps-trend.down{color:#7dd3fc}.ps-trend.flat{color:#c9d7ee}.ps-trend.ok{color:#67dd7c}.ps-section{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px}
+.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.ps-ml{font-size:10px;color:#d9e5f5}.ps-mv{font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center}.ps-ms{display:none}.ps-mmain.ok{color:#67dd7c}.ps-mmain.bad{color:#ff7a6a}.ps-trend{font-size:18px;font-weight:900;color:#c9d7ee;line-height:1;display:inline-flex;min-width:18px;justify-content:center;margin-left:10px}.ps-trend.up{color:#ffb36b}.ps-trend.down{color:#7dd3fc}.ps-trend.flat{color:#c9d7ee}.ps-trend.ok{color:#67dd7c}.ps-trend.bad{color:#ff7a6a}.ps-section{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px}
 .ps-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:7px 9px;border-radius:13px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}.ps-btn:disabled{opacity:.5;cursor:default}.ps-btn-name{font-size:12px;font-weight:800}.ps-btn-state{font-size:9px;font-weight:800}.ps-btn.is-on .ps-btn-name,.ps-btn.is-on .ps-btn-state{color:#67dd7c}.ps-btn.is-off .ps-btn-name,.ps-btn.is-off .ps-btn-state{color:#ff8d7b}
 .ps-q{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.ps-ql{font-size:9px;color:#64748b;font-weight:700;margin-bottom:3px}.ps-qv{font-size:12px;font-weight:900;color:#0f172a;line-height:1.08}
 .manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:7px 9px;border-radius:999px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}.manual-btn span{font-size:13px}.manual-btn small{font-size:10px;color:#dbeafe}
@@ -1327,8 +1327,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
     <div class="ps-scale"><div class="ps-track"><div class="ps-target"></div><div class="ps-dot"></div></div><div class="ps-target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="ps-metrics">
-      <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${metricValue(data.ph, data.phTrend, data.phInRange)}</div></div>
-      <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${metricValue(data.orp, data.orpTrend, data.orpInRange)}</div></div>
+      <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${metricValue(data.ph, data.phTrend, phClass === 'good' ? 'ok' : ((phClass === 'warn' || phClass === 'bad') ? 'bad' : ''))}</div></div>
+      <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${metricValue(data.orp, data.orpTrend, orpClass === 'good' ? 'ok' : ((orpClass === 'warn' || orpClass === 'bad') ? 'bad' : ''))}</div></div>
       <div class="ps-metric"><div class="ps-ml">Außen</div><div class="ps-mv">${metricValue(`${data.outsideTemp}°C`, data.outsideTempTrend, false)}</div></div>
       <div class="ps-metric"><div class="ps-ml">Soll</div><div class="ps-mv">${esc(data.targetTemp)}°C</div></div>
     </div>
@@ -1695,7 +1695,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf34'
+      adapterVersion: 'v0.3.16hf35'
     };
 
     const now = Date.now();
