@@ -262,6 +262,19 @@ class Poolsteuerung extends utils.Adapter {
     }
   }
 
+
+  getDeviceSyncInfo(state, maxAgeSec = 180) {
+    const ts = Number((state && (state.lc || state.ts)) || 0);
+    if (!ts) {
+      return { cls: 'bad', label: 'KEIN', ageSec: null };
+    }
+    const ageSec = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+    if (ageSec > Math.max(30, Number(maxAgeSec) || 180)) {
+      return { cls: 'warn', label: ageSec >= 3600 ? `${Math.floor(ageSec/3600)}h` : `${Math.max(1, Math.floor(ageSec/60))}m`, ageSec };
+    }
+    return { cls: 'ok', label: ageSec <= 9 ? `${ageSec}s` : `${Math.floor(ageSec/10)*10}s`, ageSec };
+  }
+
   updateCirculationPumpRuntime(isOn, stateTs = 0) {
     const active = !!isOn;
     const ts = Number(stateTs) || Date.now();
@@ -650,13 +663,16 @@ class Poolsteuerung extends utils.Adapter {
         <div class="kv-value">${esc(value)}</div>
       </div>`;
 
-    const status = (name, hint, on) => `
+    const status = (name, hint, on, syncCls = 'warn', syncLabel = '?') => `
       <div class="status-row ${on ? 'status-on' : 'status-off'}">
         <div class="status-left">
           <div class="status-name">${esc(name)}</div>
           <div class="status-hint">${esc(hint)}</div>
         </div>
-        <div class="pill ${on ? 'on' : 'off'}">${on ? 'EIN' : 'AUS'}</div>
+        <div class="status-right">
+          <div class="sync-badge ${esc(syncCls)}">${esc(syncLabel)}</div>
+          <div class="pill ${on ? 'on' : 'off'}">${on ? 'EIN' : 'AUS'}</div>
+        </div>
       </div>`;
 
     const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
@@ -850,10 +866,10 @@ body{
     <div class="card status-card">
       <div class="section status">Aktoren & Status</div>
       <div class="status-list">
-        ${status('Umwälzpumpe', 'IST-Zustand', data.pumpOn)}
-        ${status('Chlorinator', 'ORP-Regelung', data.chlorOn)}
-        ${status('pH-Dosierpumpe', 'Prüfzeiten', data.phPumpOn)}
-        ${status('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
+        ${status('Umwälzpumpe', 'IST-Zustand', data.pumpOn, data.pumpSyncCls, data.pumpSyncLabel)}
+        ${status('Chlorinator', 'ORP-Regelung', data.chlorOn, data.chlorSyncCls, data.chlorSyncLabel)}
+        ${status('pH-Dosierpumpe', 'Prüfzeiten', data.phPumpOn, data.phPumpSyncCls, data.phPumpSyncLabel)}
+        ${status('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn, data.heatpumpSyncCls, data.heatpumpSyncLabel)}
       </div>
     </div>
     <div class="card">
@@ -939,6 +955,8 @@ body{
   };
   const bind = () => {
     bindOne('.js-auto-btn', el => window.poolToggleControl(el.dataset.key, el.dataset.current === '1'));
+    bindOne('.js-device-btn', el => window.poolToggleState(el.dataset.key || '', el.dataset.current === '1'));
+    bindOne('.js-standby-btn', el => window.poolToggleStandby(el.dataset.current === '1'));
     bindOne('.js-manual-dose-btn', el => window.poolPhManualDose(Number(el.dataset.sec || 30)));
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind); else bind();
@@ -954,7 +972,7 @@ body{
     const targetTempNum = parseNum(data.targetTemp);
     const targetPct = Number.isFinite(targetTempNum) ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
     const autoBtn = (label, key, active) => `<button type="button" class="action-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
-    const deviceBtn = (label, key, active) => `<button type="button" class="action-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'EIN' : 'AUS'}</span></button>`;
+    const deviceBtn = (label, key, active, syncCls = 'warn', syncLabel = '?') => `<button type="button" class="action-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="action-sync ${esc(syncCls)}">${esc(syncLabel)}</span><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'EIN' : 'AUS'}</span></button>`;
     const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
     const quick = (label, value, trend = '', barHtml = '') => `
       <div class="quick-card">
@@ -1385,6 +1403,14 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const wallboxTimeFullNum = await this.getNumber(this.config.wallboxTimeToFullStateId, NaN);
     const wallboxRangeKmNum = await this.getNumber(this.config.wallboxRangeKmStateId, NaN);
     const wallboxPowerKwNum = await this.getNumber(this.config.wallboxPowerKwStateId, NaN);
+    const pumpStateSnap = await this.getStateSnapshot(this.config.circulationPumpSocketStateId);
+    const chlorStateSnap = await this.getStateSnapshot(this.config.chlorinatorSocketStateId);
+    const phPumpStateSnap = await this.getStateSnapshot(this.config.phPumpSocketStateId);
+    const heatpumpStateSnap = await this.getStateSnapshot(this.config.heatpumpPowerStateId);
+    const pumpSync = this.getDeviceSyncInfo(pumpStateSnap, 180);
+    const chlorSync = this.getDeviceSyncInfo(chlorStateSnap, 180);
+    const phPumpSync = this.getDeviceSyncInfo(phPumpStateSnap, 180);
+    const heatpumpSync = this.getDeviceSyncInfo(heatpumpStateSnap, 180);
     const wallboxChargingRawText = String(wallboxChargingStatusRaw || '').trim().toLowerCase();
     const wallboxPlugRawText = String(wallboxPlugStatusRaw || '').trim().toLowerCase();
     const wallboxIsConnected = ['connected', 'verbunden'].includes(wallboxPlugRawText);
@@ -1658,9 +1684,17 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
       heatpumpFanPercent,
       heatpumpMode,
+      pumpSyncCls: pumpSync.cls,
+      pumpSyncLabel: pumpSync.label,
+      chlorSyncCls: chlorSync.cls,
+      chlorSyncLabel: chlorSync.label,
+      phPumpSyncCls: phPumpSync.cls,
+      phPumpSyncLabel: phPumpSync.label,
+      heatpumpSyncCls: heatpumpSync.cls,
+      heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf31'
+      adapterVersion: 'v0.3.16hf33'
     };
 
     const now = Date.now();
