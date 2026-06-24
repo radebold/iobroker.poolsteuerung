@@ -872,7 +872,78 @@ body{
       </div>
     </div>
   </div>
-</div></body></html>`;
+<script>
+(function(){
+  function getVisApi(){
+    try{ if(window.vis) return window.vis; }catch(e){}
+    try{ if(window.parent&&window.parent.vis) return window.parent.vis; }catch(e){}
+    try{ if(window.top&&window.top.vis) return window.top.vis; }catch(e){}
+    return null;
+  }
+  function getConn(){
+    try{ const v=getVisApi(); if(v&&v.conn&&typeof v.conn.setState==='function') return v.conn; }catch(e){}
+    return null;
+  }
+  window.poolSetState = async function(id,val){
+    const v=getVisApi();
+    const conn=getConn();
+    try{
+      if(v && typeof v.setValue === 'function'){
+        const r=v.setValue(id,val);
+        if(r && typeof r.then==='function'){ await r; }
+        return true;
+      }
+    }catch(e){}
+    if(!conn) return false;
+    const attempts = [
+      () => conn.setState(id,val),
+      () => conn.setState(id,val,false),
+      () => conn.setState(id,val,()=>{}),
+      () => conn.setState(id,val,false,()=>{})
+    ];
+    for(const fn of attempts){
+      try{
+        const r=fn();
+        if(r && typeof r.then==='function'){ await r; }
+        return true;
+      }catch(e){}
+    }
+    return false;
+  };
+  window.poolToggleControl = async function(key,current){
+    const ns=${JSON.stringify(data.namespace)};
+    const ok=await window.poolSetState(ns+'.control.auto.'+key, !current);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+  window.poolPhManualDose = async function(sec){
+    const ns=${JSON.stringify(data.namespace)};
+    await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30);
+    const ok=await window.poolSetState(ns + '.control.ph.manualTrigger', Date.now());
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+  const bindOne = (selector, handler) => {
+    document.querySelectorAll(selector).forEach(el => {
+      const run = (ev) => {
+        try{ if(ev){ ev.preventDefault(); ev.stopPropagation(); } }catch(e){}
+        const now = Date.now();
+        const last = Number(el.dataset.lastTapTs || 0);
+        if (now - last < 700) return false;
+        el.dataset.lastTapTs = String(now);
+        handler(el);
+        return false;
+      };
+      try{ el.addEventListener('touchend', run, {passive:false}); }catch(e){}
+      try{ el.addEventListener('click', run, false); }catch(e){}
+      try{ el.style.cursor = 'pointer'; }catch(e){}
+    });
+  };
+  const bind = () => {
+    bindOne('.js-auto-btn', el => window.poolToggleControl(el.dataset.key, el.dataset.current === '1'));
+    bindOne('.js-manual-dose-btn', el => window.poolPhManualDose(Number(el.dataset.sec || 30)));
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind); else bind();
+})();
+</script></body></html>`;
   }
 
   buildPhoneHtml(data) {
@@ -1588,7 +1659,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.16hf26'
+      adapterVersion: 'v0.3.16hf27'
     };
 
     const now = Date.now();
