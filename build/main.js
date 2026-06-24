@@ -821,7 +821,7 @@ body{
       <div class="section energy">Schnellzugriff</div>
       <div class="mini-list">
         ${mini('Poolsolltemperatur', `${data.targetTemp} °C`, 'info')}
-        <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.phManualDoseSec || 30) || 30}" style="min-height:64px;"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
+        <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.manualDoseButtonSec || data.phManualDoseSec || 30) || 30}" style="min-height:64px;"><span>PH Manuell</span><small>${esc(data.manualDoseButtonSec || data.phManualDoseSec || 30)} Sek.</small></button>
       </div>
     </div>
     <div class="card">
@@ -1015,7 +1015,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   <div class="card" style="min-height:132px;"><div class="section-title">Schnellzugriff</div><div class="control-grid">
     <button type="button" class="action-btn js-standby-btn ${data.standbyControl ? 'is-on' : 'is-off'}" data-current="${data.standbyControl ? '1' : '0'}"><span class="action-name">Standby</span><span class="action-state">${data.standbyControl ? 'AKTIV' : 'AUS'}</span></button>
     <div class="temp-center"><div class="quick-label">Poolsolltemperatur</div><div class="quick-value">${esc(data.targetTemp)}°C</div></div>
-    <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.phManualDoseSec || 30) || 30}" style="grid-column:1 / -1;"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
+    <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.manualDoseButtonSec || data.phManualDoseSec || 30) || 30}" style="grid-column:1 / -1;"><span>PH Manuell</span><small>${esc(data.manualDoseButtonSec || data.phManualDoseSec || 30)} Sek.</small></button>
   </div></div>
 
   <div class="card" style="min-height:138px;"><div class="section-title">Automatik</div><div class="auto-grid">
@@ -1340,7 +1340,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Heute dosiert', `${data.phDailyCount}x`)}
     ${quick('Nächste Prüfung', data.phNextCheck)}
     ${quick('Granulat manuell', data.manualGranulateText)}
-    <button class="manual-btn js-manual-dose-btn" data-sec="${Number(data.phManualDoseSec || 30) || 30}"><span>PH Manuell</span><small>${esc(data.phManualDoseSec)} Sek.</small></button>
+    <button class="manual-btn js-manual-dose-btn" data-sec="${Number(data.manualDoseButtonSec || data.phManualDoseSec || 30) || 30}"><span>PH Manuell</span><small>${esc(data.manualDoseButtonSec || data.phManualDoseSec || 30)} Sek.</small></button>
   </div></div>
 </div>
 <script>
@@ -1659,7 +1659,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpFanPercent,
       heatpumpMode,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', '30'),
-      adapterVersion: 'v0.3.16hf27'
+      adapterVersion: 'v0.3.16hf29'
     };
 
     const now = Date.now();
