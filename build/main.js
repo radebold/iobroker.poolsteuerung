@@ -1161,6 +1161,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('WP Modus', data.heatpumpMode || '--')}
     ${quick('Chlor Freigabe', data.chlorDecision)}
     ${quick('pH Prüfung', data.phDecision)}
+    ${quick('Poolwert von', data.poolTempUpdatedAt)}
   </div></div>
 
 
@@ -1532,6 +1533,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       ? await this.getNumber(this.config.heatpumpSetTempStateId, NaN)
       : NaN;
     const targetTemp = this.fmt(Number.isFinite(targetTempNumFromState) ? targetTempNumFromState : parseNum(this.config.heatpumpTargetTemp), 1, '24.0');
+    const poolTempStateSnap = this.config.waterTempStateId ? await this.getStateSnapshot(this.config.waterTempStateId) : null;
+    const poolTempUpdatedAt = (() => {
+      const ts = Number((poolTempStateSnap && (poolTempStateSnap.lc || poolTempStateSnap.ts)) || 0);
+      return ts ? new Date(ts).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
+    })();
     const heatReason = await this.getText('poolsteuerung.0.status.heatpump.lastReason', '--');
     const autoCirculationState = await this.getControlBool('control.auto.circulation', this.config.enableCirculationControl !== false);
     const autoChlorState = await this.getControlBool('control.auto.chlor', this.config.enableChlorControl !== false);
@@ -1804,7 +1810,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf43'
+      adapterVersion: 'v0.3.16hf44'
     };
 
     const now = Date.now();
