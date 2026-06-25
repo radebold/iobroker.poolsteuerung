@@ -488,7 +488,7 @@ class Poolsteuerung extends utils.Adapter {
 
   resetHeatpumpLocks(reason = '') {
     const suffix = reason ? ` (${reason})` : '';
-    this.heatpumpLock = { state: null, lastOnTs: 0, lastOffTs: 0 };
+    this.heatpumpLock = { state: null, lastOnTs: 0, lastOffTs: 0, ignoreStartup: true };
     this.debug('Heatpump-Locks zurückgesetzt' + suffix);
   }
 
@@ -1647,8 +1647,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const heatLock = this.getHeatpumpLockState();
     if (heatLock.state === null) {
       heatLock.state = heatpumpOnRaw;
-      if (heatpumpOnRaw) heatLock.lastOnTs = Date.now();
-      else heatLock.lastOffTs = Date.now();
+      heatLock.lastOnTs = 0;
+      heatLock.lastOffTs = 0;
+      heatLock.ignoreStartup = true;
     }
 
     let heatDesired = heatpumpOnRaw;
@@ -1699,8 +1700,14 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
     if (allowHeatpumpWrite && heatDesired !== heatLock.state) {
       heatLock.state = heatDesired;
-      if (heatDesired) heatLock.lastOnTs = Date.now();
-      else heatLock.lastOffTs = Date.now();
+      heatLock.ignoreStartup = false;
+      if (heatDesired) {
+        heatLock.lastOnTs = Date.now();
+        heatLock.lastOffTs = 0;
+      } else {
+        heatLock.lastOffTs = Date.now();
+        heatLock.lastOnTs = 0;
+      }
     }
 
     const heatpumpOn = allowHeatpumpWrite ? heatDesired : heatpumpOnRaw;
@@ -1797,7 +1804,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf42'
+      adapterVersion: 'v0.3.16hf43'
     };
 
     const now = Date.now();
@@ -1968,13 +1975,15 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       }
     }
 
-    if (currentState === true && nextDesired === false && lock.lastOnTs && (nowTs - lock.lastOnTs) < minSwitchSec * 1000) {
-      nextDesired = true;
-      nextReason = `Mindestlaufzeit aktiv (${Math.ceil((minSwitchSec * 1000 - (nowTs - lock.lastOnTs)) / 1000)}s Rest)`;
-    }
-    if (currentState === false && nextDesired === true && lock.lastOffTs && (nowTs - lock.lastOffTs) < minSwitchSec * 1000) {
-      nextDesired = false;
-      nextReason = `Mindestpause aktiv (${Math.ceil((minSwitchSec * 1000 - (nowTs - lock.lastOffTs)) / 1000)}s Rest)`;
+    if (!lock.ignoreStartup) {
+      if (currentState === true && nextDesired === false && lock.lastOnTs && (nowTs - lock.lastOnTs) < minSwitchSec * 1000) {
+        nextDesired = true;
+        nextReason = `Mindestlaufzeit aktiv (${Math.ceil((minSwitchSec * 1000 - (nowTs - lock.lastOnTs)) / 1000)}s Rest)`;
+      }
+      if (currentState === false && nextDesired === true && lock.lastOffTs && (nowTs - lock.lastOffTs) < minSwitchSec * 1000) {
+        nextDesired = false;
+        nextReason = `Mindestpause aktiv (${Math.ceil((minSwitchSec * 1000 - (nowTs - lock.lastOffTs)) / 1000)}s Rest)`;
+      }
     }
 
     return { desiredOn: nextDesired, reason: nextReason };
