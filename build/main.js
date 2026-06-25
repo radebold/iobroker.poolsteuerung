@@ -495,6 +495,10 @@ class Poolsteuerung extends utils.Adapter {
 
     const obj = await this.getForeignObjectAsync(id);
     const common = obj && obj.common ? obj.common : {};
+    if (common && common.write === false) {
+      this.log.warn(`[WRITE-GUARD] Read-only State wird nicht direkt beschrieben: ${id}`);
+      return;
+    }
     let value;
 
     if (mode === 'num01') {
@@ -1744,7 +1748,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf39'
+      adapterVersion: 'v0.3.16hf40'
     };
 
     const now = Date.now();
@@ -2991,6 +2995,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.ensureState('control.ph.manualDoseSec', 'number', 'value.interval', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true);
       await this.setStateIfChanged('control.ph.manualDoseSec', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true);
       await this.ensureState('control.ph.manualStart', 'boolean', 'button', false, true);
+      await this.ensureState('control.ph.manualTrigger', 'number', 'value.time', 0, true);
+      await this.ensureState('control.ph.manualDoseSec', 'number', 'value.interval', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true);
+      await this.setStateIfChanged('control.ph.manualDoseSec', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true);
       await this.ensureState('control.device.circulation', 'boolean', 'switch', false, true);
       await this.ensureState('control.device.chlorinator', 'boolean', 'switch', false, true);
       await this.ensureState('control.device.phPump', 'boolean', 'switch', false, true);
