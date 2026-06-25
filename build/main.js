@@ -396,6 +396,42 @@ class Poolsteuerung extends utils.Adapter {
     return null;
   }
 
+  async requestZigbeePowerRead(id, force = false) {
+    const zbTarget = this.getTasmotaZigbeeWriteTarget(id);
+    if (!zbTarget) return false;
+    this.zigbeeReadbackTs = this.zigbeeReadbackTs || {};
+    const key = `${zbTarget.cmdId}|${zbTarget.device}`;
+    const now = Date.now();
+    const minGapMs = force ? 0 : 15000;
+    if (!force && this.zigbeeReadbackTs[key] && now - this.zigbeeReadbackTs[key] < minGapMs) {
+      return false;
+    }
+    this.zigbeeReadbackTs[key] = now;
+    try {
+      const payload = JSON.stringify({
+        Device: zbTarget.device,
+        Read: { Power: true }
+      });
+      await this.setForeignStateAsync(zbTarget.cmdId, payload, false);
+      return true;
+    } catch (e) {
+      this.debug(`Zigbee-Readback fehlgeschlagen für ${id}: ${e && e.message ? e.message : e}`);
+      return false;
+    }
+  }
+
+  async refreshZigbeeReadbacks(force = false) {
+    const ids = [
+      this.config.circulationPumpSocketStateId,
+      this.config.chlorinatorSocketStateId,
+      this.config.phPumpSocketStateId,
+      this.config.heatpumpPowerStateId
+    ].filter(Boolean);
+    for (const id of ids) {
+      try { await this.requestZigbeePowerRead(id, force); } catch {}
+    }
+  }
+
   isSingleWriteDevice(id) {
     const s = String(id || '');
     return s.startsWith('tuya.') || s === String(this.config.heatpumpPowerStateId || '');
@@ -438,6 +474,15 @@ class Poolsteuerung extends utils.Adapter {
         Send: { Power: on ? 1 : 0 }
       });
       await this.setForeignStateAsync(zbTarget.cmdId, payload, false);
+      try {
+        const readPayload = JSON.stringify({
+          Device: zbTarget.device,
+          Read: { Power: true }
+        });
+        await this.setForeignStateAsync(zbTarget.cmdId, readPayload, false);
+        this.zigbeeReadbackTs = this.zigbeeReadbackTs || {};
+        this.zigbeeReadbackTs[`${zbTarget.cmdId}|${zbTarget.device}`] = Date.now();
+      } catch {}
       return;
     }
 
@@ -1699,7 +1744,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf38'
+      adapterVersion: 'v0.3.16hf39'
     };
 
     const now = Date.now();
@@ -2994,6 +3039,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           await this.setStateAsync('status.debug.lastCycle', new Date().toISOString(), true);
           await this.updateComputedStates();
           await this.runHeartbeatChecks();
+          await this.refreshZigbeeReadbacks(false);
           if (typeof this.applyControlLogic === 'function') {
             await this.applyControlLogic();
           }
@@ -3066,8 +3112,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
             if (key === 'ph') await this.setStateIfChanged('control.device.phPump', false, true);
             if (key === 'heatpump') await this.setStateIfChanged('control.device.heatpump', false, true);
           }
+          await this.refreshZigbeeReadbacks(true);
           await this.forceImmediateRender();
-          this.queueDelayedRefresh(1500);
+          this.queueDelayedRefresh(1800);
           return;
         }
 
@@ -3076,8 +3123,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           this.clearPendingRenderTimeouts('WP Reset');
           this.resetHeatpumpLocks('manueller Reset');
           await this.setStateIfChanged('control.heatpump.resetLock', false, false);
+          await this.refreshZigbeeReadbacks(true);
           await this.forceImmediateRender();
-          this.queueDelayedRefresh(1000);
+          this.queueDelayedRefresh(1800);
           return;
         }
 
@@ -3106,8 +3154,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           await this.setStateIfChanged('control.ph.manualStart', false, false);
           await this.setStateIfChanged('control.ph.manualTrigger', 0, false);
           await this.applyControlLogic();
+          await this.refreshZigbeeReadbacks(true);
           await this.forceImmediateRender();
-          this.queueDelayedRefresh(1200);
+          this.queueDelayedRefresh(1800);
           return;
         }
 
@@ -3123,8 +3172,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
               await this.forceDependentDevicesOff('Umwälzpumpe AUS');
             }
           }
+          await this.refreshZigbeeReadbacks(true);
           await this.forceImmediateRender();
-          this.queueDelayedRefresh(1200);
+          this.queueDelayedRefresh(1800);
           return;
         }
 
