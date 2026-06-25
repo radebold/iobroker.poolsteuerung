@@ -275,6 +275,31 @@ class Poolsteuerung extends utils.Adapter {
     return { cls: 'ok', label: ageSec <= 9 ? `${ageSec}s` : `${Math.floor(ageSec/10)*10}s`, ageSec };
   }
 
+  getVerifiedDeviceSyncInfo(id, state, maxAgeSec = 180) {
+    const base = this.getDeviceSyncInfo(state, maxAgeSec);
+    const zbTarget = this.getTasmotaZigbeeWriteTarget(id);
+    if (!zbTarget) return base;
+    this.zigbeeVerifyMeta = this.zigbeeVerifyMeta || {};
+    const meta = this.zigbeeVerifyMeta[id];
+    const ts = Number((state && (state.lc || state.ts)) || 0);
+    if (!meta) {
+      return ts ? { cls: base.cls, label: base.label, ageSec: base.ageSec } : { cls: 'bad', label: 'KEIN', ageSec: null };
+    }
+    if (ts && ts > Number(meta.beforeTs || 0)) {
+      meta.verifiedTs = ts;
+      meta.lastSeenTs = ts;
+      return this.getDeviceSyncInfo({ lc: ts, ts }, maxAgeSec);
+    }
+    const requestAgeSec = Math.max(0, Math.floor((Date.now() - Number(meta.requestTs || 0)) / 1000));
+    if (meta.requestTs && requestAgeSec >= 8) {
+      return { cls: 'bad', label: 'FEHLT', ageSec: requestAgeSec };
+    }
+    if (meta.requestTs && requestAgeSec > 0) {
+      return { cls: 'warn', label: 'REQ', ageSec: requestAgeSec };
+    }
+    return ts ? base : { cls: 'bad', label: 'KEIN', ageSec: null };
+  }
+
   updateCirculationPumpRuntime(isOn, stateTs = 0) {
     const active = !!isOn;
     const ts = Number(stateTs) || Date.now();
@@ -400,13 +425,26 @@ class Poolsteuerung extends utils.Adapter {
     const zbTarget = this.getTasmotaZigbeeWriteTarget(id);
     if (!zbTarget) return false;
     this.zigbeeReadbackTs = this.zigbeeReadbackTs || {};
+    this.zigbeeVerifyMeta = this.zigbeeVerifyMeta || {};
     const key = `${zbTarget.cmdId}|${zbTarget.device}`;
     const now = Date.now();
     const minGapMs = force ? 0 : 15000;
     if (!force && this.zigbeeReadbackTs[key] && now - this.zigbeeReadbackTs[key] < minGapMs) {
       return false;
     }
+    let beforeTs = 0;
+    try {
+      const st = await this.getForeignStateAsync(id);
+      beforeTs = Number((st && (st.lc || st.ts)) || 0);
+    } catch {}
     this.zigbeeReadbackTs[key] = now;
+    this.zigbeeVerifyMeta[id] = {
+      key,
+      requestTs: now,
+      beforeTs,
+      lastSeenTs: beforeTs,
+      verifiedTs: Number((this.zigbeeVerifyMeta[id] && this.zigbeeVerifyMeta[id].verifiedTs) || 0)
+    };
     try {
       const payload = JSON.stringify({
         Device: zbTarget.device,
@@ -475,13 +513,24 @@ class Poolsteuerung extends utils.Adapter {
       });
       await this.setForeignStateAsync(zbTarget.cmdId, payload, false);
       try {
+        const st = await this.getForeignStateAsync(id);
+        const beforeTs = Number((st && (st.lc || st.ts)) || 0);
         const readPayload = JSON.stringify({
           Device: zbTarget.device,
           Read: { Power: true }
         });
-        await this.setForeignStateAsync(zbTarget.cmdId, readPayload, false);
         this.zigbeeReadbackTs = this.zigbeeReadbackTs || {};
-        this.zigbeeReadbackTs[`${zbTarget.cmdId}|${zbTarget.device}`] = Date.now();
+        this.zigbeeVerifyMeta = this.zigbeeVerifyMeta || {};
+        const now = Date.now();
+        this.zigbeeReadbackTs[`${zbTarget.cmdId}|${zbTarget.device}`] = now;
+        this.zigbeeVerifyMeta[id] = {
+          key: `${zbTarget.cmdId}|${zbTarget.device}`,
+          requestTs: now,
+          beforeTs,
+          lastSeenTs: beforeTs,
+          verifiedTs: Number((this.zigbeeVerifyMeta[id] && this.zigbeeVerifyMeta[id].verifiedTs) || 0)
+        };
+        await this.setForeignStateAsync(zbTarget.cmdId, readPayload, false);
       } catch {}
       return;
     }
@@ -1461,10 +1510,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const chlorStateSnap = await this.getStateSnapshot(this.config.chlorinatorSocketStateId);
     const phPumpStateSnap = await this.getStateSnapshot(this.config.phPumpSocketStateId);
     const heatpumpStateSnap = await this.getStateSnapshot(this.config.heatpumpPowerStateId);
-    const pumpSync = this.getDeviceSyncInfo(pumpStateSnap, 180);
-    const chlorSync = this.getDeviceSyncInfo(chlorStateSnap, 180);
-    const phPumpSync = this.getDeviceSyncInfo(phPumpStateSnap, 180);
-    const heatpumpSync = this.getDeviceSyncInfo(heatpumpStateSnap, 180);
+    const pumpSync = this.getVerifiedDeviceSyncInfo(this.config.circulationPumpSocketStateId, pumpStateSnap, 180);
+    const chlorSync = this.getVerifiedDeviceSyncInfo(this.config.chlorinatorSocketStateId, chlorStateSnap, 180);
+    const phPumpSync = this.getVerifiedDeviceSyncInfo(this.config.phPumpSocketStateId, phPumpStateSnap, 180);
+    const heatpumpSync = this.getVerifiedDeviceSyncInfo(this.config.heatpumpPowerStateId, heatpumpStateSnap, 180);
     const wallboxChargingRawText = String(wallboxChargingStatusRaw || '').trim().toLowerCase();
     const wallboxPlugRawText = String(wallboxPlugStatusRaw || '').trim().toLowerCase();
     const wallboxIsConnected = ['connected', 'verbunden'].includes(wallboxPlugRawText);
@@ -1748,7 +1797,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf40'
+      adapterVersion: 'v0.3.16hf41'
     };
 
     const now = Date.now();
