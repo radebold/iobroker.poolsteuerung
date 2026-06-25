@@ -1146,10 +1146,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   </div></div>
 
   <div class="card" style="min-height:138px;"><div class="section-title">Aktoren & Status</div><div class="status-grid">
-    ${deviceBtn('Umwälzpumpe','circulation',!!data.pumpOn)}
-    ${deviceBtn('Chlorinator','chlorinator',!!data.chlorOn)}
-    ${deviceBtn('pH-Dosierpumpe','phPump',!!data.phPumpOn)}
-    ${deviceBtn('Wärmepumpe','heatpump',!!data.heatpumpOn)}
+    ${deviceBtn('Umwälzpumpe','circulation',!!data.pumpOn, data.pumpSyncCls, data.pumpSyncLabel)}
+    ${deviceBtn('Chlorinator','chlorinator',!!data.chlorOn, data.chlorSyncCls, data.chlorSyncLabel)}
+    ${deviceBtn('pH-Dosierpumpe','phPump',!!data.phPumpOn, data.phPumpSyncCls, data.phPumpSyncLabel)}
+    ${deviceBtn('Wärmepumpe','heatpump',!!data.heatpumpOn, data.heatpumpSyncCls, data.heatpumpSyncLabel)}
   </div></div>
 
   <div class="card" style="min-height:190px;"><div class="section-title">Energie & Steuerung</div><div class="quick-grid">
@@ -1353,10 +1353,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   <div class="ps-card">
     <div class="ps-block-title">Aktoren & Status</div>
     <div class="ps-statuswrap">
-      ${deviceBtn('Umwälzpumpe','circulation',!!data.pumpOn)}
-      ${deviceBtn('Chlorinator','chlorinator',!!data.chlorOn)}
-      ${deviceBtn('pH-Dosierpumpe','phPump',!!data.phPumpOn)}
-      ${deviceBtn('Wärmepumpe','heatpump',!!data.heatpumpOn)}
+      ${deviceBtn('Umwälzpumpe','circulation',!!data.pumpOn, data.pumpSyncCls, data.pumpSyncLabel)}
+      ${deviceBtn('Chlorinator','chlorinator',!!data.chlorOn, data.chlorSyncCls, data.chlorSyncLabel)}
+      ${deviceBtn('pH-Dosierpumpe','phPump',!!data.phPumpOn, data.phPumpSyncCls, data.phPumpSyncLabel)}
+      ${deviceBtn('Wärmepumpe','heatpump',!!data.heatpumpOn, data.heatpumpSyncCls, data.heatpumpSyncLabel)}
     </div>
     <div class="ps-list">
       <div class="ps-row"><div class="ps-k">Zeitplan</div><div class="ps-v">${data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV'}</div></div>
@@ -1403,7 +1403,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const targetTempNum = parseNum(data.targetTemp);
     const targetPct = Number.isFinite(targetTempNum) ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
     const autoBtn = (label, key, active) => `<button class="ps-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
-    const deviceBtn = (label, key, active) => `<button class="ps-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'EIN' : 'AUS'}</span></button>`;
+    const deviceBtn = (label, key, active, syncCls = 'warn', syncLabel = '?') => `<button class="ps-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="ps-sync ${esc(syncCls)}">${esc(syncLabel)}</span><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'EIN' : 'AUS'}</span></button>`;
     const quick = (l, v, trend = '', barHtml = '') => `<div class="ps-q"><div class="ps-ql">${esc(l)}</div><div class="ps-qvr"><div class="ps-qv">${esc(v)}</div>${trend ? `<div class="ps-qtrend ${trendClass(trend)}">${esc(trend)}</div>` : ''}</div>${barHtml || ''}</div>`;
     const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
     const metricValue = (value, trend = '→', stateCls = '') => `<span class="ps-mmain ${stateCls}">${esc(value)}</span><span class="ps-trend ${trendClass(trend)} ${stateCls}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>`;
@@ -1442,10 +1442,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${autoBtn('Wärmepumpe','heatpump',!!data.autoHeatpumpControl)}
   </div></div>
   <div class="ps-card"><div class="ps-section">Aktoren & Status</div><div class="ps-statusGrid">
-    ${deviceBtn('Umwälzpumpe','circulation',!!data.pumpOn)}
-    ${deviceBtn('Chlorinator','chlorinator',!!data.chlorOn)}
-    ${deviceBtn('pH-Dosierpumpe','phPump',!!data.phPumpOn)}
-    ${deviceBtn('Wärmepumpe','heatpump',!!data.heatpumpOn)}
+    ${deviceBtn('Umwälzpumpe','circulation',!!data.pumpOn, data.pumpSyncCls, data.pumpSyncLabel)}
+    ${deviceBtn('Chlorinator','chlorinator',!!data.chlorOn, data.chlorSyncCls, data.chlorSyncLabel)}
+    ${deviceBtn('pH-Dosierpumpe','phPump',!!data.phPumpOn, data.phPumpSyncCls, data.phPumpSyncLabel)}
+    ${deviceBtn('Wärmepumpe','heatpump',!!data.heatpumpOn, data.heatpumpSyncCls, data.heatpumpSyncLabel)}
   </div></div>
   <div class="ps-card"><div class="ps-section">Energie & Steuerung</div><div class="ps-quickGrid">
     ${quick('PV-Leistung', `${data.pv} W`, data.pvTrend || '→')}
@@ -1797,7 +1797,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf41'
+      adapterVersion: 'v0.3.16hf42'
     };
 
     const now = Date.now();
