@@ -716,8 +716,18 @@ class Poolsteuerung extends utils.Adapter {
   formatHeatpumpMode(value) {
     const txt = String(value ?? '').trim();
     if (!txt || txt === '--') return '--';
+    const normalized = txt.replace(',', '.').toLowerCase();
+    if (normalized === '0' || normalized === '0.0') return 'Auto';
+    if (normalized === '1' || normalized === '1.0') return 'Heizen';
+    if (normalized === '2' || normalized === '2.0') return 'Kühlen';
     const m = txt.match(/^([^()]+)\(([^)]+)\)$/);
-    if (m) return `${m[1].trim()} (${m[2].trim()})`;
+    if (m) {
+      const code = m[2].trim().replace(',', '.').toLowerCase();
+      if (code === '0' || code === '0.0') return 'Auto';
+      if (code === '1' || code === '1.0') return 'Heizen';
+      if (code === '2' || code === '2.0') return 'Kühlen';
+      return `${m[1].trim()} (${m[2].trim()})`;
+    }
     return txt;
   }
 
@@ -1013,9 +1023,7 @@ body{
         ${kv('WP Freigabe', data.heatReason, 'reason')}
         ${kv('Chlor Freigabe', data.chlorDecision, 'reason')}
         ${kv('Zeitplan', data.pumpDecision, 'reason')}
-        ${kv('pH Prüfung', data.phDecision, 'reason')}
         ${kv('pH Zeiten', data.phTimes)}
-        ${kv('Standby nächster Lauf', data.standbyNext)}
         ${kv('Letzte Dosierung', `${data.phLastDoseDurationSec} s`)}
       </div>
     </div>
@@ -1217,7 +1225,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('WP Lüfter', String(data.heatpumpFanPercent ?? '--'))}
     ${quick('WP Modus', data.heatpumpMode || '--')}
     ${quick('Chlor Freigabe', data.chlorDecision)}
-    ${quick('pH Prüfung', data.phDecision)}
     ${quick('Poolwert von', data.poolTempUpdatedAt)}
   </div></div>
 
@@ -1405,7 +1412,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       <div class="ps-row"><div class="ps-k">WP Freigabe</div>${decisionValue(data.heatDecision)}</div>
       <div class="ps-row"><div class="ps-k">Chlor Freigabe</div>${decisionValue(data.chlorDecision)}</div>
       <div class="ps-row"><div class="ps-k">Zeitplan</div>${decisionValue(data.pumpDecision)}</div>
-      <div class="ps-row"><div class="ps-k">pH Prüfung</div>${decisionValue(data.phDecision)}</div>
     </div>
   </div>
   <div class="ps-card">
@@ -1511,7 +1517,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Batterie', `${data.battery} %`, '', batteryBar)}
     ${quick('WP Freigabe', data.heatDecision)}
     ${quick('Chlor Freigabe', data.chlorDecision)}
-    ${quick('pH Prüfung', data.phDecision)}
   </div></div>
   <div class="ps-card"><div class="ps-section">pH Info</div><div class="ps-quickGrid ps-phGrid">
     ${quick('Berechnet', `${data.phCalculatedDoseSec} s / ${data.phCalculatedDoseMl} ml`)}
@@ -1992,7 +1997,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf61'
+      adapterVersion: 'v0.3.16hf62'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
