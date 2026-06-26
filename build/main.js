@@ -101,8 +101,13 @@ class Poolsteuerung extends utils.Adapter {
         await this.syncControlStates();
         await this.syncDeviceControlStates();
       }
+      this.lastTabletHtml = '';
+      this.lastPhoneHtml = '';
+      this.lastTabletWidget = '';
+      this.lastPhoneWidget = '';
       this.lastRenderSignature = '';
       this.lastRenderAt = 0;
+      this.lastRenderedBuild = '';
       await this.renderVis();
     } catch (e) {
       if (!this.isDbClosedError(e)) this.log.warn('VIS Sofort-Render Fehler: ' + (e && e.stack ? e.stack : e));
@@ -1846,14 +1851,15 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || 30),
-      adapterVersion: 'v0.3.16hf49'
+      adapterVersion: 'v0.3.16hf50'
     };
 
     const now = Date.now();
     const signature = JSON.stringify({ ...stableData, __build: stableData.adapterVersion || 'unknown' });
     const buildChanged = this.lastRenderedBuild !== stableData.adapterVersion;
 
-    if (!buildChanged && signature === this.lastRenderSignature && now - this.lastRenderAt < 300000) {
+    // Hotfix hf50: VIS immer neu rendern, um hängende Altstände sicher zu überschreiben
+    if (false && !buildChanged && signature === this.lastRenderSignature && now - this.lastRenderAt < 300000) {
       return;
     }
 
@@ -1934,8 +1940,13 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         }
         await this.syncControlStates();
         await this.syncDeviceControlStates();
+        this.lastTabletHtml = '';
+        this.lastPhoneHtml = '';
+        this.lastTabletWidget = '';
+        this.lastPhoneWidget = '';
         this.lastRenderSignature = '';
         this.lastRenderAt = 0;
+        this.lastRenderedBuild = '';
         await this.renderVis();
       } catch (e) {
         if (!this.isDbClosedError(e)) this.log.warn('VIS Delayed Refresh Fehler: ' + (e && e.stack ? e.stack : e));
@@ -3137,6 +3148,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.runHeartbeatChecks();
       await this.applyDependencyRules();
       await this.renderVis();
+      this.queueDelayedRefresh(1500);
+      this.queueDelayedRefresh(5000);
       await this.logStartupSummary();
       const pollMin = Math.max(1, Number(this.config.pollIntervalMin) || 1);
       if (this.phStopWatcher) clearInterval(this.phStopWatcher);
