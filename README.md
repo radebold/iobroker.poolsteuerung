@@ -1,12 +1,3 @@
-# poolsteuerung 0.3.1
+Poolsteuerung v0.3.16-hotfix55
 
-VIS HTML wird direkt im Adapter erzeugt:
-- poolsteuerung.0.vis.htmlTablet
-- poolsteuerung.0.vis.htmlPhone
-
-
-## 0.3.16-hotfix54
-- VIS-Render beim Adapterstart wird erzwungen.
-- Leere oder gelöschte VIS-States werden automatisch neu befüllt.
-- Signature-Cache verhindert kein Neuschreiben leerer HTML-/Widget-States mehr.
-- Button-/State-Änderungen nutzen weiterhin den bestehenden Sofort-Render.
+Fix: VIS-Rendering wird beim Start und bei leeren States erzwungen. Wenn der Vollrender abbricht, werden die VIS-States mit einem Fallback inklusive Fehlermeldung befüllt.
