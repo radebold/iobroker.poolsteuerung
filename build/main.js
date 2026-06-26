@@ -1591,7 +1591,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const phDailyCount = await this.getText('poolsteuerung.0.status.phDose.dailyCount', '0');
     const phLastDoseDurationSec = await this.getText('poolsteuerung.0.status.phDose.lastDoseDurationSec', '0');
     const phCalculatedDoseSec = await this.getText('poolsteuerung.0.status.phDose.calculatedDoseSec', '0');
-    try { await this.setStateIfChanged('control.ph.manualDoseSec', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true); } catch {}
     const phLastDoseTsRaw = await this.getNumber('poolsteuerung.0.status.phDose.lastDoseTs', 0);
     const phLastDoseAt = phLastDoseTsRaw ? new Date(phLastDoseTsRaw).toLocaleString('de-DE') : '-';
     const phLastStartInfo = await this.getText('poolsteuerung.0.status.debug.lastPhStartInfo', '');
@@ -1791,7 +1790,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       phDailyCount,
       phLastDoseDurationSec,
       phCalculatedDoseSec,
-      manualDoseButtonSec: Math.max(1, parseNum(this.config.phDoseDurationSec || 30)),
       phCalculatedDoseMl,
       phLastDoseAt,
       phLastDoseMl,
@@ -1847,8 +1845,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncCls: heatpumpSync.cls,
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
-      manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf46'
+      manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || 30),
+      adapterVersion: 'v0.3.16hf47'
     };
 
     const now = Date.now();
@@ -3095,11 +3093,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.ensureControlState('control.auto.ph', this.config.enablePhControl !== false);
       await this.ensureControlState('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
       await this.ensureState('control.ph.manualDoseSec', 'number', 'value.interval', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true);
-      await this.setStateIfChanged('control.ph.manualDoseSec', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true);
       await this.ensureState('control.ph.manualStart', 'boolean', 'button', false, true);
       await this.ensureState('control.ph.manualTrigger', 'number', 'value.time', 0, true);
       await this.ensureState('control.ph.manualDoseSec', 'number', 'value.interval', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true);
-      await this.setStateIfChanged('control.ph.manualDoseSec', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true);
       await this.ensureState('control.device.circulation', 'boolean', 'switch', false, true);
       await this.ensureState('control.device.chlorinator', 'boolean', 'switch', false, true);
       await this.ensureState('control.device.phPump', 'boolean', 'switch', false, true);
