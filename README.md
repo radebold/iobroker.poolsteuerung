@@ -1,3 +1,3 @@
-Poolsteuerung v0.3.16-hotfix55
+Poolsteuerung Adapter v0.3.16-hotfix56
 
-Fix: VIS-Rendering wird beim Start und bei leeren States erzwungen. Wenn der Vollrender abbricht, werden die VIS-States mit einem Fallback inklusive Fehlermeldung befüllt.
+Diagnose-Build: VIS-Rendering wird mit [VIS]-Logs protokolliert.

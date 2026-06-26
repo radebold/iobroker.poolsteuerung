@@ -69,6 +69,14 @@ class Poolsteuerung extends utils.Adapter {
     if (this.config.debugMode) this.log.debug('[DEBUG] ' + msg);
   }
 
+  visTrace(step, detail = '') {
+    const text = `[VIS] ${step}${detail ? ' | ' + detail : ''}`;
+    try { this.log.info(text); } catch {}
+    try {
+      this.setStateAsync('status.debug.lastVisTrace', text, true).catch(() => {});
+    } catch {}
+  }
+
   trackTimeout(handle) {
     this.pendingTimeouts.add(handle);
     return handle;
@@ -95,15 +103,19 @@ class Poolsteuerung extends utils.Adapter {
   async forceImmediateRender() {
     if (this.isShuttingDown) return;
     try {
+      this.visTrace('forceImmediateRender START');
       await this.updateComputedStates();
       if (typeof this.applyControlLogic === 'function') {
-        await this.applyControlLogic();
+        this.visTrace('onReady applyControlLogic START');
+      await this.applyControlLogic();
+      this.visTrace('onReady applyControlLogic OK');
         await this.syncControlStates();
         await this.syncDeviceControlStates();
       }
       this.lastRenderSignature = '';
       this.lastRenderAt = 0;
       await this.renderVis(true);
+      this.visTrace('forceImmediateRender OK');
     } catch (e) {
       if (!this.isDbClosedError(e)) this.log.warn('VIS Sofort-Render Fehler: ' + (e && e.stack ? e.stack : e));
     }
@@ -1530,11 +1542,14 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   async renderVis(force = false) {
     if (this.isShuttingDown) return;
     const visIds = ['vis.htmlTablet', 'vis.htmlPhone', 'vis.widgetTablet', 'vis.widgetPhone'];
+    const renderStartTs = Date.now();
     try {
+      this.visTrace('renderVis START', `force=${!!force}`);
       await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
       await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
       await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
       await this.ensureState('vis.widgetPhone', 'string', 'html', '', false);
+      this.visTrace('renderVis States sichergestellt');
 
       // Wichtig: Beim Adapterstart oder bei leeren VIS-States darf niemals wegen Signatur/Cache abgebrochen werden.
       let hasEmptyVisState = false;
@@ -1551,7 +1566,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         }
       }
 
+      this.visTrace('renderVisFull wird aufgerufen', `forceFull=${!!(force || hasEmptyVisState)} empty=${hasEmptyVisState}`);
       await this.renderVisFull(force || hasEmptyVisState);
+      this.visTrace('renderVisFull zurückgekehrt');
 
       // Sicherheitsnetz: falls renderVisFull ohne Exception zurückkam, aber trotzdem nichts geschrieben hat.
       for (const id of visIds) {
@@ -1560,14 +1577,17 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           throw new Error(`VIS-State ${id} ist nach renderVisFull weiterhin leer`);
         }
       }
+      this.visTrace('renderVis OK', `${Date.now() - renderStartTs}ms`);
     } catch (e) {
       const msg = e && e.stack ? e.stack : String(e && e.message ? e.message : e);
       this.log.error('VIS Render Abbruch: ' + msg);
+      this.visTrace('renderVis ERROR', msg.slice(0, 500));
       await this.renderVisFallback(msg);
     }
   }
 
   async renderVisFallback(errorText = '') {
+    this.visTrace('renderVisFallback START');
     const updated = new Date().toLocaleString('de-DE');
     const safeError = esc(String(errorText || 'unbekannter Fehler')).slice(0, 4000);
     const read = async (label, id, unit = '') => {
@@ -1587,7 +1607,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.16hf55</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.16hf56</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -1598,9 +1618,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     await this.setStateAsync('vis.widgetPhone', html, true);
     try { await this.setStateAsync('status.debug.lastVisUpdate', `Fallback ${updated}`, true); } catch {}
     try { await this.setStateAsync('status.debug.lastStartupError', `VIS Render Abbruch: ${String(errorText || '').slice(0, 500)}`, true); } catch {}
+    this.visTrace('renderVisFallback OK', `htmlLen=${html.length}`);
   }
 
   async renderVisFull(force = false) {
+    this.visTrace('renderVisFull START', `force=${!!force}`);
     const ph = this.fmt(await this.getNumber(this.config.phStateId, 2), 2);
     const orp = this.fmt(await this.getNumber(this.config.orpStateId, 0), 0);
     const poolTemp = this.fmt(await this.getNumber(this.config.waterTempStateId, 1), 1);
@@ -1624,6 +1646,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const chlorSync = await this.getVerifiedDeviceSyncInfo(this.config.chlorinatorSocketStateId, chlorStateSnap, 180);
     const phPumpSync = await this.getVerifiedDeviceSyncInfo(this.config.phPumpSocketStateId, phPumpStateSnap, 180);
     const heatpumpSync = await this.getVerifiedDeviceSyncInfo(this.config.heatpumpPowerStateId, heatpumpStateSnap, 180);
+    this.visTrace('renderVisFull Basiswerte gelesen', `pH=${ph} ORP=${orp} Temp=${poolTemp}`);
     const wallboxChargingRawText = String(wallboxChargingStatusRaw || '').trim().toLowerCase();
     const wallboxPlugRawText = String(wallboxPlugStatusRaw || '').trim().toLowerCase();
     const wallboxIsConnected = ['connected', 'verbunden'].includes(wallboxPlugRawText);
@@ -1689,6 +1712,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         : 'info';
     const phMlPer01Per10 = this.fmt(parseNum(this.config.phDoseMlPer01Per10m3), 0, '--');
     const volume = this.fmt(this.calcVolume(), 2, '--');
+    this.visTrace('renderVisFull Statuswerte gelesen', `mode=${modeActive} phDecision=${String(phDecision).slice(0,80)}`);
 
     const circulationEnabled = !standbyMode && await this.getControlBool('control.auto.circulation', this.config.enableCirculationControl !== false);
     const phEnabledMaster = !standbyMode && await this.getControlBool('control.auto.ph', this.config.enablePhControl !== false);
@@ -1844,6 +1868,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const heatpumpFanPercent = await this.getText(heatpumpAuxIds.speedId, '--');
     const heatpumpMode = this.formatHeatpumpMode(await this.getText(heatpumpAuxIds.modeId, '--'));
 
+    this.visTrace('renderVisFull Entscheidungen berechnet', `pump=${pumpOn} chlor=${chlorOn} heat=${heatpumpOn}`);
+
     const stableData = {
       ph, orp, poolTemp, outsideTemp, pv, feedIn, gridSupply, battery, targetTemp, heatReason, volume, modeActive,
       autoCirculation, autoChlor, autoPh, autoHeatpump,
@@ -1919,7 +1945,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf55'
+      adapterVersion: 'v0.3.16hf56'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -1941,6 +1967,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const signature = JSON.stringify(stableData);
 
     if (!force && visStatesFilled && signature === this.lastRenderSignature && now - this.lastRenderAt < 300000) {
+      this.visTrace('renderVisFull SKIP', 'Signatur unverändert und VIS-States gefüllt');
       return;
     }
 
@@ -1954,15 +1981,19 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       ...stableData,
     };
 
+    this.visTrace('renderVisFull HTML wird gebaut');
     const tablet = this.buildTabletHtml(data);
     const phone = this.buildPhoneHtml(data);
     const tabletWidget = this.buildTabletWidget(data);
     const phoneWidget = this.buildPhoneWidget(data);
+    this.visTrace('renderVisFull HTML gebaut', `tablet=${tablet.length} phone=${phone.length} widgetTablet=${tabletWidget.length} widgetPhone=${phoneWidget.length}`);
 
-    await this.setStateIfChanged('vis.htmlTablet', tablet, true);
-    await this.setStateIfChanged('vis.htmlPhone', phone, true);
-    await this.setStateIfChanged('vis.widgetTablet', tabletWidget, true);
-    await this.setStateIfChanged('vis.widgetPhone', phoneWidget, true);
+    this.visTrace('renderVisFull schreibe VIS-States');
+    await this.setStateAsync('vis.htmlTablet', tablet, true);
+    await this.setStateAsync('vis.htmlPhone', phone, true);
+    await this.setStateAsync('vis.widgetTablet', tabletWidget, true);
+    await this.setStateAsync('vis.widgetPhone', phoneWidget, true);
+    this.visTrace('renderVisFull VIS-States geschrieben');
 
     this.lastTabletHtml = tablet;
     this.lastPhoneHtml = phone;
@@ -1972,6 +2003,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     await this.setStateIfChanged('status.debug.lastVisUpdate', data.updated, true);
     await this.ensureState('status.debug.lastDecision', 'string', 'text', '', false);
     await this.setStateAsync('status.debug.lastDecision', `WP: ${data.heatpumpOn ? 'EIN' : 'AUS'} | ${data.heatDecision} || Chlor: ${data.chlorOn ? 'EIN' : 'AUS'} | ${data.chlorDecision}`, true);
+    this.visTrace('renderVisFull OK');
 
   }
 
@@ -3160,9 +3192,12 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
+      this.log.info('[VIS] hotfix56 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
+      await this.ensureState('status.debug.lastVisTrace', 'string', 'text', '', false);
+      this.visTrace('onReady States Basis OK');
       await this.ensureAlertStates();
       await this.ensureControlState('control.standby', this.config.standbyModeEnabled === true);
       await this.ensureControlState('control.auto.circulation', this.config.enableCirculationControl !== false);
@@ -3185,6 +3220,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       this.clearPendingRenderTimeouts('Adapterstart');
       this.resetHeatpumpLocks('Adapterstart');
       await this.forceDependentDevicesOff('Adapterstart Recovery');
+      this.visTrace('onReady Recovery OK');
       await this.setStateAsync('info.connection', true, true);
       await this.subscribeConfiguredStates();
       try { this.subscribeStates('control.*'); } catch {}
@@ -3204,10 +3240,15 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         this.lastPhPumpOn = !!(initialPhPumpState && initialPhPumpState.val);
         this.phManualStartedAt = this.lastPhPumpOn ? Number((initialPhPumpState && (initialPhPumpState.lc || initialPhPumpState.ts)) || Date.now()) : 0;
       }
+      this.visTrace('onReady updateComputedStates START');
       await this.updateComputedStates();
+      this.visTrace('onReady runHeartbeatChecks START');
       await this.runHeartbeatChecks();
+      this.visTrace('onReady applyDependencyRules START');
       await this.applyDependencyRules();
+      this.visTrace('onReady renderVis START');
       await this.renderVis(true);
+      this.visTrace('onReady renderVis OK');
       await this.logStartupSummary();
       const pollMin = Math.max(1, Number(this.config.pollIntervalMin) || 1);
       if (this.phStopWatcher) clearInterval(this.phStopWatcher);
