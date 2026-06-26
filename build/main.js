@@ -103,7 +103,7 @@ class Poolsteuerung extends utils.Adapter {
       }
       this.lastRenderSignature = '';
       this.lastRenderAt = 0;
-      await this.renderVis();
+      await this.renderVis(true);
     } catch (e) {
       if (!this.isDbClosedError(e)) this.log.warn('VIS Sofort-Render Fehler: ' + (e && e.stack ? e.stack : e));
     }
@@ -1527,7 +1527,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 </script>`;
   }
 
-  async renderVis() {
+  async renderVis(force = false) {
     const ph = this.fmt(await this.getNumber(this.config.phStateId, 2), 2);
     const orp = this.fmt(await this.getNumber(this.config.orpStateId, 0), 0);
     const poolTemp = this.fmt(await this.getNumber(this.config.waterTempStateId, 1), 1);
@@ -1846,13 +1846,28 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf53'
+      adapterVersion: 'v0.3.16hf54'
     };
+
+    await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
+    await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
+    await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
+    await this.ensureState('vis.widgetPhone', 'string', 'html', '', false);
+
+    const visStateIds = ['vis.htmlTablet', 'vis.htmlPhone', 'vis.widgetTablet', 'vis.widgetPhone'];
+    let visStatesFilled = true;
+    for (const id of visStateIds) {
+      const s = await this.getStateAsync(id);
+      if (!s || typeof s.val !== 'string' || s.val.length < 50) {
+        visStatesFilled = false;
+        break;
+      }
+    }
 
     const now = Date.now();
     const signature = JSON.stringify(stableData);
 
-    if (signature === this.lastRenderSignature && now - this.lastRenderAt < 300000) {
+    if (!force && visStatesFilled && signature === this.lastRenderSignature && now - this.lastRenderAt < 300000) {
       return;
     }
 
@@ -1871,26 +1886,15 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const tabletWidget = this.buildTabletWidget(data);
     const phoneWidget = this.buildPhoneWidget(data);
 
-    await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
-    await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
-    await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
-    await this.ensureState('vis.widgetPhone', 'string', 'html', '', false);
-    if (tablet !== this.lastTabletHtml) {
-      await this.setStateIfChanged('vis.htmlTablet', tablet, true);
-      this.lastTabletHtml = tablet;
-    }
-    if (phone !== this.lastPhoneHtml) {
-      await this.setStateIfChanged('vis.htmlPhone', phone, true);
-      this.lastPhoneHtml = phone;
-    }
-    if (tabletWidget !== this.lastTabletWidget) {
-      await this.setStateIfChanged('vis.widgetTablet', tabletWidget, true);
-      this.lastTabletWidget = tabletWidget;
-    }
-    if (phoneWidget !== this.lastPhoneWidget) {
-      await this.setStateIfChanged('vis.widgetPhone', phoneWidget, true);
-      this.lastPhoneWidget = phoneWidget;
-    }
+    await this.setStateIfChanged('vis.htmlTablet', tablet, true);
+    await this.setStateIfChanged('vis.htmlPhone', phone, true);
+    await this.setStateIfChanged('vis.widgetTablet', tabletWidget, true);
+    await this.setStateIfChanged('vis.widgetPhone', phoneWidget, true);
+
+    this.lastTabletHtml = tablet;
+    this.lastPhoneHtml = phone;
+    this.lastTabletWidget = tabletWidget;
+    this.lastPhoneWidget = phoneWidget;
     await this.ensureState('status.debug.lastVisUpdate', 'string', 'text', '', false);
     await this.setStateIfChanged('status.debug.lastVisUpdate', data.updated, true);
     await this.ensureState('status.debug.lastDecision', 'string', 'text', '', false);
@@ -3130,7 +3134,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.updateComputedStates();
       await this.runHeartbeatChecks();
       await this.applyDependencyRules();
-      await this.renderVis();
+      await this.renderVis(true);
       await this.logStartupSummary();
       const pollMin = Math.max(1, Number(this.config.pollIntervalMin) || 1);
       if (this.phStopWatcher) clearInterval(this.phStopWatcher);
@@ -3160,7 +3164,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           }
         }
       }, pollMin * 60000);
-      this.debug(`VIS-HTML aktiv: poolsteuerung.0.vis.htmlTablet / htmlPhone, Poll=${pollMin}min`);
+      this.debug(`VIS-HTML aktiv: poolsteuerung.0.vis.htmlTablet / htmlPhone (Start-Render erzwungen), Poll=${pollMin}min`);
     } catch (e) {
       this.log.error(`Startfehler: ${e && e.stack ? e.stack : e}`);
       try { await this.setStateAsync('status.debug.lastStartupError', String(e && e.message ? e.message : e), true); } catch {}
