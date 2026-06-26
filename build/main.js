@@ -1126,7 +1126,7 @@ body{
     const batteryBar = `<div class="mini-bar"><div class="mini-fill battery-fill" style="width:${batteryPct}%"></div></div>`;
 
     return `<!DOCTYPE html>
-<html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"><meta name="x-build" content="${esc(data.adapterVersion || '')}"><meta name="x-build" content="${esc(data.adapterVersion || '')}">
 <style>
 :root{--bg:#08111f;--bg2:#10203a;--line:rgba(15,23,42,.08);--text:#0f172a;--muted:#66758a}
 *{box-sizing:border-box}
@@ -1157,7 +1157,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 </style>
 </head><body><div class="wrap">
   <div class="card hero">
-    <div class="header"><div class="title">Pool Manager <span class="ver">${esc(data.adapterVersion)}</span></div><div class="meta"><div class="mode-badge">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div></div>
+    <div class="header"><div class="title">Pool Manager <span class="ver">${esc(data.adapterVersion)}</span></div><div class="meta"><div class="mode-badge">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}<br><span style="opacity:.8">${esc(data.adapterVersion || '')}</span></div></div>
     <div class="temp-row"><div class="temp">${esc(data.poolTemp)}</div><div class="unit">°C</div></div>
     <div class="scale"><div class="track"><div class="target-mark"></div><div class="dot"></div></div><div class="target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="metrics">
@@ -1356,7 +1356,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   <div class="ps-card ps-hero">
     <div class="ps-header">
       <div><div class="ps-title">Pool Manager <span class="ps-ver">${esc(data.adapterVersion)}</span></div></div>
-      <div class="ps-sub"><button class="ps-mode js-standby-btn" data-current="${data.standbyControl ? '1' : '0'}">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</button><br>Aktualisiert<br>${esc(data.updated)}</div>
+      <div class="ps-sub"><button class="ps-mode js-standby-btn" data-current="${data.standbyControl ? '1' : '0'}">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</button><br>Aktualisiert<br>${esc(data.updated)}<br><span style="opacity:.8">${esc(data.adapterVersion || '')}</span></div>
     </div>
     <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
     <div class="ps-scale"><div class="ps-track"><div class="ps-target"></div><div class="ps-dot"></div></div><div class="ps-target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
@@ -1446,7 +1446,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const metricValue = (value, trend = '→', stateCls = '') => `<span class="ps-mmain ${stateCls}">${esc(value)}</span><span class="ps-trend ${trendClass(trend)} ${stateCls}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>`;
     const batteryPct = Math.max(0, Math.min(100, parseNum(data.battery)));
     const batteryBar = `<div class="ps-bbar"><div class="ps-bfill" style="width:${batteryPct}%"></div></div>`;
-    return `<!-- phone-render:${esc(data.updated)} -->
+    return `<!-- phone-render:${esc(data.adapterVersion)}|${esc(data.updated)} -->
 <style>
 .ps-wrap{width:100%;max-width:510px;height:1090px;max-height:1090px;overflow:hidden;margin:0 auto;display:grid;gap:4px;padding:4px;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,#10203a,#08111f);font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
 .ps-card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid rgba(15,23,42,.08);border-radius:15px;padding:6px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
@@ -1846,11 +1846,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || 30),
-      adapterVersion: 'v0.3.16hf47'
+      adapterVersion: 'v0.3.16hf48'
     };
 
     const now = Date.now();
-    const signature = JSON.stringify(stableData);
+    const signature = JSON.stringify({ ...stableData, __build: stableData.adapterVersion || 'unknown' });
 
     if (signature === this.lastRenderSignature && now - this.lastRenderAt < 300000) {
       return;
