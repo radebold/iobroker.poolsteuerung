@@ -73,7 +73,7 @@ class Poolsteuerung extends utils.Adapter {
 
   visTrace(step, detail = '') {
     const text = `[VIS] ${step}${detail ? ' | ' + detail : ''}`;
-    try { this.log.info(text); } catch {}
+    try { if (this.config.debugMode) this.log.debug(text); } catch {}
     try {
       this.setStateAsync('status.debug.lastVisTrace', text, true).catch(() => {});
     } catch {}
@@ -1629,7 +1629,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.16hf58</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.16hf59</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -1816,39 +1816,29 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     let heatDesired = heatpumpOnRaw;
     let allowHeatpumpWrite = true;
 
-    if (!heatEnabledMaster) {
+    if (standbyMode) {
+      heatDesired = false;
+      heatDecision = 'Standby aktiv';
+    } else if (!heatEnabledMaster) {
       allowHeatpumpWrite = false;
       if (!pumpOn && heatpumpOnRaw) {
         heatDesired = false;
         heatDecision = 'Sicherheits-AUS: Umwälzpumpe AUS';
         allowHeatpumpWrite = true;
-      } else if (standbyMode && heatpumpOnRaw) {
-        heatDesired = false;
-        heatDecision = 'Sicherheits-AUS: Standby aktiv';
-        allowHeatpumpWrite = true;
       } else {
         heatDesired = heatpumpOnRaw;
         heatDecision = heatpumpOnRaw ? 'Manuell EIN (Auto AUS)' : 'Steuerung deaktiviert · manuell AUS';
       }
-    } else if (!circulationHeartbeatOkDisplay && !pumpOn) {
+    } else if (!pumpOn) {
+      heatDesired = false;
+      heatDecision = 'Umwälzpumpe AUS';
+    } else if (!circulationHeartbeatOkDisplay) {
       heatDesired = false;
       heatDecision = 'Umwälzpumpe nicht erreichbar';
     } else {
-      const hyst = this.applyHeatpumpHysteresis(true, `PV OK (${feedIn}W >= ${threshold}W) · Temperatur regelt WP selbst`, poolTemp, targetTemp, feedIn, threshold);
+      const hyst = this.applyHeatpumpHysteresis(heatpumpOnRaw, '', poolTemp, targetTemp, feedIn, threshold);
       heatDesired = hyst.desiredOn;
       heatDecision = hyst.reason;
-    }
-
-    if (heatEnabledMaster && this.isControlTransitionActive() && heatLock.state !== null) {
-      heatDesired = heatLock.state;
-      heatDecision = `Schaltsperre aktiv / Anti-Pendeln`;
-    }
-
-    if (heatEnabledMaster && pumpOn && Number.isFinite(feedIn) && feedIn >= parseNum(this.config.heatpumpPvOffThresholdW || 800) && heatLock.state === true) {
-      heatDesired = true;
-      if (!this.isControlTransitionActive()) {
-        heatDecision = `PV halten / Anti-Pendeln (${feedIn}W >= ${parseNum(this.config.heatpumpPvOffThresholdW || 800)}W)`;
-      }
     }
 
     if (allowHeatpumpWrite && this.config.heatpumpPowerStateId && heatDesired !== heatpumpOnRaw) {
@@ -1983,7 +1973,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf58'
+      adapterVersion: 'v0.3.16hf59'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -2133,49 +2123,27 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     return this.heatpumpLock;
   }
 
-  applyHeatpumpHysteresis(desiredOn, reason, poolTemp, targetTemp, feedIn, threshold) {
-    const lock = this.getHeatpumpLockState();
+  applyHeatpumpHysteresis(currentOn, reason, poolTemp, targetTemp, feedIn, threshold) {
     const pvOnThreshold = parseNum(this.config.heatpumpPvOnThresholdW || parseNum(threshold) || 1000);
     const pvOffThreshold = parseNum(this.config.heatpumpPvOffThresholdW || 800);
-    const minSwitchSec = Math.max(300, parseNum(this.config.heatpumpMinSwitchSec || 600) || 600);
-
     const feedNum = parseNum(feedIn);
-    const currentState = lock.state;
-    const nowTs = Date.now();
 
-    let nextDesired = desiredOn;
-    let nextReason = reason;
-
-    if (Number.isFinite(feedNum)) {
-      if (currentState === true) {
-        if (feedNum < pvOffThreshold) {
-          nextDesired = false;
-          nextReason = `PV AUS-Hysterese (${feedNum}W < ${pvOffThreshold}W)`;
-        } else {
-          nextDesired = true;
-          nextReason = `PV halten / Anti-Pendeln (${feedNum}W >= ${pvOffThreshold}W)`;
-        }
-      } else if (feedNum >= pvOnThreshold) {
-        nextDesired = true;
-        nextReason = `PV EIN-Hysterese (${feedNum}W >= ${pvOnThreshold}W)`;
-      } else {
-        nextDesired = false;
-        nextReason = `PV zu gering (${feedNum}W < ${pvOnThreshold}W)`;
-      }
+    if (!Number.isFinite(feedNum)) {
+      return { desiredOn: false, reason: 'Netzeinspeisung ungültig' };
     }
 
-    if (!lock.ignoreStartup) {
-      if (currentState === true && nextDesired === false && lock.lastOnTs && (nowTs - lock.lastOnTs) < minSwitchSec * 1000) {
-        nextDesired = true;
-        nextReason = `Mindestlaufzeit aktiv (${Math.ceil((minSwitchSec * 1000 - (nowTs - lock.lastOnTs)) / 1000)}s Rest)`;
+    if (currentOn === true) {
+      if (feedNum < pvOffThreshold) {
+        return { desiredOn: false, reason: `PV AUS-Hysterese (${feedNum}W < ${pvOffThreshold}W)` };
       }
-      if (currentState === false && nextDesired === true && lock.lastOffTs && (nowTs - lock.lastOffTs) < minSwitchSec * 1000) {
-        nextDesired = false;
-        nextReason = `Mindestpause aktiv (${Math.ceil((minSwitchSec * 1000 - (nowTs - lock.lastOffTs)) / 1000)}s Rest)`;
-      }
+      return { desiredOn: true, reason: `PV halten (${feedNum}W >= ${pvOffThreshold}W)` };
     }
 
-    return { desiredOn: nextDesired, reason: nextReason };
+    if (feedNum >= pvOnThreshold) {
+      return { desiredOn: true, reason: `PV EIN-Hysterese (${feedNum}W >= ${pvOnThreshold}W)` };
+    }
+
+    return { desiredOn: false, reason: `PV zu gering (${feedNum}W < ${pvOnThreshold}W)` };
   }
 
   valuesEqual(a, b) {
@@ -2706,18 +2674,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     } else if (!circulationHeartbeatOk) {
       shouldHeat = false;
       heatReason = 'Umwälzpumpe nicht erreichbar';
-    } else if (feedIn === null || !Number.isFinite(feedIn)) {
-      shouldHeat = false;
-      heatReason = 'Netzeinspeisung ungültig';
-    } else if (poolTemp !== null && Number.isFinite(poolTemp) && Number.isFinite(targetTemp) && poolTemp >= targetTemp) {
-      shouldHeat = false;
-      heatReason = `Temperaturregelung durch WP (${poolTemp}°C >= ${targetTemp}°C)`;
-    } else if (feedIn < heatThreshold) {
-      shouldHeat = false;
-      heatReason = `PV zu gering (${feedIn}W < ${heatThreshold}W)`;
     } else {
-      shouldHeat = true;
-      heatReason = `PV OK (${feedIn}W >= ${heatThreshold}W)`;
+      const hyst = this.applyHeatpumpHysteresis(currentHeat, '', poolTemp, targetTemp, feedIn, heatThreshold);
+      shouldHeat = hyst.desiredOn;
+      heatReason = hyst.reason;
     }
 
     if (!this.config.simulateMode && heatpumpId && shouldHeat !== currentHeat) {
@@ -3230,7 +3190,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] hotfix58 Diagnose-Logging aktiv');
+      this.log.info('[VIS] hotfix59 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
