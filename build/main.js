@@ -967,7 +967,7 @@ body{
 .mini.info{background:linear-gradient(180deg,rgba(90,166,255,.09),rgba(255,255,255,.04))}
 .mini.highlight{background:linear-gradient(180deg,rgba(255,190,76,.11),rgba(255,255,255,.04))}
 .mini-label{font-size:12px;color:#c8d7eb;font-weight:800;margin-bottom:6px}
-.mini-value{font-size:13px;font-weight:900;line-height:1.1}
+.mini-value{font-size:11px;font-weight:500;line-height:1.15;white-space:pre-line}
 .manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:6px 10px;border-radius:14px;min-height:40px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}
 .manual-btn span{font-size:16px}
 .manual-btn small{font-size:10px;color:#dbeafe}
@@ -2009,7 +2009,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const heatpumpMode = this.formatHeatpumpMode(await this.getText(heatpumpAuxIds.modeId, '--'));
     const nextActions = this.getNextDashboardActions(new Date(), nextPhCheck);
     const nextActionsText = nextActions.length
-      ? nextActions.map(a => `${a.label}: ${a.time}`).join(' · ')
+      ? nextActions.map(a => `${a.label}: ${a.time}`).join('\n')
       : '--';
 
     this.visTrace('renderVisFull Entscheidungen berechnet', `pump=${pumpOn} chlor=${chlorOn} heat=${heatpumpOn}`);
@@ -2094,7 +2094,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
-      adapterVersion: 'v0.3.16hf67'
+      adapterVersion: 'v0.3.16hf68'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -3374,7 +3374,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] hotfix67 Diagnose-Logging aktiv');
+      this.log.info('[VIS] hotfix68 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
