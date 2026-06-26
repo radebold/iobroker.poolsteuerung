@@ -163,15 +163,24 @@ class Poolsteuerung extends utils.Adapter {
     return d;
   }
 
-  getPumpWindows() {
+  getPumpWindows(now = new Date()) {
+    const tableRules = Array.isArray(this.config.pumpSchedules) ? this.config.pumpSchedules : [];
+    const tableWindows = tableRules
+      .filter(rule => !!rule && rule.enabled !== false)
+      .filter(rule => this.matchesPumpScheduleDay(rule.days, now))
+      .map(rule => ({ start: rule.start, end: rule.end, days: rule.days || 'daily' }))
+      .filter(w => this.parseHHMM(w.start) !== null && this.parseHHMM(w.end) !== null && this.parseHHMM(w.start) !== this.parseHHMM(w.end) && !(this.parseHHMM(w.start) === 0 && this.parseHHMM(w.end) === 0));
+
+    if (tableWindows.length) return tableWindows;
+
     return [
-      { start: this.config.pumpWindow1Start, end: this.config.pumpWindow1End },
-      { start: this.config.pumpWindow2Start, end: this.config.pumpWindow2End }
+      { start: this.config.pumpWindow1Start, end: this.config.pumpWindow1End, days: 'legacy' },
+      { start: this.config.pumpWindow2Start, end: this.config.pumpWindow2End, days: 'legacy' }
     ].filter(w => this.parseHHMM(w.start) !== null && this.parseHHMM(w.end) !== null && this.parseHHMM(w.start) !== this.parseHHMM(w.end) && !(this.parseHHMM(w.start) === 0 && this.parseHHMM(w.end) === 0));
   }
 
   getNextPumpAction(now = new Date()) {
-    const windows = this.getPumpWindows();
+    const windows = this.getPumpWindows(now);
     if (!windows.length) return null;
     const candidates = [];
     for (const w of windows) {
@@ -1627,7 +1636,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.16hf60</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.16hf61</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -1983,7 +1992,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf60'
+      adapterVersion: 'v0.3.16hf61'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -2397,8 +2406,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   }
 
   isPumpScheduleActive(now = new Date()) {
-    return this.isWindowActive(this.config.pumpWindow1Start, this.config.pumpWindow1End, now) ||
-           this.isWindowActive(this.config.pumpWindow2Start, this.config.pumpWindow2End, now);
+    // Wichtig: Die neue UI schreibt in pumpSchedules (Tabelle).
+    // Legacy-Felder pumpWindow1/2 werden nur noch als Fallback verwendet.
+    return this.isWithinCirculationSchedule(now);
   }
 
   isPhCheckDue(now = new Date()) {
@@ -2539,6 +2549,13 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const heatEnabledMaster = !standbyMode && await this.getControlBool('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
     const chlorEnabledMaster = !standbyMode && await this.getControlBool('control.auto.chlor', this.config.enableChlorControl !== false);
     const pumpTarget = standbyMode ? this.isStandbyPumpActive(now) : (circulationEnabled ? this.isPumpScheduleActive(now) : false);
+    if (this.config.debugMode) {
+      try {
+        const label = standbyMode ? 'Standby' : this.getCirculationScheduleLabel(now);
+        const windows = this.getCirculationWindowsForDate(now).map(([a,b]) => `${a}-${b}`).join(', ');
+        this.log.info(`[PUMPE] Zeitplanprüfung | aktiv=${pumpTarget ? 'ja' : 'nein'} | auto=${circulationEnabled ? 'ja' : 'nein'} | plan=${label} | fenster=${windows || '-'}`);
+      } catch {}
+    }
     const pumpState = await this.getStateSnapshot(pumpId);
     const pumpCurrent = !!(pumpState && pumpState.val);
     this.updateCirculationPumpRuntime(pumpCurrent, pumpState && (pumpState.lc || pumpState.ts));
@@ -3200,7 +3217,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] hotfix60 Diagnose-Logging aktiv');
+      this.log.info('[VIS] hotfix61 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);

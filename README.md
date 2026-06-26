@@ -1,8 +1,8 @@
 # ioBroker Poolsteuerung
 
-Version 0.3.16-hotfix60
+Version 0.3.16-hotfix61
 
-## 0.3.16-hotfix60
+## 0.3.16-hotfix61
 - Tablet-VIS aufgeräumt: Poolvolumen, Pumpenleistung und ml/0,1/10m³ aus Zusatzwerten entfernt.
 - ORP-Schaltgrenzen direkt am ORP-Wert angezeigt.
 - pH-Korrektur zum Sollwert als ml und Sekunden eingeblendet, nur wenn pH über Soll liegt.
