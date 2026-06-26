@@ -1,11 +1,14 @@
 # ioBroker Poolsteuerung
 
-Version 0.3.16-hotfix58
+Version 0.3.16-hotfix60
 
-Fix: VIS-Rendering beim Start wird erzwungen. History-Trends haben Timeout, damit das Rendern nicht hängen bleibt. Zusätzlich Render-Lock gegen parallele Renderläufe.
+## 0.3.16-hotfix60
+- Tablet-VIS aufgeräumt: Poolvolumen, Pumpenleistung und ml/0,1/10m³ aus Zusatzwerten entfernt.
+- ORP-Schaltgrenzen direkt am ORP-Wert angezeigt.
+- pH-Korrektur zum Sollwert als ml und Sekunden eingeblendet, nur wenn pH über Soll liegt.
+- pH-Zielbereich ergänzt: optimal 7,2–7,4; sehr gut/unkritisch 7,0–7,4.
+- Render-Fix aus hotfix58/59 bleibt enthalten.
 
-
-## 0.3.16-hotfix59
 - Wärmepumpensteuerung vereinfacht: EIN nur bei laufender Umwälzpumpe und Einspeisung >= WP-EIN-Schwelle.
 - AUS bei gestoppter Umwälzpumpe, Standby oder Einspeisung < WP-AUS-Hysterese.
 - Temperaturprüfung und Anti-Pendel-Mindestzeiten aus der WP-Freigabelogik entfernt.
