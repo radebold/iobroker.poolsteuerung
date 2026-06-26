@@ -1846,18 +1846,20 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || 30),
-      adapterVersion: 'v0.3.16hf48'
+      adapterVersion: 'v0.3.16hf49'
     };
 
     const now = Date.now();
     const signature = JSON.stringify({ ...stableData, __build: stableData.adapterVersion || 'unknown' });
+    const buildChanged = this.lastRenderedBuild !== stableData.adapterVersion;
 
-    if (signature === this.lastRenderSignature && now - this.lastRenderAt < 300000) {
+    if (!buildChanged && signature === this.lastRenderSignature && now - this.lastRenderAt < 300000) {
       return;
     }
 
     this.lastRenderSignature = signature;
     this.lastRenderAt = now;
+    this.lastRenderedBuild = stableData.adapterVersion;
 
     const renderStamp = new Date();
     const updatedText = `${renderStamp.toLocaleDateString('de-DE')}, ${String(renderStamp.getHours()).padStart(2,'0')}:${String(renderStamp.getMinutes()).padStart(2,'0')}`;
@@ -1875,20 +1877,20 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
     await this.ensureState('vis.widgetPhone', 'string', 'html', '', false);
-    if (tablet !== this.lastTabletHtml) {
-      await this.setStateIfChanged('vis.htmlTablet', tablet, true);
+    if (buildChanged || tablet !== this.lastTabletHtml) {
+      await this.setStateAsync('vis.htmlTablet', tablet, true);
       this.lastTabletHtml = tablet;
     }
-    if (phone !== this.lastPhoneHtml) {
-      await this.setStateIfChanged('vis.htmlPhone', phone, true);
+    if (buildChanged || phone !== this.lastPhoneHtml) {
+      await this.setStateAsync('vis.htmlPhone', phone, true);
       this.lastPhoneHtml = phone;
     }
-    if (tabletWidget !== this.lastTabletWidget) {
-      await this.setStateIfChanged('vis.widgetTablet', tabletWidget, true);
+    if (buildChanged || tabletWidget !== this.lastTabletWidget) {
+      await this.setStateAsync('vis.widgetTablet', tabletWidget, true);
       this.lastTabletWidget = tabletWidget;
     }
-    if (phoneWidget !== this.lastPhoneWidget) {
-      await this.setStateIfChanged('vis.widgetPhone', phoneWidget, true);
+    if (buildChanged || phoneWidget !== this.lastPhoneWidget) {
+      await this.setStateAsync('vis.widgetPhone', phoneWidget, true);
       this.lastPhoneWidget = phoneWidget;
     }
     await this.ensureState('status.debug.lastVisUpdate', 'string', 'text', '', false);
@@ -3107,6 +3109,12 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       this.resetHeatpumpLocks('Adapterstart');
       await this.forceDependentDevicesOff('Adapterstart Recovery');
       await this.setStateAsync('info.connection', true, true);
+      this.lastTabletHtml = '';
+      this.lastPhoneHtml = '';
+      this.lastTabletWidget = '';
+      this.lastPhoneWidget = '';
+      this.lastRenderSignature = '';
+      this.lastRenderAt = 0;
       await this.subscribeConfiguredStates();
       try { this.subscribeStates('control.*'); } catch {}
       try { this.subscribeStates('control.device.*'); } catch {}
