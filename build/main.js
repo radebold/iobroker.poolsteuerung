@@ -1845,8 +1845,18 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncCls: heatpumpSync.cls,
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
+<<<<<<< HEAD
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
       adapterVersion: 'v0.3.16hf45'
+=======
+<<<<<<< HEAD
+      manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
+      adapterVersion: 'v0.3.16hf46'
+=======
+      manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || 30),
+      adapterVersion: 'v0.3.16hf52'
+>>>>>>> 132718c60ae5bb3e26f181e53254bede8d5ec8fd
+>>>>>>> c7cee74ab9597ab6b03329759cb3147af7b12e8c
     };
 
     const now = Date.now();
