@@ -612,6 +612,20 @@
           ],
           "help": "fest = feste Laufzeit. berechnet (einfach) = Sekundenfaktor. berechnet (ml-basiert) = ml-Bedarf + Fördermenge."
         },
+        "phManualHeader": {
+          "type": "header",
+          "text": "Manuelle Dosierung",
+          "size": 2
+        },
+        "phManualDoseSec": {
+          "type": "number",
+          "label": "Standarddauer PH Manuell (Sekunden)",
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
+          "help": "Wird als Startwert für die manuelle pH-Dosierung in der VIS verwendet. Wenn leer/0, werden 30 Sekunden verwendet. Änderungen in der VIS bleiben im State control.ph.manualDoseSec erhalten."
+        },
         "phFixedHeader": {
           "type": "header",
           "text": "Feste Dosierung",

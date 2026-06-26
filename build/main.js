@@ -9,6 +9,13 @@ function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function getManualPhDoseDefaultSec(config) {
+  const raw = config && config.phManualDoseSec !== undefined && config.phManualDoseSec !== null && String(config.phManualDoseSec).trim() !== ''
+    ? config.phManualDoseSec
+    : 30;
+  return Math.max(1, parseNum(raw) || 30);
+}
+
 function inWindow(now, startHHMM, endHHMM) {
   const parseHHMM = (v) => {
     const m = String(v || '').match(/^(\d{1,2}):(\d{2})$/);
@@ -2076,9 +2083,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       phPumpSyncLabel: phPumpSync.label,
       heatpumpSyncCls: heatpumpSync.cls,
       heatpumpSyncLabel: heatpumpSync.label,
-      phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
-      manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf65'
+      phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
+      manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
+      adapterVersion: 'v0.3.16hf66'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -3358,7 +3365,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] hotfix61 Diagnose-Logging aktiv');
+      this.log.info('[VIS] hotfix66 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
@@ -3370,10 +3377,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.ensureControlState('control.auto.chlor', this.config.enableChlorControl !== false);
       await this.ensureControlState('control.auto.ph', this.config.enablePhControl !== false);
       await this.ensureControlState('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
-      await this.ensureState('control.ph.manualDoseSec', 'number', 'value.interval', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true);
+      await this.ensureState('control.ph.manualDoseSec', 'number', 'value.interval', getManualPhDoseDefaultSec(this.config), true);
       const manualDoseSecStartupState = await this.getStateAsync('control.ph.manualDoseSec');
       if (!manualDoseSecStartupState || manualDoseSecStartupState.val === null || manualDoseSecStartupState.val === undefined || manualDoseSecStartupState.val === '') {
-        await this.setStateIfChanged('control.ph.manualDoseSec', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true);
+        await this.setStateIfChanged('control.ph.manualDoseSec', getManualPhDoseDefaultSec(this.config), true);
       }
       await this.ensureState('control.ph.manualStart', 'boolean', 'button', false, true);
       await this.ensureState('control.ph.manualTrigger', 'number', 'value.time', 0, true);

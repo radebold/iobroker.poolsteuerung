@@ -1,5 +1,11 @@
 # ioBroker Poolsteuerung
 
+## 0.3.16-hotfix66
+- Neues Admin-UI-Feld im pH-Tab: Standarddauer PH Manuell (Sekunden).
+- Wenn leer/0, wird für manuelle pH-Dosierung auf 30 Sekunden zurückgefallen.
+- Der VIS-State control.ph.manualDoseSec wird beim Start nur initial gesetzt, wenn er leer ist.
+
+
 Version 0.3.16-hotfix61
 
 ## 0.3.16-hotfix61
