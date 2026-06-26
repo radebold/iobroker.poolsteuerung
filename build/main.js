@@ -1024,7 +1024,7 @@ body{
         ${kv('Chlor Freigabe', data.chlorDecision, 'reason')}
         ${kv('Zeitplan', data.pumpDecision, 'reason')}
         ${kv('pH Zeiten', data.phTimes)}
-        ${kv('Letzte Dosierung', `${data.phLastDoseDurationSec} s`)}
+        ${kv('Letzte Dosierung', data.phLastDoseInfo)}
       </div>
     </div>
   </div>
@@ -1045,8 +1045,8 @@ body{
         ${mini('pH zum Soll', data.phCorrectionText, data.phCorrectionNeeded ? 'highlight' : 'info')}
         ${mini('pH Zielbereich', data.phTargetRangeText, 'info')}
         ${mini('pH Tag', `${data.phDailyCount}`, 'info')}
-        ${mini('Letzte pH-Dosis', `${data.phLastDoseDurationSec} s / ${data.phLastDoseMl} ml`, 'info')}
-        ${mini('Zeitplan', data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV', 'highlight')}
+        ${mini('Letzte pH-Dosis', data.phLastDoseInfo, 'info')}
+        ${mini('Nächste Schaltungen', data.nextActionsText, 'highlight')}
         ${mini('PV Schwelle', `${data.threshold} W`, 'info')}
         ${mini('WP Lüfter', String(data.heatpumpFanPercent ?? '--'), 'info')}
         ${mini('WP Modus', data.heatpumpMode || '--', 'highlight')}
@@ -1426,8 +1426,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       <div class="ps-row"><div class="ps-k">pH zum Soll</div><div class="ps-v">${esc(data.phCorrectionText)}</div></div>
       <div class="ps-row"><div class="ps-k">pH Zielbereich</div><div class="ps-v">${esc(data.phTargetRangeText)}</div></div>
       <div class="ps-row"><div class="ps-k">pH Tag</div><div class="ps-v">${esc(data.phDailyCount)}</div></div>
-      <div class="ps-row"><div class="ps-k">Letzte pH-Dosis</div><div class="ps-v">${esc(data.phLastDoseDurationSec)} s / ${esc(data.phLastDoseMl)} ml</div></div>
-      <div class="ps-row"><div class="ps-k">Zeitplan</div><div class="ps-v">${data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV'}</div></div>
+      <div class="ps-row"><div class="ps-k">Letzte pH-Dosis</div><div class="ps-v">${esc(data.phLastDoseInfo)}</div></div>
+      <div class="ps-row"><div class="ps-k">Nächste Schaltungen</div><div class="ps-v">${esc(data.nextActionsText)}</div></div>
       <div class="ps-row"><div class="ps-k">PV Schwelle</div><div class="ps-v">${esc(data.threshold)} W</div></div>
       <div class="ps-row"><div class="ps-k">WP Lüfter</div><div class="ps-v">${esc(String(data.heatpumpFanPercent ?? '--'))}</div></div>
       <div class="ps-row"><div class="ps-k">WP Modus</div><div class="ps-v">${esc(data.heatpumpMode || '--')}</div></div>
@@ -1520,7 +1520,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   </div></div>
   <div class="ps-card"><div class="ps-section">pH Info</div><div class="ps-quickGrid ps-phGrid">
     ${quick('Berechnet', `${data.phCalculatedDoseSec} s / ${data.phCalculatedDoseMl} ml`)}
-    ${quick('Letzte Dosis', `${data.phLastDoseDurationSec} s / ${data.phLastDoseMl} ml`)}
+    ${quick('Letzte Dosis', data.phLastDoseInfo)}
     ${quick('Heute dosiert', `${data.phDailyCount}x`)}
     ${quick('Nächste Prüfung', data.phNextCheck)}
     ${quick('Granulat manuell', data.manualGranulateText)}
@@ -1731,6 +1731,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const phFlowMlMin = this.fmt(phFlowMlMinNum, 0, '--');
     const phCalculatedDoseMl = Number.isFinite(phFlowMlMinNum) ? this.fmt((parseNum(phCalculatedDoseSec) || 0) * phFlowMlMinNum / 60, 0, '0') : '--';
     const phLastDoseMl = Number.isFinite(phFlowMlMinNum) ? this.fmt((parseNum(phLastDoseDurationSec) || 0) * phFlowMlMinNum / 60, 0, '0') : '--';
+    const phLastDoseInfo = phLastDoseTsRaw ? `${phLastDoseDurationSec} s / ${phLastDoseMl} ml · ${phLastDoseAt}` : 'noch keine';
     const phCurrentNum = parseNum(ph);
     const phTargetNum = parseNum(this.config.phSetpoint);
     const phCorrectionNeeded = Number.isFinite(phCurrentNum) && Number.isFinite(phTargetNum) && phCurrentNum > phTargetNum;
@@ -1916,6 +1917,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const heatpumpAuxIds = this.getDerivedHeatpumpAuxStateIds();
     const heatpumpFanPercent = await this.getText(heatpumpAuxIds.speedId, '--');
     const heatpumpMode = this.formatHeatpumpMode(await this.getText(heatpumpAuxIds.modeId, '--'));
+    const nextActions = this.getNextDashboardActions(new Date(), nextPhCheck);
+    const nextActionsText = nextActions.length
+      ? nextActions.map(a => `${a.label}: ${a.time}`).join(' · ')
+      : '--';
 
     this.visTrace('renderVisFull Entscheidungen berechnet', `pump=${pumpOn} chlor=${chlorOn} heat=${heatpumpOn}`);
 
@@ -1941,6 +1946,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       phCalculatedDoseMl,
       phLastDoseAt,
       phLastDoseMl,
+      phLastDoseInfo,
+      nextActionsText,
       manualGranulateG,
       manualGranulateText,
       phInfoText,
@@ -1997,7 +2004,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf62'
+      adapterVersion: 'v0.3.16hf63'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -2381,6 +2388,61 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     }
 
     return 'Standard';
+  }
+
+  formatActionTime(d) {
+    if (!(d instanceof Date) || Number.isNaN(d.getTime())) return '--';
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} Uhr`;
+  }
+
+  getCirculationScheduleRulesForDate(dayDate = new Date()) {
+    const tableRules = Array.isArray(this.config.pumpSchedules) ? this.config.pumpSchedules : [];
+    const fromTable = tableRules
+      .filter(rule => !!rule && rule.enabled !== false)
+      .filter(rule => this.matchesPumpScheduleDay(rule.days, dayDate))
+      .map(rule => ({ start: rule.start, end: rule.end }))
+      .filter(rule => String(rule.start || '').trim() && String(rule.end || '').trim());
+
+    if (fromTable.length) return fromTable;
+
+    return [
+      { start: this.config.pumpWindow1Start, end: this.config.pumpWindow1End },
+      { start: this.config.pumpWindow2Start, end: this.config.pumpWindow2End },
+    ].filter(rule => String(rule.start || '').trim() && String(rule.end || '').trim());
+  }
+
+  getNextCirculationScheduleActions(now = new Date(), limit = 4) {
+    const actions = [];
+    for (let offset = 0; offset < 8; offset++) {
+      const day = new Date(now);
+      day.setDate(now.getDate() + offset);
+      day.setHours(0, 0, 0, 0);
+      const rules = this.getCirculationScheduleRulesForDate(day);
+      for (const rule of rules) {
+        const startMin = this.parseHHMM(rule.start);
+        const endMin = this.parseHHMM(rule.end);
+        if (startMin === null || endMin === null || startMin === endMin) continue;
+        const start = new Date(day);
+        start.setMinutes(startMin, 0, 0);
+        const end = new Date(day);
+        end.setMinutes(endMin, 0, 0);
+        if (endMin < startMin) end.setDate(end.getDate() + 1);
+        if (start > now) actions.push({ when: start, label: 'Umwälzpumpe ein' });
+        if (end > now) actions.push({ when: end, label: 'Umwälzpumpe aus' });
+      }
+    }
+    actions.sort((a, b) => a.when - b.when);
+    return actions.slice(0, limit);
+  }
+
+  getNextDashboardActions(now = new Date(), nextPhCheck = null) {
+    const actions = [];
+    if (nextPhCheck instanceof Date && !Number.isNaN(nextPhCheck.getTime()) && nextPhCheck > now) {
+      actions.push({ when: nextPhCheck, label: 'pH Dose' });
+    }
+    actions.push(...this.getNextCirculationScheduleActions(now, 4));
+    actions.sort((a, b) => a.when - b.when);
+    return actions.slice(0, 2).map(a => ({ ...a, time: this.formatActionTime(a.when) }));
   }
 
   isStandbyPumpActive(now = new Date()) {
