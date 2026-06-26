@@ -1,5 +1,13 @@
 # ioBroker Poolsteuerung
 
+## 0.3.16-hotfix69
+
+- Tablet-VIS: Auto-Status für Pumpe, Chlor, pH und Wärmepumpe ist jetzt als klickbarer Button umgesetzt.
+- Klick schaltet die jeweiligen States `control.auto.circulation`, `control.auto.chlor`, `control.auto.ph`, `control.auto.heatpump`.
+- Bestehende Fixes aus hotfix68 bleiben enthalten.
+
+# ioBroker Poolsteuerung
+
 ## 0.3.16-hotfix68
 - Neues Admin-UI-Feld im pH-Tab: Standarddauer PH Manuell (Sekunden).
 - Wenn leer/0, wird für manuelle pH-Dosierung auf 30 Sekunden zurückgefallen.

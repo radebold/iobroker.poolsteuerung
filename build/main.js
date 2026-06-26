@@ -846,6 +846,12 @@ class Poolsteuerung extends utils.Adapter {
         <div class="kv-value">${esc(value)}</div>
       </div>`;
 
+    const autoBtn = (label, key, active) => `
+      <button type="button" class="kv auto auto-toggle js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}">
+        <span class="kv-label">${esc(label)}</span>
+        <span class="auto-toggle-state">${active ? 'AKTIV' : 'AUS'}</span>
+      </button>`;
+
     const status = (name, hint, on, syncCls = 'warn', syncLabel = '?') => `
       <div class="status-row ${on ? 'status-on' : 'status-off'}">
         <div class="status-left">
@@ -948,6 +954,13 @@ body{
 .kv{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:6px}
 .kv.energy{background:linear-gradient(90deg,rgba(68,171,255,.10),rgba(255,255,255,.04))}
 .kv.auto{background:linear-gradient(90deg,rgba(109,128,255,.14),rgba(255,255,255,.04))}
+.auto-toggle{appearance:none;border:1px solid rgba(255,255,255,.07);cursor:pointer;width:100%;font-family:inherit;color:inherit;text-align:left}
+.auto-toggle:active{transform:translateY(1px)}
+.auto-toggle.is-on{background:linear-gradient(90deg,rgba(74,205,104,.16),rgba(255,255,255,.04))}
+.auto-toggle.is-off{background:linear-gradient(90deg,rgba(255,108,95,.14),rgba(255,255,255,.04))}
+.auto-toggle-state{font-size:12px;font-weight:900;line-height:1.15;text-align:right;border-radius:999px;padding:4px 9px;min-width:58px}
+.auto-toggle.is-on .auto-toggle-state{color:#9ff5b3;background:rgba(64,196,99,.16)}
+.auto-toggle.is-off .auto-toggle-state{color:#ffc0b7;background:rgba(255,107,87,.14)}
 .kv.reason{background:linear-gradient(90deg,rgba(94,210,158,.11),rgba(255,255,255,.04))}
 .kv-label{font-size:12px;color:#c6d7ea;font-weight:800;max-width:42%}
 .kv-value{font-size:13px;font-weight:900;line-height:1.15;text-align:right;word-break:break-word;max-width:58%}
@@ -1035,10 +1048,10 @@ body{
     <div class="card">
       <div class="section energy">Energie & Steuerung</div>
       <div class="stack">
-        ${kv('Pumpe Auto', data.autoCirculation, 'auto')}
-        ${kv('Chlor Auto', data.autoChlor, 'auto')}
-        ${kv('pH Auto', data.autoPh, 'auto')}
-        ${kv('WP Auto', data.autoHeatpump, 'auto')}
+        ${autoBtn('Pumpe Auto', 'circulation', !!data.autoCirculationControl)}
+        ${autoBtn('Chlor Auto', 'chlor', !!data.autoChlorControl)}
+        ${autoBtn('pH Auto', 'ph', !!data.autoPhControl)}
+        ${autoBtn('WP Auto', 'heatpump', !!data.autoHeatpumpControl)}
         ${kv('PV-Leistung', `${data.pv} W`, 'energy')}
         ${kv('Netzeinspeisung', `${data.feedIn} W`, 'energy')}
         ${kv('Netzbezug', `${data.gridSupply} W`, 'energy')}
@@ -2094,7 +2107,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
-      adapterVersion: 'v0.3.16hf68'
+      adapterVersion: 'v0.3.16hf69'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -3374,7 +3387,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] hotfix68 Diagnose-Logging aktiv');
+      this.log.info('[VIS] hotfix69 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
