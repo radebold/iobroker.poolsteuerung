@@ -101,13 +101,8 @@ class Poolsteuerung extends utils.Adapter {
         await this.syncControlStates();
         await this.syncDeviceControlStates();
       }
-      this.lastTabletHtml = '';
-      this.lastPhoneHtml = '';
-      this.lastTabletWidget = '';
-      this.lastPhoneWidget = '';
       this.lastRenderSignature = '';
       this.lastRenderAt = 0;
-      this.lastRenderedBuild = '';
       await this.renderVis();
     } catch (e) {
       if (!this.isDbClosedError(e)) this.log.warn('VIS Sofort-Render Fehler: ' + (e && e.stack ? e.stack : e));
@@ -1131,7 +1126,7 @@ body{
     const batteryBar = `<div class="mini-bar"><div class="mini-fill battery-fill" style="width:${batteryPct}%"></div></div>`;
 
     return `<!DOCTYPE html>
-<html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"><meta name="x-build" content="${esc(data.adapterVersion || '')}"><meta name="x-build" content="${esc(data.adapterVersion || '')}">
+<html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <style>
 :root{--bg:#08111f;--bg2:#10203a;--line:rgba(15,23,42,.08);--text:#0f172a;--muted:#66758a}
 *{box-sizing:border-box}
@@ -1162,7 +1157,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 </style>
 </head><body><div class="wrap">
   <div class="card hero">
-    <div class="header"><div class="title">Pool Manager <span class="ver">${esc(data.adapterVersion)}</span></div><div class="meta"><div class="mode-badge">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}<br><span style="opacity:.8">${esc(data.adapterVersion || '')}</span></div></div>
+    <div class="header"><div class="title">Pool Manager <span class="ver">${esc(data.adapterVersion)}</span></div><div class="meta"><div class="mode-badge">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div></div>
     <div class="temp-row"><div class="temp">${esc(data.poolTemp)}</div><div class="unit">°C</div></div>
     <div class="scale"><div class="track"><div class="target-mark"></div><div class="dot"></div></div><div class="target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="metrics">
@@ -1361,7 +1356,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   <div class="ps-card ps-hero">
     <div class="ps-header">
       <div><div class="ps-title">Pool Manager <span class="ps-ver">${esc(data.adapterVersion)}</span></div></div>
-      <div class="ps-sub"><button class="ps-mode js-standby-btn" data-current="${data.standbyControl ? '1' : '0'}">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</button><br>Aktualisiert<br>${esc(data.updated)}<br><span style="opacity:.8">${esc(data.adapterVersion || '')}</span></div>
+      <div class="ps-sub"><button class="ps-mode js-standby-btn" data-current="${data.standbyControl ? '1' : '0'}">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</button><br>Aktualisiert<br>${esc(data.updated)}</div>
     </div>
     <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
     <div class="ps-scale"><div class="ps-track"><div class="ps-target"></div><div class="ps-dot"></div></div><div class="ps-target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
@@ -1451,7 +1446,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const metricValue = (value, trend = '→', stateCls = '') => `<span class="ps-mmain ${stateCls}">${esc(value)}</span><span class="ps-trend ${trendClass(trend)} ${stateCls}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>`;
     const batteryPct = Math.max(0, Math.min(100, parseNum(data.battery)));
     const batteryBar = `<div class="ps-bbar"><div class="ps-bfill" style="width:${batteryPct}%"></div></div>`;
-    return `<!-- phone-render:${esc(data.adapterVersion)}|${esc(data.updated)} -->
+    return `<!-- phone-render:${esc(data.updated)} -->
 <style>
 .ps-wrap{width:100%;max-width:510px;height:1090px;max-height:1090px;overflow:hidden;margin:0 auto;display:grid;gap:4px;padding:4px;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,#10203a,#08111f);font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
 .ps-card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid rgba(15,23,42,.08);border-radius:15px;padding:6px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
@@ -1596,6 +1591,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const phDailyCount = await this.getText('poolsteuerung.0.status.phDose.dailyCount', '0');
     const phLastDoseDurationSec = await this.getText('poolsteuerung.0.status.phDose.lastDoseDurationSec', '0');
     const phCalculatedDoseSec = await this.getText('poolsteuerung.0.status.phDose.calculatedDoseSec', '0');
+    try { await this.setStateIfChanged('control.ph.manualDoseSec', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true); } catch {}
     const phLastDoseTsRaw = await this.getNumber('poolsteuerung.0.status.phDose.lastDoseTs', 0);
     const phLastDoseAt = phLastDoseTsRaw ? new Date(phLastDoseTsRaw).toLocaleString('de-DE') : '-';
     const phLastStartInfo = await this.getText('poolsteuerung.0.status.debug.lastPhStartInfo', '');
@@ -1795,6 +1791,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       phDailyCount,
       phLastDoseDurationSec,
       phCalculatedDoseSec,
+      manualDoseButtonSec: Math.max(1, parseNum(this.config.phDoseDurationSec || 30)),
       phCalculatedDoseMl,
       phLastDoseAt,
       phLastDoseMl,
@@ -1850,22 +1847,19 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncCls: heatpumpSync.cls,
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
-      manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || 30),
-      adapterVersion: 'v0.3.16hf50'
+      manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
+      adapterVersion: 'v0.3.16hf51'
     };
 
     const now = Date.now();
-    const signature = JSON.stringify({ ...stableData, __build: stableData.adapterVersion || 'unknown' });
-    const buildChanged = this.lastRenderedBuild !== stableData.adapterVersion;
+    const signature = JSON.stringify(stableData);
 
-    // Hotfix hf50: VIS immer neu rendern, um hängende Altstände sicher zu überschreiben
-    if (false && !buildChanged && signature === this.lastRenderSignature && now - this.lastRenderAt < 300000) {
+    if (signature === this.lastRenderSignature && now - this.lastRenderAt < 300000) {
       return;
     }
 
     this.lastRenderSignature = signature;
     this.lastRenderAt = now;
-    this.lastRenderedBuild = stableData.adapterVersion;
 
     const renderStamp = new Date();
     const updatedText = `${renderStamp.toLocaleDateString('de-DE')}, ${String(renderStamp.getHours()).padStart(2,'0')}:${String(renderStamp.getMinutes()).padStart(2,'0')}`;
@@ -1883,20 +1877,20 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
     await this.ensureState('vis.widgetPhone', 'string', 'html', '', false);
-    if (buildChanged || tablet !== this.lastTabletHtml) {
-      await this.setStateAsync('vis.htmlTablet', tablet, true);
+    if (tablet !== this.lastTabletHtml) {
+      await this.setStateIfChanged('vis.htmlTablet', tablet, true);
       this.lastTabletHtml = tablet;
     }
-    if (buildChanged || phone !== this.lastPhoneHtml) {
-      await this.setStateAsync('vis.htmlPhone', phone, true);
+    if (phone !== this.lastPhoneHtml) {
+      await this.setStateIfChanged('vis.htmlPhone', phone, true);
       this.lastPhoneHtml = phone;
     }
-    if (buildChanged || tabletWidget !== this.lastTabletWidget) {
-      await this.setStateAsync('vis.widgetTablet', tabletWidget, true);
+    if (tabletWidget !== this.lastTabletWidget) {
+      await this.setStateIfChanged('vis.widgetTablet', tabletWidget, true);
       this.lastTabletWidget = tabletWidget;
     }
-    if (buildChanged || phoneWidget !== this.lastPhoneWidget) {
-      await this.setStateAsync('vis.widgetPhone', phoneWidget, true);
+    if (phoneWidget !== this.lastPhoneWidget) {
+      await this.setStateIfChanged('vis.widgetPhone', phoneWidget, true);
       this.lastPhoneWidget = phoneWidget;
     }
     await this.ensureState('status.debug.lastVisUpdate', 'string', 'text', '', false);
@@ -1940,13 +1934,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         }
         await this.syncControlStates();
         await this.syncDeviceControlStates();
-        this.lastTabletHtml = '';
-        this.lastPhoneHtml = '';
-        this.lastTabletWidget = '';
-        this.lastPhoneWidget = '';
         this.lastRenderSignature = '';
         this.lastRenderAt = 0;
-        this.lastRenderedBuild = '';
         await this.renderVis();
       } catch (e) {
         if (!this.isDbClosedError(e)) this.log.warn('VIS Delayed Refresh Fehler: ' + (e && e.stack ? e.stack : e));
