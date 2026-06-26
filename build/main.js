@@ -1848,7 +1848,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf51'
+      adapterVersion: 'v0.3.16hf46'
     };
 
     const now = Date.now();
@@ -3095,9 +3095,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.ensureControlState('control.auto.ph', this.config.enablePhControl !== false);
       await this.ensureControlState('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
       await this.ensureState('control.ph.manualDoseSec', 'number', 'value.interval', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true);
+      await this.setStateIfChanged('control.ph.manualDoseSec', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true);
       await this.ensureState('control.ph.manualStart', 'boolean', 'button', false, true);
       await this.ensureState('control.ph.manualTrigger', 'number', 'value.time', 0, true);
       await this.ensureState('control.ph.manualDoseSec', 'number', 'value.interval', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true);
+      await this.setStateIfChanged('control.ph.manualDoseSec', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true);
       await this.ensureState('control.device.circulation', 'boolean', 'switch', false, true);
       await this.ensureState('control.device.chlorinator', 'boolean', 'switch', false, true);
       await this.ensureState('control.device.phPump', 'boolean', 'switch', false, true);
@@ -3109,12 +3111,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       this.resetHeatpumpLocks('Adapterstart');
       await this.forceDependentDevicesOff('Adapterstart Recovery');
       await this.setStateAsync('info.connection', true, true);
-      this.lastTabletHtml = '';
-      this.lastPhoneHtml = '';
-      this.lastTabletWidget = '';
-      this.lastPhoneWidget = '';
-      this.lastRenderSignature = '';
-      this.lastRenderAt = 0;
       await this.subscribeConfiguredStates();
       try { this.subscribeStates('control.*'); } catch {}
       try { this.subscribeStates('control.device.*'); } catch {}
@@ -3137,8 +3133,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.runHeartbeatChecks();
       await this.applyDependencyRules();
       await this.renderVis();
-      this.queueDelayedRefresh(1500);
-      this.queueDelayedRefresh(5000);
       await this.logStartupSummary();
       const pollMin = Math.max(1, Number(this.config.pollIntervalMin) || 1);
       if (this.phStopWatcher) clearInterval(this.phStopWatcher);
