@@ -1,13 +1,5 @@
 {
   "name": "iobroker.poolsteuerung",
-<<<<<<< HEAD
-  "version": "0.3.16-hotfix45",
-=======
-<<<<<<< HEAD
-  "version": "0.3.16-hotfix46",
-=======
-  "version": "0.3.16-hotfix52",
->>>>>>> 132718c60ae5bb3e26f181e53254bede8d5ec8fd
->>>>>>> c7cee74ab9597ab6b03329759cb3147af7b12e8c
+  "version": "0.3.16-hotfix53",
   "main": "build/main.js"
 }
