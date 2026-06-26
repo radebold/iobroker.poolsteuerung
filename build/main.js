@@ -955,6 +955,10 @@ body{
 .manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:10px 12px;border-radius:14px;min-height:52px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}
 .manual-btn span{font-size:20px}
 .manual-btn small{font-size:12px;color:#dbeafe}
+.manual-dose-control{display:grid;grid-template-columns:minmax(120px,1fr) minmax(150px,1.2fr);gap:8px;align-items:stretch;grid-column:1 / -1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:8px}
+.manual-dose-field{display:flex;flex-direction:column;justify-content:center;gap:5px}
+.manual-dose-field label{font-size:11px;color:#c8d7eb;font-weight:900}
+.manual-dose-input{width:100%;height:38px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:#fff;color:#0f172a;font-size:20px;font-weight:900;text-align:center;padding:4px 8px}
 @media (max-width:1100px){
   .layout{display:block}
   .col-left,.col-mid,.col-right{width:auto}
@@ -1006,7 +1010,10 @@ body{
       <div class="section energy">Schnellzugriff</div>
       <div class="mini-list">
         ${mini('Poolsolltemperatur', `${data.targetTemp} °C`, 'info')}
-        <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.manualDoseButtonSec || 30) || 30}" style="min-height:64px;"><span>PH Manuell</span><small>${esc(data.manualDoseButtonSec || 30)} Sek.</small></button>
+        <div class="manual-dose-control">
+          <div class="manual-dose-field"><label>PH Manuell Sekunden</label><input class="manual-dose-input js-manual-dose-sec" type="number" min="1" max="600" step="1" value="${esc(data.manualDoseButtonSec || 30)}"></div>
+          <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.manualDoseButtonSec || 30) || 30}" style="min-height:64px;"><span>PH Manuell</span><small>Start Dosierung</small></button>
+        </div>
       </div>
     </div>
     <div class="card">
@@ -1122,7 +1129,25 @@ body{
     bindOne('.js-auto-btn', el => window.poolToggleControl(el.dataset.key, el.dataset.current === '1'));
     bindOne('.js-device-btn', el => window.poolToggleState(el.dataset.key || '', el.dataset.current === '1'));
     bindOne('.js-standby-btn', el => window.poolToggleStandby(el.dataset.current === '1'));
-    bindOne('.js-manual-dose-btn', el => window.poolPhManualDose(Number(el.dataset.sec || 30)));
+    bindOne('.js-manual-dose-btn', el => {
+      const wrap = el.closest('.manual-dose-control');
+      const input = wrap ? wrap.querySelector('.js-manual-dose-sec') : null;
+      const sec = Math.max(1, Number((input && input.value) || el.dataset.sec || 30) || 30);
+      if (input) input.value = String(sec);
+      window.poolPhManualDose(sec);
+    });
+    document.querySelectorAll('.js-manual-dose-sec').forEach(input => {
+      const save = async () => {
+        const ns=${JSON.stringify(data.namespace)};
+        const sec=Math.max(1, Number(input.value || 30) || 30);
+        input.value=String(sec);
+        await window.poolSetState(ns + '.control.ph.manualDoseSec', sec);
+      };
+      input.addEventListener('change', save);
+      input.addEventListener('blur', save);
+      input.addEventListener('click', ev => ev.stopPropagation());
+      input.addEventListener('touchend', ev => ev.stopPropagation(), {passive:false});
+    });
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind); else bind();
 })();
@@ -1178,7 +1203,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .action-btn.is-on .action-name,.action-btn.is-on .action-state{color:#67dd7c}
 .action-btn.is-off .action-name,.action-btn.is-off .action-state{color:#ff8d7b}
 .manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:8px 10px;border-radius:999px;min-height:42px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 6px 14px rgba(6,24,44,.22);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}
-.manual-btn span{font-size:12px}.manual-btn small{font-size:8px;color:#dbeafe}
+.manual-btn span{font-size:12px}.manual-btn small{font-size:8px;color:#dbeafe}.manual-dose-control{display:grid;grid-template-columns:1fr;gap:5px;grid-column:1 / -1;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.manual-dose-field label{display:block;font-size:9px;color:#64748b;font-weight:800;margin-bottom:3px}.manual-dose-input{width:100%;height:36px;border-radius:10px;border:1px solid rgba(15,23,42,.14);background:#f8fafc;color:#0f172a;font-size:18px;font-weight:900;text-align:center;padding:4px 8px}
 .temp-btn{appearance:none;border:none;cursor:pointer;border-radius:12px;min-height:52px;padding:8px 10px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:16px}
 .temp-center{display:flex;flex-direction:column;justify-content:center;align-items:center;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}
 .temp-center .quick-label{margin-bottom:1px}
@@ -1200,7 +1225,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   <div class="card" style="min-height:132px;"><div class="section-title">Schnellzugriff</div><div class="control-grid">
     <button type="button" class="action-btn js-standby-btn ${data.standbyControl ? 'is-on' : 'is-off'}" data-current="${data.standbyControl ? '1' : '0'}"><span class="action-name">Standby</span><span class="action-state">${data.standbyControl ? 'AKTIV' : 'AUS'}</span></button>
     <div class="temp-center"><div class="quick-label">Poolsolltemperatur</div><div class="quick-value">${esc(data.targetTemp)}°C</div></div>
-    <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.manualDoseButtonSec || 30) || 30}" style="grid-column:1 / -1;"><span>PH Manuell</span><small>${esc(data.manualDoseButtonSec || 30)} Sek.</small></button>
+    <div class="manual-dose-control">
+      <div class="manual-dose-field"><label>PH Manuell Sekunden</label><input class="manual-dose-input js-manual-dose-sec" type="number" min="1" max="600" step="1" value="${esc(data.manualDoseButtonSec || 30)}"></div>
+      <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.manualDoseButtonSec || 30) || 30}"><span>PH Manuell</span><small>Start Dosierung</small></button>
+    </div>
   </div></div>
 
   <div class="card" style="min-height:138px;"><div class="section-title">Automatik</div><div class="auto-grid">
@@ -1325,7 +1353,25 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     bindOne('.js-auto-btn', el => window.poolToggleControl(el.dataset.key, el.dataset.current === '1'));
     bindOne('.js-device-btn', el => window.poolToggleState(el.dataset.key || '', el.dataset.current === '1'));
     bindOne('.js-standby-btn', el => window.poolToggleStandby(el.dataset.current === '1'));
-    bindOne('.js-manual-dose-btn', el => window.poolPhManualDose(Number(el.dataset.sec || 30)));
+    bindOne('.js-manual-dose-btn', el => {
+      const wrap = el.closest('.manual-dose-control');
+      const input = wrap ? wrap.querySelector('.js-manual-dose-sec') : null;
+      const sec = Math.max(1, Number((input && input.value) || el.dataset.sec || 30) || 30);
+      if (input) input.value = String(sec);
+      window.poolPhManualDose(sec);
+    });
+    document.querySelectorAll('.js-manual-dose-sec').forEach(input => {
+      const save = async () => {
+        const ns=${JSON.stringify(data.namespace)};
+        const sec=Math.max(1, Number(input.value || 30) || 30);
+        input.value=String(sec);
+        await window.poolSetState(ns + '.control.ph.manualDoseSec', sec);
+      };
+      input.addEventListener('change', save);
+      input.addEventListener('blur', save);
+      input.addEventListener('click', ev => ev.stopPropagation());
+      input.addEventListener('touchend', ev => ev.stopPropagation(), {passive:false});
+    });
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind); else bind();
 })();
@@ -1485,7 +1531,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.ps-ml{font-size:10px;color:#d9e5f5}.ps-mv{font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center}.ps-ms{display:none}.ps-mmain.ok{color:#67dd7c}.ps-mmain.bad{color:#ff7a6a}.ps-trend{font-size:18px;font-weight:900;color:#c9d7ee;line-height:1;display:inline-flex;min-width:18px;justify-content:center;margin-left:10px}.ps-trend.up{color:#ffb36b}.ps-trend.down{color:#7dd3fc}.ps-trend.flat{color:#c9d7ee}.ps-trend.ok{color:#67dd7c}.ps-trend.bad{color:#ff7a6a}.ps-section{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px}
 .ps-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:7px 9px;border-radius:13px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}.ps-btn:disabled{opacity:.5;cursor:default}.ps-btn-name{font-size:12px;font-weight:800}.ps-btn-state{font-size:9px;font-weight:800}.ps-btn.is-on .ps-btn-name,.ps-btn.is-on .ps-btn-state{color:#67dd7c}.ps-btn.is-off .ps-btn-name,.ps-btn.is-off .ps-btn-state{color:#ff8d7b}
 .ps-q{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.ps-ql{font-size:9px;color:#64748b;font-weight:700;margin-bottom:3px}.ps-qv{font-size:12px;font-weight:900;color:#0f172a;line-height:1.08}
-.manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:7px 9px;border-radius:999px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}.manual-btn span{font-size:13px}.manual-btn small{font-size:10px;color:#dbeafe}
+.manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:7px 9px;border-radius:999px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}.manual-btn span{font-size:13px}.manual-btn small{font-size:10px;color:#dbeafe}.manual-dose-control{display:grid;grid-template-columns:1fr;gap:5px;grid-column:1 / -1;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.manual-dose-field label{display:block;font-size:9px;color:#64748b;font-weight:800;margin-bottom:3px}.manual-dose-input{width:100%;height:34px;border-radius:10px;border:1px solid rgba(15,23,42,.14);background:#f8fafc;color:#0f172a;font-size:16px;font-weight:900;text-align:center;padding:4px 8px}
 </style>
 <div class="ps-wrap">
   <div class="ps-card ps-hero">
@@ -1524,7 +1570,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Heute dosiert', `${data.phDailyCount}x`)}
     ${quick('Nächste Prüfung', data.phNextCheck)}
     ${quick('Granulat manuell', data.manualGranulateText)}
-    <button class="manual-btn js-manual-dose-btn" data-sec="${Number(data.manualDoseButtonSec || 30) || 30}"><span>PH Manuell</span><small>${esc(data.manualDoseButtonSec || 30)} Sek.</small></button>
+    <div class="manual-dose-control">
+      <div class="manual-dose-field"><label>PH Manuell Sekunden</label><input class="manual-dose-input js-manual-dose-sec" type="number" min="1" max="600" step="1" value="${esc(data.manualDoseButtonSec || 30)}"></div>
+      <button class="manual-btn js-manual-dose-btn" data-sec="${Number(data.manualDoseButtonSec || 30) || 30}"><span>PH Manuell</span><small>Start Dosierung</small></button>
+    </div>
   </div></div>
 </div>
 <script>
@@ -1549,6 +1598,33 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     if(!ok) alert('VIS setState nicht verfügbar');
   };
   window.poolPhManualDose = async function(sec){ const ns=${JSON.stringify(data.namespace)}; await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30); const ok=await window.poolSetState(ns + '.control.ph.manualStart', true); if(!ok) alert('VIS setState nicht verfügbar'); };
+  const bindOne = (selector, handler) => {
+    document.querySelectorAll(selector).forEach(el => {
+      const run = (ev) => { try{ if(ev){ ev.preventDefault(); ev.stopPropagation(); } }catch(e){} handler(el); return false; };
+      try{ el.addEventListener('touchend', run, {passive:false}); }catch(e){}
+      try{ el.addEventListener('click', run, false); }catch(e){}
+      try{ el.style.cursor = 'pointer'; }catch(e){}
+    });
+  };
+  bindOne('.js-manual-dose-btn', el => {
+    const wrap = el.closest('.manual-dose-control');
+    const input = wrap ? wrap.querySelector('.js-manual-dose-sec') : null;
+    const sec = Math.max(1, Number((input && input.value) || el.dataset.sec || 30) || 30);
+    if (input) input.value = String(sec);
+    window.poolPhManualDose(sec);
+  });
+  document.querySelectorAll('.js-manual-dose-sec').forEach(input => {
+    const save = async () => {
+      const ns=${JSON.stringify(data.namespace)};
+      const sec=Math.max(1, Number(input.value || 30) || 30);
+      input.value=String(sec);
+      await window.poolSetState(ns + '.control.ph.manualDoseSec', sec);
+    };
+    input.addEventListener('change', save);
+    input.addEventListener('blur', save);
+    input.addEventListener('click', ev => ev.stopPropagation());
+    input.addEventListener('touchend', ev => ev.stopPropagation(), {passive:false});
+  });
 })();
 </script>`;
   }
@@ -2004,7 +2080,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf63'
+      adapterVersion: 'v0.3.16hf64'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -3297,11 +3373,12 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.ensureControlState('control.auto.ph', this.config.enablePhControl !== false);
       await this.ensureControlState('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
       await this.ensureState('control.ph.manualDoseSec', 'number', 'value.interval', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true);
-      await this.setStateIfChanged('control.ph.manualDoseSec', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true);
+      const manualDoseSecStartupState = await this.getStateAsync('control.ph.manualDoseSec');
+      if (!manualDoseSecStartupState || manualDoseSecStartupState.val === null || manualDoseSecStartupState.val === undefined || manualDoseSecStartupState.val === '') {
+        await this.setStateIfChanged('control.ph.manualDoseSec', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true);
+      }
       await this.ensureState('control.ph.manualStart', 'boolean', 'button', false, true);
       await this.ensureState('control.ph.manualTrigger', 'number', 'value.time', 0, true);
-      await this.ensureState('control.ph.manualDoseSec', 'number', 'value.interval', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true);
-      await this.setStateIfChanged('control.ph.manualDoseSec', Math.max(1, parseNum(this.config.phDoseDurationSec || 30)), true);
       await this.ensureState('control.device.circulation', 'boolean', 'switch', false, true);
       await this.ensureState('control.device.chlorinator', 'boolean', 'switch', false, true);
       await this.ensureState('control.device.phPump', 'boolean', 'switch', false, true);
