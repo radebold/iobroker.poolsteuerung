@@ -1052,9 +1052,7 @@ body{
         ${mini('pH zum Soll', data.phCorrectionText, data.phCorrectionNeeded ? 'highlight' : 'info')}
         ${mini('pH Zielbereich', data.phTargetRangeText, 'info')}
         ${mini('pH Tag', `${data.phDailyCount}`, 'info')}
-        ${mini('Letzte pH-Dosis', data.phLastDoseInfo, 'info')}
         ${mini('Nächste Schaltungen', data.nextActionsText, 'highlight')}
-        ${mini('PV Schwelle', `${data.threshold} W`, 'info')}
         ${mini('WP Lüfter', String(data.heatpumpFanPercent ?? '--'), 'info')}
         ${mini('WP Modus', data.heatpumpMode || '--', 'highlight')}
       </div>
@@ -2080,7 +2078,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf64'
+      adapterVersion: 'v0.3.16hf65'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);

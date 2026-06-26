@@ -13,3 +13,7 @@ Version 0.3.16-hotfix61
 - AUS bei gestoppter Umwälzpumpe, Standby oder Einspeisung < WP-AUS-Hysterese.
 - Temperaturprüfung und Anti-Pendel-Mindestzeiten aus der WP-Freigabelogik entfernt.
 - VIS-Render-Fix aus hotfix58 bleibt enthalten.
+
+## 0.3.16-hotfix65
+- Tablet-VIS: doppelte Anzeige 'Letzte pH-Dosis' entfernt.
+- Tablet-VIS: doppelte Zusatzwert-Anzeige 'PV Schwelle' entfernt.
