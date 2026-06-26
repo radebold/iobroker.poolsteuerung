@@ -16,6 +16,15 @@ function getManualPhDoseDefaultSec(config) {
   return Math.max(1, parseNum(raw) || 30);
 }
 
+function getConfiguredManualPhDoseSec(config) {
+  if (!config || config.phManualDoseSec === undefined || config.phManualDoseSec === null) return null;
+  const raw = String(config.phManualDoseSec).trim();
+  if (raw === '') return null;
+  const n = parseNum(raw);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.max(1, Math.round(n));
+}
+
 function inWindow(now, startHHMM, endHHMM) {
   const parseHHMM = (v) => {
     const m = String(v || '').match(/^(\d{1,2}):(\d{2})$/);
@@ -959,13 +968,13 @@ body{
 .mini.highlight{background:linear-gradient(180deg,rgba(255,190,76,.11),rgba(255,255,255,.04))}
 .mini-label{font-size:12px;color:#c8d7eb;font-weight:800;margin-bottom:6px}
 .mini-value{font-size:13px;font-weight:900;line-height:1.1}
-.manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:10px 12px;border-radius:14px;min-height:52px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}
-.manual-btn span{font-size:20px}
-.manual-btn small{font-size:12px;color:#dbeafe}
-.manual-dose-control{display:grid;grid-template-columns:minmax(120px,1fr) minmax(150px,1.2fr);gap:8px;align-items:stretch;grid-column:1 / -1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:8px}
-.manual-dose-field{display:flex;flex-direction:column;justify-content:center;gap:5px}
-.manual-dose-field label{font-size:11px;color:#c8d7eb;font-weight:900}
-.manual-dose-input{width:100%;height:38px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:#fff;color:#0f172a;font-size:20px;font-weight:900;text-align:center;padding:4px 8px}
+.manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:6px 10px;border-radius:14px;min-height:40px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}
+.manual-btn span{font-size:16px}
+.manual-btn small{font-size:10px;color:#dbeafe}
+.manual-dose-control{display:grid;grid-template-columns:minmax(110px,.9fr) minmax(130px,1fr);gap:6px;align-items:center;grid-column:1 / -1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:6px}
+.manual-dose-field{display:flex;flex-direction:column;justify-content:center;gap:3px}
+.manual-dose-field label{font-size:10px;color:#c8d7eb;font-weight:900}
+.manual-dose-input{width:100%;height:32px;border-radius:9px;border:1px solid rgba(255,255,255,.16);background:#fff;color:#0f172a;font-size:18px;font-weight:900;text-align:center;padding:3px 8px}
 @media (max-width:1100px){
   .layout{display:block}
   .col-left,.col-mid,.col-right{width:auto}
@@ -1019,7 +1028,7 @@ body{
         ${mini('Poolsolltemperatur', `${data.targetTemp} °C`, 'info')}
         <div class="manual-dose-control">
           <div class="manual-dose-field"><label>PH Manuell Sekunden</label><input class="manual-dose-input js-manual-dose-sec" type="number" min="1" max="600" step="1" value="${esc(data.manualDoseButtonSec || 30)}"></div>
-          <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.manualDoseButtonSec || 30) || 30}" style="min-height:64px;"><span>PH Manuell</span><small>Start Dosierung</small></button>
+          <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.manualDoseButtonSec || 30) || 30}"><span>PH Manuell</span><small>Start Dosierung</small></button>
         </div>
       </div>
     </div>
@@ -2085,7 +2094,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
-      adapterVersion: 'v0.3.16hf66'
+      adapterVersion: 'v0.3.16hf67'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -3365,7 +3374,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] hotfix66 Diagnose-Logging aktiv');
+      this.log.info('[VIS] hotfix67 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
@@ -3378,9 +3387,12 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.ensureControlState('control.auto.ph', this.config.enablePhControl !== false);
       await this.ensureControlState('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
       await this.ensureState('control.ph.manualDoseSec', 'number', 'value.interval', getManualPhDoseDefaultSec(this.config), true);
+      const configuredManualDoseSec = getConfiguredManualPhDoseSec(this.config);
       const manualDoseSecStartupState = await this.getStateAsync('control.ph.manualDoseSec');
-      if (!manualDoseSecStartupState || manualDoseSecStartupState.val === null || manualDoseSecStartupState.val === undefined || manualDoseSecStartupState.val === '') {
-        await this.setStateIfChanged('control.ph.manualDoseSec', getManualPhDoseDefaultSec(this.config), true);
+      if (configuredManualDoseSec !== null) {
+        await this.setStateIfChanged('control.ph.manualDoseSec', configuredManualDoseSec, true);
+      } else if (!manualDoseSecStartupState || manualDoseSecStartupState.val === null || manualDoseSecStartupState.val === undefined || manualDoseSecStartupState.val === '') {
+        await this.setStateIfChanged('control.ph.manualDoseSec', 30, true);
       }
       await this.ensureState('control.ph.manualStart', 'boolean', 'button', false, true);
       await this.ensureState('control.ph.manualTrigger', 'number', 'value.time', 0, true);

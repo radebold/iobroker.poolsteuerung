@@ -1,6 +1,6 @@
 # ioBroker Poolsteuerung
 
-## 0.3.16-hotfix66
+## 0.3.16-hotfix67
 - Neues Admin-UI-Feld im pH-Tab: Standarddauer PH Manuell (Sekunden).
 - Wenn leer/0, wird für manuelle pH-Dosierung auf 30 Sekunden zurückgefallen.
 - Der VIS-State control.ph.manualDoseSec wird beim Start nur initial gesetzt, wenn er leer ist.
@@ -23,3 +23,9 @@ Version 0.3.16-hotfix61
 ## 0.3.16-hotfix65
 - Tablet-VIS: doppelte Anzeige 'Letzte pH-Dosis' entfernt.
 - Tablet-VIS: doppelte Zusatzwert-Anzeige 'PV Schwelle' entfernt.
+
+
+## 0.3.16-hotfix67
+- Manuelle pH-Dosierdauer aus der Adapter-UI wird beim Start in `control.ph.manualDoseSec` übernommen, wenn gepflegt.
+- Bei leerem/0-Konfigurationswert bleibt ein vorhandener VIS-State erhalten; fallback nur dann 30 Sekunden.
+- Tablet-VIS Schnellzugriff kompakter: PH-Manuell-Button und Eingabe kleiner.
