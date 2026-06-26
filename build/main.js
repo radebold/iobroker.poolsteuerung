@@ -54,6 +54,8 @@ class Poolsteuerung extends utils.Adapter {
     this.timer = null;
     this.monitoredIds = [];
     this.renderQueued = false;
+    this.renderActive = false;
+    this.renderAgainRequested = false;
     this.lastWrittenPhStopAtTs = null;
     this.phDoseStopAtTsMemory = 0;
     this.phLastDoseTsMemory = 0;
@@ -1541,6 +1543,28 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async renderVis(force = false) {
     if (this.isShuttingDown) return;
+    if (this.renderActive) {
+      this.renderAgainRequested = true;
+      this.visTrace('renderVis übersprungen', 'bereits aktiv -> erneuter Render vorgemerkt');
+      return;
+    }
+    this.renderActive = true;
+    try {
+      await this._renderVisInternal(force);
+    } finally {
+      this.renderActive = false;
+      if (this.renderAgainRequested && !this.isShuttingDown) {
+        this.renderAgainRequested = false;
+        const handle = this.trackTimeout(setTimeout(async () => {
+          this.pendingTimeouts.delete(handle);
+          try { await this.renderVis(true); } catch (e) { this.log.error('VIS Nach-Render Fehler: ' + (e && e.stack ? e.stack : e)); }
+        }, 500));
+      }
+    }
+  }
+
+  async _renderVisInternal(force = false) {
+    if (this.isShuttingDown) return;
     const visIds = ['vis.htmlTablet', 'vis.htmlPhone', 'vis.widgetTablet', 'vis.widgetPhone'];
     const renderStartTs = Date.now();
     try {
@@ -1551,7 +1575,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.ensureState('vis.widgetPhone', 'string', 'html', '', false);
       this.visTrace('renderVis States sichergestellt');
 
-      // Wichtig: Beim Adapterstart oder bei leeren VIS-States darf niemals wegen Signatur/Cache abgebrochen werden.
       let hasEmptyVisState = false;
       for (const id of visIds) {
         try {
@@ -1570,7 +1593,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.renderVisFull(force || hasEmptyVisState);
       this.visTrace('renderVisFull zurückgekehrt');
 
-      // Sicherheitsnetz: falls renderVisFull ohne Exception zurückkam, aber trotzdem nichts geschrieben hat.
       for (const id of visIds) {
         const st = await this.getStateAsync(id);
         if (!st || typeof st.val !== 'string' || st.val.trim().length < 50) {
@@ -1607,7 +1629,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.16hf57</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.16hf58</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -1851,7 +1873,23 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
     const heatpumpOn = allowHeatpumpWrite ? heatDesired : heatpumpOnRaw;
 
-    const historyTrends = await this.getHistoryTrends();
+    this.visTrace('renderVisFull History-Trends START');
+    const trendFallback = { phTrend: '→', orpTrend: '→', poolTempTrend: '→', outsideTempTrend: '→', pvTrend: '→', feedInTrend: '→' };
+    let historyTrends = trendFallback;
+    try {
+      historyTrends = await Promise.race([
+        this.getHistoryTrends(),
+        new Promise(resolve => setTimeout(() => resolve({ ...trendFallback, __timeout: true }), 1800))
+      ]);
+      if (historyTrends && historyTrends.__timeout) {
+        this.visTrace('renderVisFull History-Trends TIMEOUT', 'verwende Pfeile-Fallback');
+      } else {
+        this.visTrace('renderVisFull History-Trends OK');
+      }
+    } catch (e) {
+      this.visTrace('renderVisFull History-Trends ERROR', String(e && e.message ? e.message : e).slice(0, 300));
+      historyTrends = trendFallback;
+    }
     const phTrend = historyTrends.phTrend || '→';
     const orpTrend = historyTrends.orpTrend || '→';
     const poolTempTrend = historyTrends.poolTempTrend || '→';
@@ -1945,7 +1983,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30)))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(Math.max(1, parseNum(this.config.phDoseDurationSec || 30))))) || Math.max(1, parseNum(this.config.phDoseDurationSec || 30))),
-      adapterVersion: 'v0.3.16hf57'
+      adapterVersion: 'v0.3.16hf58'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -3192,7 +3230,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] hotfix57 Diagnose-Logging aktiv');
+      this.log.info('[VIS] hotfix58 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);

@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.3.16-hotfix57",
+    "version": "0.3.16-hotfix58",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -10,7 +10,8 @@
     "materializeTab": true,
     "adminUI": {
       "config": "json"
-    }
+    },
+    "installedFrom": "radebold/iobroker.poolsteuerung#hotfix58"
   },
   "native": {
     "phSetpoint": 7.2,
