@@ -1,39 +1,70 @@
 # ioBroker Poolsteuerung
 
-## 0.3.16-hotfix69
+Version: `0.3.15-hotfix23`
 
-- Tablet-VIS: Auto-Status für Pumpe, Chlor, pH und Wärmepumpe ist jetzt als klickbarer Button umgesetzt.
-- Klick schaltet die jeweiligen States `control.auto.circulation`, `control.auto.chlor`, `control.auto.ph`, `control.auto.heatpump`.
-- Bestehende Fixes aus hotfix68 bleiben enthalten.
+## VIS HTML
 
-# ioBroker Poolsteuerung
+Der Adapter erzeugt die VIS-Ausgaben direkt als States:
 
-## 0.3.16-hotfix68
-- Neues Admin-UI-Feld im pH-Tab: Standarddauer PH Manuell (Sekunden).
-- Wenn leer/0, wird für manuelle pH-Dosierung auf 30 Sekunden zurückgefallen.
-- Der VIS-State control.ph.manualDoseSec wird beim Start nur initial gesetzt, wenn er leer ist.
+- `poolsteuerung.0.vis.htmlTablet`
+- `poolsteuerung.0.vis.htmlPhone`
+- `poolsteuerung.0.vis.widgetTablet`
+- `poolsteuerung.0.vis.widgetPhone`
 
+## pH-Minus Kanisterverwaltung
 
-Version 0.3.16-hotfix68
+In dieser Version ist die pH-Minus-Kanisterverwaltung direkt in die Poolsteuerung integriert.
 
-## 0.3.16-hotfix68
-- Tablet-VIS aufgeräumt: Poolvolumen, Pumpenleistung und ml/0,1/10m³ aus Zusatzwerten entfernt.
-- ORP-Schaltgrenzen direkt am ORP-Wert angezeigt.
-- pH-Korrektur zum Sollwert als ml und Sekunden eingeblendet, nur wenn pH über Soll liegt.
-- pH-Zielbereich ergänzt: optimal 7,2–7,4; sehr gut/unkritisch 7,0–7,4.
-- Render-Fix aus hotfix68/59 bleibt enthalten.
+### Neue States
 
-- Wärmepumpensteuerung vereinfacht: EIN nur bei laufender Umwälzpumpe und Einspeisung >= WP-EIN-Schwelle.
-- AUS bei gestoppter Umwälzpumpe, Standby oder Einspeisung < WP-AUS-Hysterese.
-- Temperaturprüfung und Anti-Pendel-Mindestzeiten aus der WP-Freigabelogik entfernt.
-- VIS-Render-Fix aus hotfix68 bleibt enthalten.
+Status:
 
-## 0.3.16-hotfix68
-- Tablet-VIS: doppelte Anzeige 'Letzte pH-Dosis' entfernt.
-- Tablet-VIS: doppelte Zusatzwert-Anzeige 'PV Schwelle' entfernt.
+- `poolsteuerung.0.status.phCanister.capacityL`
+- `poolsteuerung.0.status.phCanister.usedL`
+- `poolsteuerung.0.status.phCanister.restL`
+- `poolsteuerung.0.status.phCanister.restPercent`
+- `poolsteuerung.0.status.phCanister.warning`
+- `poolsteuerung.0.status.phCanister.critical`
+- `poolsteuerung.0.status.phCanister.orderRecommended`
+- `poolsteuerung.0.status.phCanister.statusText`
+- `poolsteuerung.0.status.phCanister.lastDoseMl`
+- `poolsteuerung.0.status.phCanister.lastDoseTs`
+- `poolsteuerung.0.status.phCanister.lastCorrection`
+- `poolsteuerung.0.status.phCanister.lastReset`
 
+Bedienung:
 
-## 0.3.16-hotfix68
-- Manuelle pH-Dosierdauer aus der Adapter-UI wird beim Start in `control.ph.manualDoseSec` übernommen, wenn gepflegt.
-- Bei leerem/0-Konfigurationswert bleibt ein vorhandener VIS-State erhalten; fallback nur dann 30 Sekunden.
-- Tablet-VIS Schnellzugriff kompakter: PH-Manuell-Button und Eingabe kleiner.
+- `poolsteuerung.0.control.phCanister.measuredRestL`
+- `poolsteuerung.0.control.phCanister.applyCorrection`
+- `poolsteuerung.0.control.phCanister.newCanister`
+- `poolsteuerung.0.control.phCanister.capacityL`
+
+### Funktion
+
+Beim Start einer echten pH-Dosierung wird anhand der konfigurierten Fördermenge der pH-Pumpe automatisch Verbrauch gebucht:
+
+```text
+Verbrauch ml = Dosierdauer Sekunden × Fördermenge ml/min ÷ 60
+```
+
+Im Simulationsmodus wird kein Kanisterverbrauch gebucht.
+
+### VIS Bedienung
+
+Die VIS-Karten enthalten jetzt direkt:
+
+- Restinhalt in Litern
+- Verbrauch in Litern
+- Füllstand in Prozent
+- Warnstatus OK / BESTELLEN / KRITISCH
+- Eingabefeld für gemessenen Restinhalt
+- Button „Neuer Kanister“
+- Button „Größe“
+
+### Konfiguration
+
+Im Adapter-Admin unter `PH` gibt es neue Felder:
+
+- Kanistergröße pH-Minus, Standard `10 l`
+- Nachbestellen ab Rest, Standard `2 l`
+- Kritisch ab Rest, Standard `1 l`

@@ -9,180 +9,79 @@
         "adapterEnabled": {
           "type": "checkbox",
           "label": "Adapter aktiv",
-          "newLine": true,
-          "sm": 12,
-          "md": 3,
-          "lg": 3
+          "newLine": true
         },
         "debugMode": {
           "type": "checkbox",
           "label": "Debug-Modus",
-          "newLine": false,
-          "sm": 12,
-          "md": 3,
-          "lg": 3
+          "newLine": true
         },
         "simulateMode": {
           "type": "checkbox",
           "label": "Simulationsmodus",
-          "newLine": false,
-          "sm": 12,
-          "md": 3,
-          "lg": 3
+          "newLine": true
         },
         "standbyModeEnabled": {
           "type": "checkbox",
           "label": "Standby-Modus / Vorsommer-Modus aktiv",
-          "newLine": false,
-          "sm": 12,
-          "md": 3,
-          "lg": 3
-        },
-        "enableCirculationControl": {
-          "type": "checkbox",
-          "label": "Umwälzpumpe aktiv",
-          "newLine": true,
-          "sm": 12,
-          "md": 3,
-          "lg": 3
-        },
-        "enablePhControl": {
-          "type": "checkbox",
-          "label": "PH Steuerung aktiv",
-          "newLine": false,
-          "sm": 12,
-          "md": 3,
-          "lg": 3
-        },
-        "enableHeatpumpControl": {
-          "type": "checkbox",
-          "label": "Wärmepumpensteuerung aktiv",
-          "newLine": false,
-          "sm": 12,
-          "md": 3,
-          "lg": 3
-        },
-        "enableChlorControl": {
-          "type": "checkbox",
-          "label": "Chlorsteuerung aktiv",
-          "newLine": false,
-          "sm": 12,
-          "md": 3,
-          "lg": 3
+          "newLine": true
         },
         "standbyRunTime": {
           "type": "text",
           "label": "Standby-Uhrzeit (HH:MM)",
           "newLine": true,
-          "help": "Täglicher Kurzlauf der Umwälzpumpe, z. B. 12:00",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "help": "Täglicher Kurzlauf der Umwälzpumpe, z. B. 12:00"
         },
         "standbyPumpDurationSec": {
           "type": "number",
           "label": "Standby-Laufzeit Umwälzpumpe (Sekunden)",
-          "newLine": false,
-          "help": "Standard 30 Sekunden",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "newLine": true,
+          "help": "Standard 30 Sekunden"
         },
         "pollIntervalMin": {
           "type": "number",
           "label": "Prüfintervall (Minuten)",
           "newLine": true,
-          "help": "Wie oft alle Werte neu gelesen und die HTML-Ausgabe aktualisiert wird.",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "trendHeader": {
-          "type": "header",
-          "text": "Trend aus History",
-          "size": 2
-        },
-        "trendHistoryInstance": {
-          "type": "text",
-          "label": "History-Instanz",
-          "help": "Standard history.0. Wird für die 1h-Tendenz verwendet.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "trendWindowMin": {
-          "type": "number",
-          "label": "Trendfenster (Minuten)",
-          "help": "Standard 60 Minuten.",
-          "newLine": false,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "trendSmoothMin": {
-          "type": "number",
-          "label": "Glättung (Minuten)",
-          "help": "Standard 5 Minuten. Vergleicht Mittelwert der letzten x Minuten mit dem Fenster vor 60 Minuten.",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "trendTolerancePh": {
-          "type": "text",
-          "label": "Toleranz pH",
-          "help": "Standard 0.03",
-          "newLine": false,
-          "sm": 12,
-          "md": 2,
-          "lg": 2
-        },
-        "trendToleranceOrp": {
-          "type": "number",
-          "label": "Toleranz ORP",
-          "help": "Standard 15",
-          "newLine": false,
-          "sm": 12,
-          "md": 2,
-          "lg": 2
-        },
-        "trendToleranceTemp": {
-          "type": "text",
-          "label": "Toleranz Temperatur",
-          "help": "Standard 0.3 °C",
-          "newLine": false,
-          "sm": 12,
-          "md": 2,
-          "lg": 2
+          "help": "Wie oft alle Werte neu gelesen und die HTML-Ausgabe aktualisiert wird."
         },
         "poolDiameterM": {
           "type": "text",
           "label": "Pooldurchmesser (m)",
-          "newLine": false,
-          "help": "z. B. 4.60 oder 4,60",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "newLine": true,
+          "help": "z. B. 4.60 oder 4,60"
         },
         "poolWaterHeightM": {
           "type": "text",
           "label": "Wasserhöhe (m)",
           "newLine": true,
-          "help": "z. B. 1.10 oder 1,10",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "help": "z. B. 1.10 oder 1,10"
         },
         "poolVolumeM3": {
           "type": "text",
           "label": "Poolvolumen (m³)",
-          "newLine": false,
+          "newLine": true,
           "help": "Wird beim Adapterstart / Poll neu berechnet.",
-          "disabled": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "disabled": true
+        },
+        "enableCirculationControl": {
+          "type": "checkbox",
+          "label": "Umwälzpumpe aktiv",
+          "newLine": true
+        },
+        "enablePhControl": {
+          "type": "checkbox",
+          "label": "PH Steuerung aktiv",
+          "newLine": true
+        },
+        "enableHeatpumpControl": {
+          "type": "checkbox",
+          "label": "Wärmepumpensteuerung aktiv",
+          "newLine": true
+        },
+        "enableChlorControl": {
+          "type": "checkbox",
+          "label": "Chlorsteuerung aktiv",
+          "newLine": true
         }
       }
     },
@@ -190,30 +89,15 @@
       "type": "panel",
       "label": "UMWÄLZPUMPE",
       "items": {
-        "headerPump": {
-          "type": "header",
-          "text": "Aktor & Schreibweise",
-          "newLine": true,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "size": 2
-        },
         "circulationPumpSocketStateId": {
-          "type": "objectId",
+          "type": "text",
           "label": "Umwälzpumpe",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "objectTypes": [
-            "state"
-          ]
+          "newLine": true
         },
         "circulationPumpWriteMode": {
           "type": "select",
           "label": "Schreibformat Umwälzpumpe",
-          "newLine": false,
+          "newLine": true,
           "options": [
             {
               "label": "false / true",
@@ -224,19 +108,7 @@
               "value": "num01"
             }
           ],
-          "help": "Legt fest, wie der Adapter den Aktor schaltet.",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "headerHeartbeat": {
-          "type": "header",
-          "text": "Erreichbarkeit",
-          "newLine": true,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "size": 2
+          "help": "Legt fest, wie der Adapter den Aktor schaltet."
         },
         "circulationPumpHeartbeatStateId": {
           "type": "objectId",
@@ -253,135 +125,48 @@
         "circulationPumpHeartbeatMaxAgeMin": {
           "type": "number",
           "label": "Max. Alter Heartbeat (Minuten)",
-          "newLine": false,
-          "help": "Wenn der Heartbeat älter ist als dieser Wert, wird das Gerät als veraltet markiert. 0 = keine Prüfung.",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "headerWindows": {
-          "type": "header",
-          "text": "Zeitpläne",
           "newLine": true,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "size": 2
+          "help": "Wenn der Heartbeat älter ist als dieser Wert, wird das Gerät als veraltet markiert. 0 = keine Prüfung."
         },
-        "pumpSchedules": {
-          "type": "table",
-          "label": "Zeitpläne Umwälzpumpe",
+        "pumpWindow1Start": {
+          "type": "text",
+          "label": "Zeitfenster 1 Start",
           "newLine": true,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "help": "Beliebig viele Zeitfenster anlegen. Beispiele: 10:00-17:00 Mo-Fr oder 20:00-21:30 Sa-So.",
-          "items": [
-            {
-              "attr": "enabled",
-              "type": "checkbox",
-              "title": "Aktiv",
-              "width": "70px"
-            },
-            {
-              "attr": "start",
-              "type": "text",
-              "title": "Start",
-              "width": "110px"
-            },
-            {
-              "attr": "end",
-              "type": "text",
-              "title": "Ende",
-              "width": "110px"
-            },
-            {
-              "attr": "days",
-              "type": "select",
-              "title": "Tage",
-              "width": "140px",
-              "options": [
-                {
-                  "label": "Täglich",
-                  "value": "daily"
-                },
-                {
-                  "label": "Mo-Fr",
-                  "value": "mon_fri"
-                },
-                {
-                  "label": "Sa-So",
-                  "value": "sat_sun"
-                },
-                {
-                  "label": "Mo",
-                  "value": "mon"
-                },
-                {
-                  "label": "Di",
-                  "value": "tue"
-                },
-                {
-                  "label": "Mi",
-                  "value": "wed"
-                },
-                {
-                  "label": "Do",
-                  "value": "thu"
-                },
-                {
-                  "label": "Fr",
-                  "value": "fri"
-                },
-                {
-                  "label": "Sa",
-                  "value": "sat"
-                },
-                {
-                  "label": "So",
-                  "value": "sun"
-                }
-              ]
-            }
-          ]
+          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
+        },
+        "pumpWindow1End": {
+          "type": "text",
+          "label": "Zeitfenster 1 Ende",
+          "newLine": true,
+          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
+        },
+        "pumpWindow2Start": {
+          "type": "text",
+          "label": "Zeitfenster 2 Start",
+          "newLine": true,
+          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
+        },
+        "pumpWindow2End": {
+          "type": "text",
+          "label": "Zeitfenster 2 Ende",
+          "newLine": true,
+          "help": "Format HH:MM. 00:00 bis 00:00 = inaktiv."
         }
-      },
-      "hidden": "data.enableCirculationControl === false"
+      }
     },
     "chlor": {
       "type": "panel",
       "label": "CHLOR",
       "items": {
-        "headerSensorAct": {
-          "type": "header",
-          "text": "Sensor & Aktor",
-          "newLine": true,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "size": 2
-        },
         "orpStateId": {
-          "type": "objectId",
+          "type": "text",
           "label": "State-ID ORP",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "objectTypes": [
-            "state"
-          ]
+          "newLine": true
         },
         "chlorinatorSocketStateId": {
-          "type": "objectId",
+          "type": "text",
           "label": "Chlorinator",
-          "newLine": false,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "objectTypes": [
-            "state"
-          ]
+          "newLine": true
         },
         "chlorinatorWriteMode": {
           "type": "select",
@@ -397,29 +182,14 @@
               "value": "num01"
             }
           ],
-          "help": "Legt fest, wie der Adapter den Aktor schaltet.",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "help": "Legt fest, wie der Adapter den Aktor schaltet."
         },
         "chlorPumpStartDelaySec": {
           "type": "number",
           "label": "Verzögerung nach Pumpenstart (Sekunden)",
-          "newLine": false,
-          "min": 0,
-          "help": "Der Chlorinator darf erst nach dieser Verzögerung nach dem Einschalten der Umwälzpumpe aktiv werden. 0 = ohne Verzögerung.",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "headerChlHb": {
-          "type": "header",
-          "text": "Erreichbarkeit",
           "newLine": true,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "size": 2
+          "min": 0,
+          "help": "Der Chlorinator darf erst nach dieser Verzögerung nach dem Einschalten der Umwälzpumpe aktiv werden. 0 = ohne Verzögerung."
         },
         "chlorinatorHeartbeatStateId": {
           "type": "objectId",
@@ -436,49 +206,27 @@
         "chlorinatorHeartbeatMaxAgeMin": {
           "type": "number",
           "label": "Max. Alter Heartbeat (Minuten)",
-          "newLine": false,
-          "help": "Wenn der Heartbeat älter ist als dieser Wert, wird der Chlorinator als veraltet markiert. 0 = keine Prüfung.",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "headerOrp": {
-          "type": "header",
-          "text": "ORP-Grenzen",
           "newLine": true,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "size": 2
+          "help": "Wenn der Heartbeat älter ist als dieser Wert, wird der Chlorinator als veraltet markiert. 0 = keine Prüfung."
         },
         "orpSetpoint": {
           "type": "number",
           "label": "ORP Sollwert",
-          "newLine": true,
-          "sm": 12,
-          "md": 4,
-          "lg": 4
+          "newLine": true
         },
         "orpOnThreshold": {
           "type": "number",
           "label": "ORP Einschaltgrenze",
-          "newLine": false,
-          "help": "Wenn ORP kleiner oder gleich diesem Wert ist, darf der Chlorinator einschalten.",
-          "sm": 12,
-          "md": 4,
-          "lg": 4
+          "newLine": true,
+          "help": "Wenn ORP kleiner oder gleich diesem Wert ist, darf der Chlorinator einschalten."
         },
         "orpOffThreshold": {
           "type": "number",
           "label": "ORP Ausschaltgrenze",
-          "newLine": false,
-          "help": "Wenn ORP größer als dieser Wert ist, wird der Chlorinator ausgeschaltet.",
-          "sm": 12,
-          "md": 4,
-          "lg": 4
+          "newLine": true,
+          "help": "Wenn ORP größer als dieser Wert ist, wird der Chlorinator ausgeschaltet."
         }
-      },
-      "hidden": "data.enableChlorControl === false"
+      }
     },
     "ph": {
       "type": "panel",
@@ -558,6 +306,38 @@
           "newLine": true,
           "help": "Wenn der Heartbeat älter ist als dieser Wert, wird die pH-Dosierpumpe als veraltet markiert. 0 = keine Prüfung."
         },
+        "phCanisterHeader": {
+          "type": "header",
+          "text": "pH-Minus Kanister",
+          "size": 2
+        },
+        "phCanisterCapacityL": {
+          "type": "number",
+          "label": "Kanistergröße pH-Minus (Liter)",
+          "newLine": true,
+          "sm": 12,
+          "md": 4,
+          "lg": 4,
+          "help": "Standard: 10 Liter. Kann später auch in der VIS geändert werden."
+        },
+        "phCanisterWarnL": {
+          "type": "number",
+          "label": "Nachbestellen ab Rest (Liter)",
+          "newLine": false,
+          "sm": 12,
+          "md": 4,
+          "lg": 4,
+          "help": "Standard: 2 Liter."
+        },
+        "phCanisterCriticalL": {
+          "type": "number",
+          "label": "Kritisch ab Rest (Liter)",
+          "newLine": false,
+          "sm": 12,
+          "md": 4,
+          "lg": 4,
+          "help": "Standard: 1 Liter."
+        },
         "phControlHeader": {
           "type": "header",
           "text": "Regelung",
@@ -611,20 +391,6 @@
             }
           ],
           "help": "fest = feste Laufzeit. berechnet (einfach) = Sekundenfaktor. berechnet (ml-basiert) = ml-Bedarf + Fördermenge."
-        },
-        "phManualHeader": {
-          "type": "header",
-          "text": "Manuelle Dosierung",
-          "size": 2
-        },
-        "phManualDoseSec": {
-          "type": "number",
-          "label": "Standarddauer PH Manuell (Sekunden)",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "help": "Wird als Startwert für die manuelle pH-Dosierung in der VIS verwendet. Wenn leer/0, werden 30 Sekunden verwendet. Änderungen in der VIS bleiben im State control.ph.manualDoseSec erhalten."
         },
         "phFixedHeader": {
           "type": "header",
@@ -710,54 +476,26 @@
           "md": 6,
           "lg": 6
         }
-      },
-      "hidden": "data.enablePhControl === false"
+      }
     },
     "heat": {
       "type": "panel",
       "label": "WÄRMEPUMPE",
       "items": {
-        "headerTemps": {
-          "type": "header",
-          "text": "Temperaturen & Aktor",
-          "newLine": true,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "size": 2
-        },
         "waterTempStateId": {
-          "type": "objectId",
+          "type": "text",
           "label": "State-ID Wassertemperatur",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "objectTypes": [
-            "state"
-          ]
+          "newLine": true
         },
         "outsideTempStateId": {
-          "type": "objectId",
+          "type": "text",
           "label": "State-ID Außentemperatur",
-          "newLine": false,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "objectTypes": [
-            "state"
-          ]
+          "newLine": true
         },
         "heatpumpPowerStateId": {
-          "type": "objectId",
+          "type": "text",
           "label": "Wärmepumpe Power",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "objectTypes": [
-            "state"
-          ]
+          "newLine": true
         },
         "heatpumpHeartbeatStateId": {
           "type": "objectId",
@@ -765,7 +503,7 @@
           "objectTypes": [
             "state"
           ],
-          "newLine": false,
+          "newLine": true,
           "sm": 12,
           "md": 6,
           "lg": 6,
@@ -775,235 +513,54 @@
           "type": "number",
           "label": "Max. Alter Heartbeat (Minuten)",
           "newLine": true,
-          "help": "Wenn der Heartbeat älter ist als dieser Wert, wird die Wärmepumpe als veraltet markiert. 0 = keine Prüfung.",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "help": "Wenn der Heartbeat älter ist als dieser Wert, wird die Wärmepumpe als veraltet markiert. 0 = keine Prüfung."
         },
         "heatpumpModeStateId": {
-          "type": "objectId",
+          "type": "text",
           "label": "Wärmepumpe Mode",
-          "newLine": false,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "objectTypes": [
-            "state"
-          ]
+          "newLine": true
         },
         "heatpumpSetTempStateId": {
-          "type": "objectId",
+          "type": "text",
           "label": "Wärmepumpe Solltemperatur",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "objectTypes": [
-            "state"
-          ]
+          "newLine": true
         },
         "heatpumpTargetTemp": {
           "type": "number",
           "label": "Solltemperatur",
-          "newLine": false,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "headerHeatCtrl": {
-          "type": "header",
-          "text": "Regelung",
-          "newLine": true,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "size": 2
-        },
-        "heatpumpTempOnDeltaC": {
-          "type": "number",
-          "label": "Temperatur-Hysterese EIN (°C unter Soll)",
-          "newLine": true,
-          "help": "Standard 0,5 °C. Beispiel: Soll 28,0 °C => EIN erst bei 27,5 °C oder darunter.",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
-        },
-        "headerWallbox": {
-          "type": "header",
-          "text": "Auto & Wallbox"
-        },
-        "wallboxChargingStatusStateId": {
-          "type": "objectId",
-          "label": "State-ID Ladestatus",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "objectTypes": [
-            "state"
-          ]
-        },
-        "wallboxPlugStatusStateId": {
-          "type": "objectId",
-          "label": "State-ID Steckerstatus",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "objectTypes": [
-            "state"
-          ]
-        },
-        "wallboxPowerKwStateId": {
-          "type": "objectId",
-          "label": "State-ID Ladeleistung (kW)",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "objectTypes": [
-            "state"
-          ]
-        },
-        "wallboxSocStateId": {
-          "type": "objectId",
-          "label": "State-ID Auto-SoC (%)",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "objectTypes": [
-            "state"
-          ]
-        },
-        "wallboxTargetSocStateId": {
-          "type": "objectId",
-          "label": "State-ID Ziel-SoC (%)",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "objectTypes": [
-            "state"
-          ]
-        },
-        "wallboxTimeToFullStateId": {
-          "type": "objectId",
-          "label": "State-ID Restzeit bis voll (h)",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "objectTypes": [
-            "state"
-          ]
-        },
-        "wallboxRangeKmStateId": {
-          "type": "objectId",
-          "label": "State-ID Reichweite (km)",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "objectTypes": [
-            "state"
-          ]
+          "newLine": true
         }
-      },
-      "hidden": "data.enableHeatpumpControl === false"
+      }
     },
     "solar": {
       "type": "panel",
       "label": "SOLAR",
       "items": {
-        "headerSolarStates": {
-          "type": "header",
-          "text": "Messwerte",
-          "newLine": true,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "size": 2
-        },
         "pvPowerStateId": {
-          "type": "objectId",
+          "type": "text",
           "label": "State-ID PV-Leistung",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "objectTypes": [
-            "state"
-          ]
+          "newLine": true
         },
         "gridFeedInStateId": {
-          "type": "objectId",
+          "type": "text",
           "label": "State-ID Netzeinspeisung",
-          "newLine": false,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "objectTypes": [
-            "state"
-          ]
+          "newLine": true
         },
         "gridSupplyStateId": {
-          "type": "objectId",
+          "type": "text",
           "label": "State-ID Netzbezug",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "objectTypes": [
-            "state"
-          ]
+          "newLine": true
         },
         "batterySocStateId": {
-          "type": "objectId",
+          "type": "text",
           "label": "State-ID Batterie SoC",
-          "newLine": false,
-          "sm": 12,
-          "md": 6,
-          "lg": 6,
-          "objectTypes": [
-            "state"
-          ]
-        },
-        "headerSolarThresholds": {
-          "type": "header",
-          "text": "Freigaben & Hysterese",
-          "newLine": true,
-          "sm": 12,
-          "md": 12,
-          "lg": 12,
-          "size": 2
+          "newLine": true
         },
         "heatEnableFeedInThresholdW": {
           "type": "number",
           "label": "PV-Überschuss Schwellwert (W)",
           "newLine": true,
-          "help": "Wenn die Netzeinspeisung größer als dieser Wert ist, darf die Wärmepumpe laufen.",
-          "sm": 12,
-          "md": 4,
-          "lg": 4
-        },
-        "heatpumpPvOnThresholdW": {
-          "type": "number",
-          "label": "Wärmepumpe EIN ab Einspeisung (W)",
-          "newLine": false,
-          "help": "Wird dieser Einspeisewert erreicht oder überschritten, darf die Wärmepumpe eingeschaltet werden.",
-          "sm": 12,
-          "md": 4,
-          "lg": 4
-        },
-        "heatpumpPvOffThresholdW": {
-          "type": "number",
-          "label": "Wärmepumpe AUS unter Einspeisung (W)",
-          "newLine": false,
-          "help": "Wird dieser Einspeisewert unterschritten, wird die Wärmepumpe wieder ausgeschaltet.",
-          "sm": 12,
-          "md": 4,
-          "lg": 4
+          "help": "Wenn die Netzeinspeisung größer als dieser Wert ist, darf die Wärmepumpe laufen."
         }
       }
     },
@@ -1015,143 +572,92 @@
           "type": "checkbox",
           "label": "Alerts aktiv",
           "newLine": true,
-          "help": "Benachrichtigungen werden nur gesendet, wenn zusätzlich unter ALLGEMEIN der Adapter aktiv ist.",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "help": "Benachrichtigungen werden nur gesendet, wenn zusätzlich unter ALLGEMEIN der Adapter aktiv ist."
         },
         "alertRepeatLockMin": {
           "type": "number",
           "label": "Wiederholsperre je Meldung (Minuten)",
           "newLine": true,
-          "help": "Verhindert identische Benachrichtigungen in zu kurzen Abständen.",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "help": "Verhindert identische Benachrichtigungen in zu kurzen Abständen."
         },
         "alertWhatsappEnabled": {
           "type": "checkbox",
           "label": "WhatsApp aktiv",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "newLine": true
         },
         "alertWhatsappInstance": {
           "type": "text",
           "label": "WhatsApp Instanz",
           "newLine": true,
-          "help": "Zum Beispiel open-wa.0",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "help": "Zum Beispiel open-wa.0"
         },
         "alertWhatsappTo": {
           "type": "text",
           "label": "WhatsApp Empfänger",
-          "newLine": false,
-          "help": "Empfänger oder Ziel-ID für den konfigurierten Adapter.",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "newLine": true,
+          "help": "Empfänger oder Ziel-ID für den konfigurierten Adapter."
         },
         "alertTelegramEnabled": {
           "type": "checkbox",
           "label": "Telegram aktiv",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "newLine": true
         },
         "alertTelegramInstance": {
           "type": "text",
           "label": "Telegram Instanz",
           "newLine": true,
-          "help": "Zum Beispiel telegram.0",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "help": "Zum Beispiel telegram.0"
         },
         "alertTelegramTo": {
           "type": "text",
           "label": "Telegram Empfänger / Chat-ID",
-          "newLine": false,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "newLine": true
         },
         "alertEmailEnabled": {
           "type": "checkbox",
           "label": "E-Mail aktiv",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "newLine": true
         },
         "alertEmailInstance": {
           "type": "text",
           "label": "E-Mail Instanz",
           "newLine": true,
-          "help": "Zum Beispiel email.0",
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "help": "Zum Beispiel email.0"
         },
         "alertEmailTo": {
           "type": "text",
           "label": "E-Mail Empfänger",
-          "newLine": false,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "newLine": true
         },
         "alertOnPhDoseStarted": {
           "type": "checkbox",
           "label": "Bei pH-Dosierung gestartet",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "newLine": true
         },
         "alertOnPhDoseStopped": {
           "type": "checkbox",
           "label": "Bei pH-Dosierung beendet",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "newLine": true
         },
         "alertOnPhDoseAborted": {
           "type": "checkbox",
           "label": "Bei pH-Dosierung abgebrochen",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "newLine": true
         },
         "alertOnPhDailyLimit": {
           "type": "checkbox",
           "label": "Bei Tageslimit pH-Dosierung",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "newLine": true
         },
         "alertOnSensorError": {
           "type": "checkbox",
           "label": "Bei Sensorfehler / ungültigen Werten",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "newLine": true
         },
         "alertOnPollError": {
           "type": "checkbox",
           "label": "Bei Adapter- oder Poll-Fehlern",
-          "newLine": true,
-          "sm": 12,
-          "md": 6,
-          "lg": 6
+          "newLine": true
         }
       }
     },
