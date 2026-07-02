@@ -338,6 +338,53 @@
           "lg": 4,
           "help": "Standard: 1 Liter."
         },
+        "phCanisterCurrentRestL": {
+          "type": "number",
+          "label": "Aktueller Füllstand pH-Minus (Liter)",
+          "newLine": true,
+          "sm": 12,
+          "md": 4,
+          "lg": 4,
+          "help": "Hier den am Kanister gemessenen aktuellen Füllstand eintragen. Beim Speichern übernimmt der Adapter den Wert und berechnet Verbrauch und Prozent neu."
+        },
+        "phCanisterUsedL": {
+          "type": "number",
+          "label": "Verbraucht seit letztem Kanister (Liter)",
+          "newLine": false,
+          "sm": 12,
+          "md": 4,
+          "lg": 4,
+          "disabled": true,
+          "help": "Anzeige. Wird vom Adapter aus Dosierdauer und Fördermenge berechnet."
+        },
+        "phCanisterRestPercent": {
+          "type": "number",
+          "label": "Füllstand (%)",
+          "newLine": false,
+          "sm": 12,
+          "md": 4,
+          "lg": 4,
+          "disabled": true,
+          "help": "Anzeige. Wird vom Adapter berechnet."
+        },
+        "phCanisterLastCorrection": {
+          "type": "text",
+          "label": "Letzte Füllstand-Korrektur",
+          "newLine": true,
+          "sm": 12,
+          "md": 8,
+          "lg": 8,
+          "disabled": true
+        },
+        "phCanisterNewOnSave": {
+          "type": "checkbox",
+          "label": "Neuer Kanister beim Speichern setzen",
+          "newLine": false,
+          "sm": 12,
+          "md": 4,
+          "lg": 4,
+          "help": "Einmal aktivieren und speichern. Der Adapter setzt den Füllstand auf die Kanistergröße zurück und deaktiviert diese Option danach wieder."
+        },
         "phControlHeader": {
           "type": "header",
           "text": "Regelung",

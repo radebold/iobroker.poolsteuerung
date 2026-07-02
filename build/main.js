@@ -1033,6 +1033,71 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
 
 
+
+  async updateOwnNative(patch) {
+    try {
+      const objId = `system.adapter.${this.namespace}`;
+      const obj = await this.getForeignObjectAsync(objId);
+      if (!obj) return;
+      const nextNative = { ...(obj.native || {}), ...patch };
+      let changed = false;
+      for (const [k, v] of Object.entries(patch)) {
+        if ((obj.native || {})[k] !== v) { changed = true; break; }
+      }
+      if (changed) {
+        await this.extendForeignObjectAsync(objId, { native: nextNative });
+      }
+    } catch (e) {
+      this.log.debug(`Native-Spiegel konnte nicht aktualisiert werden: ${e.message || e}`);
+    }
+  }
+
+  async applyPhCanisterAdminConfigIfNeeded() {
+    await this.ensureState('status.phCanister.usedL', 'number', 'value.volume', 0, true);
+    const cfg = this.getPhCanisterConfig();
+    const capacityL = cfg.capacityL;
+
+    if (this.config.phCanisterNewOnSave === true) {
+      await this.setStateAsync('control.phCanister.capacityL', Number(capacityL.toFixed(3)), true);
+      await this.setStateAsync('status.phCanister.capacityL', Number(capacityL.toFixed(3)), true);
+      await this.setStateAsync('status.phCanister.usedL', 0, true);
+      await this.setStateAsync('control.phCanister.measuredRestL', Number(capacityL.toFixed(3)), true);
+      await this.setStateAsync('status.phCanister.lastReset', `${new Date().toLocaleString('de-DE')} - Neuer Kanister über Admin`, true);
+      this.phCanisterAdminAppliedRest = Number(capacityL.toFixed(3));
+      await this.updateOwnNative({
+        phCanisterNewOnSave: false,
+        phCanisterCurrentRestL: Number(capacityL.toFixed(3)),
+        phCanisterUsedL: 0,
+        phCanisterRestPercent: 100,
+        phCanisterLastCorrection: `${new Date().toLocaleString('de-DE')} - Neuer Kanister über Admin`,
+        phCanisterAdminRestLastApplied: Number(capacityL.toFixed(3))
+      });
+      return;
+    }
+
+    const restFromAdmin = parseNum(this.config.phCanisterCurrentRestL);
+    const lastApplied = parseNum(this.config.phCanisterAdminRestLastApplied);
+    const runtimeKey = Number(restFromAdmin.toFixed(3));
+    if (this.phCanisterAdminAppliedRest === runtimeKey) return;
+    if (Number.isFinite(restFromAdmin) && restFromAdmin >= 0 && restFromAdmin <= capacityL && Math.abs(restFromAdmin - lastApplied) >= 0.001) {
+      this.phCanisterAdminAppliedRest = runtimeKey;
+      const usedL = Number((capacityL - restFromAdmin).toFixed(3));
+      const txt = `${new Date().toLocaleString('de-DE')} - Rest über Admin auf ${restFromAdmin.toFixed(2)} l gesetzt`;
+      await this.setStateAsync('control.phCanister.capacityL', Number(capacityL.toFixed(3)), true);
+      await this.setStateAsync('status.phCanister.capacityL', Number(capacityL.toFixed(3)), true);
+      await this.setStateAsync('status.phCanister.usedL', usedL, true);
+      await this.setStateAsync('control.phCanister.measuredRestL', Number(restFromAdmin.toFixed(3)), true);
+      await this.setStateAsync('status.phCanister.lastCorrection', txt, true);
+      await this.updateOwnNative({
+        phCanisterCurrentRestL: Number(restFromAdmin.toFixed(3)),
+        phCanisterUsedL: usedL,
+        phCanisterRestPercent: Number(((restFromAdmin / capacityL) * 100).toFixed(1)),
+        phCanisterLastCorrection: txt,
+        phCanisterAdminRestLastApplied: Number(restFromAdmin.toFixed(3))
+      });
+    }
+  }
+
   getPhCanisterConfig() {
     const capacityL = Math.max(0.1, parseNum(this.config.phCanisterCapacityL || 10));
     const warnL = Math.max(0, parseNum(this.config.phCanisterWarnL || 2));
@@ -1067,6 +1132,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     if (!capStatus || !Number(capStatus.val)) {
       await this.setStateAsync('status.phCanister.capacityL', cfg.capacityL, true);
     }
+    await this.applyPhCanisterAdminConfigIfNeeded();
     await this.recalcPhCanister();
   }
 
@@ -1104,6 +1170,14 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     await this.setStateIfChanged('status.phCanister.critical', critical, true);
     await this.setStateIfChanged('status.phCanister.orderRecommended', warning, true);
     await this.setStateIfChanged('status.phCanister.statusText', text, true);
+    const lastCorrection = (await this.getStateAsync('status.phCanister.lastCorrection'))?.val || this.config.phCanisterLastCorrection || '-';
+    await this.updateOwnNative({
+      phCanisterCurrentRestL: restL,
+      phCanisterUsedL: Number(usedL.toFixed(3)),
+      phCanisterRestPercent: restPercent,
+      phCanisterLastCorrection: String(lastCorrection),
+      phCanisterAdminRestLastApplied: restL
+    });
   }
 
   async addPhCanisterDoseMl(ml) {
