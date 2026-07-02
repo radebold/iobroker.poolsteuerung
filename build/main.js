@@ -1058,42 +1058,42 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const capacityL = cfg.capacityL;
 
     if (this.config.phCanisterNewOnSave === true) {
-      await this.setStateAsync('control.phCanister.capacityL', Number(capacityL.toFixed(3)), true);
-      await this.setStateAsync('status.phCanister.capacityL', Number(capacityL.toFixed(3)), true);
+      await this.setStateAsync('control.phCanister.capacityL', Number(capacityL.toFixed(2)), true);
+      await this.setStateAsync('status.phCanister.capacityL', Number(capacityL.toFixed(2)), true);
       await this.setStateAsync('status.phCanister.usedL', 0, true);
-      await this.setStateAsync('control.phCanister.measuredRestL', Number(capacityL.toFixed(3)), true);
+      await this.setStateAsync('control.phCanister.measuredRestL', Number(capacityL.toFixed(2)), true);
       await this.setStateAsync('status.phCanister.lastReset', `${new Date().toLocaleString('de-DE')} - Neuer Kanister über Admin`, true);
-      this.phCanisterAdminAppliedRest = Number(capacityL.toFixed(3));
+      this.phCanisterAdminAppliedRest = Number(capacityL.toFixed(2));
       await this.updateOwnNative({
         phCanisterNewOnSave: false,
-        phCanisterCurrentRestL: Number(capacityL.toFixed(3)),
+        phCanisterCurrentRestL: Number(capacityL.toFixed(2)),
         phCanisterUsedL: 0,
         phCanisterRestPercent: 100,
         phCanisterLastCorrection: `${new Date().toLocaleString('de-DE')} - Neuer Kanister über Admin`,
-        phCanisterAdminRestLastApplied: Number(capacityL.toFixed(3))
+        phCanisterAdminRestLastApplied: Number(capacityL.toFixed(2))
       });
       return;
     }
 
     const restFromAdmin = parseNum(this.config.phCanisterCurrentRestL);
     const lastApplied = parseNum(this.config.phCanisterAdminRestLastApplied);
-    const runtimeKey = Number(restFromAdmin.toFixed(3));
+    const runtimeKey = Number(restFromAdmin.toFixed(2));
     if (this.phCanisterAdminAppliedRest === runtimeKey) return;
     if (Number.isFinite(restFromAdmin) && restFromAdmin >= 0 && restFromAdmin <= capacityL && Math.abs(restFromAdmin - lastApplied) >= 0.001) {
       this.phCanisterAdminAppliedRest = runtimeKey;
       const usedL = Number((capacityL - restFromAdmin).toFixed(3));
       const txt = `${new Date().toLocaleString('de-DE')} - Rest über Admin auf ${restFromAdmin.toFixed(2)} l gesetzt`;
-      await this.setStateAsync('control.phCanister.capacityL', Number(capacityL.toFixed(3)), true);
-      await this.setStateAsync('status.phCanister.capacityL', Number(capacityL.toFixed(3)), true);
+      await this.setStateAsync('control.phCanister.capacityL', Number(capacityL.toFixed(2)), true);
+      await this.setStateAsync('status.phCanister.capacityL', Number(capacityL.toFixed(2)), true);
       await this.setStateAsync('status.phCanister.usedL', usedL, true);
-      await this.setStateAsync('control.phCanister.measuredRestL', Number(restFromAdmin.toFixed(3)), true);
+      await this.setStateAsync('control.phCanister.measuredRestL', Number(restFromAdmin.toFixed(2)), true);
       await this.setStateAsync('status.phCanister.lastCorrection', txt, true);
       await this.updateOwnNative({
-        phCanisterCurrentRestL: Number(restFromAdmin.toFixed(3)),
-        phCanisterUsedL: usedL,
+        phCanisterCurrentRestL: Number(restFromAdmin.toFixed(2)),
+        phCanisterUsedL: Number(usedL.toFixed(2)),
         phCanisterRestPercent: Number(((restFromAdmin / capacityL) * 100).toFixed(1)),
         phCanisterLastCorrection: txt,
-        phCanisterAdminRestLastApplied: Number(restFromAdmin.toFixed(3))
+        phCanisterAdminRestLastApplied: Number(restFromAdmin.toFixed(2))
       });
     }
   }
@@ -1162,7 +1162,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         ? `pH-Minus nachbestellen: ${restL.toFixed(2)} l Rest (${restPercent.toFixed(1)} %)`
         : `pH-Minus OK: ${restL.toFixed(2)} l Rest (${restPercent.toFixed(1)} %)`;
 
-    await this.setStateIfChanged('status.phCanister.capacityL', Number(capacityL.toFixed(3)), true);
+    await this.setStateIfChanged('status.phCanister.capacityL', Number(capacityL.toFixed(2)), true);
     await this.setStateIfChanged('status.phCanister.usedL', Number(usedL.toFixed(3)), true);
     await this.setStateIfChanged('status.phCanister.restL', restL, true);
     await this.setStateIfChanged('status.phCanister.restPercent', restPercent, true);
@@ -1172,11 +1172,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     await this.setStateIfChanged('status.phCanister.statusText', text, true);
     const lastCorrection = (await this.getStateAsync('status.phCanister.lastCorrection'))?.val || this.config.phCanisterLastCorrection || '-';
     await this.updateOwnNative({
-      phCanisterCurrentRestL: restL,
-      phCanisterUsedL: Number(usedL.toFixed(3)),
+      phCanisterCurrentRestL: Number(restL.toFixed(2)),
+      phCanisterUsedL: Number(usedL.toFixed(2)),
       phCanisterRestPercent: restPercent,
       phCanisterLastCorrection: String(lastCorrection),
-      phCanisterAdminRestLastApplied: restL
+      phCanisterAdminRestLastApplied: Number(restL.toFixed(2))
     });
   }
 
@@ -1210,10 +1210,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   async resetPhCanister() {
     await this.ensurePhCanisterStates();
     const capacityL = await this.getPhCanisterCapacityL();
-    await this.setStateAsync('status.phCanister.capacityL', Number(capacityL.toFixed(3)), true);
+    await this.setStateAsync('status.phCanister.capacityL', Number(capacityL.toFixed(2)), true);
     await this.setStateAsync('status.phCanister.usedL', 0, true);
     await this.setStateAsync('status.phCanister.lastReset', `${new Date().toLocaleString('de-DE')} - Neuer Kanister`, true);
-    await this.setStateAsync('control.phCanister.measuredRestL', Number(capacityL.toFixed(3)), true);
+    await this.setStateAsync('control.phCanister.measuredRestL', Number(capacityL.toFixed(2)), true);
     await this.setStateAsync('control.phCanister.newCanister', false, true);
     await this.recalcPhCanister();
     this.queueRender();
@@ -1287,7 +1287,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       </div>
       <div style="font-size:11px;color:#475569;line-height:1.35;margin-bottom:8px">${esc(c.statusText)}<br>Letzte Dosis: ${esc(c.lastDoseMl)} ml · ${esc(c.lastDoseAt)}</div>
       <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;margin-bottom:6px">
-        <input id="psPhRestInput" type="number" step="0.1" min="0" max="${esc(c.capacityL)}" placeholder="Aktueller Füllstand in Liter" style="min-width:0;border:1px solid #cbd5e1;border-radius:9px;padding:8px;font-size:13px">
+        <input id="psPhRestInput" type="number" step="0.01" min="0" max="${esc(c.capacityL)}" placeholder="Aktueller Füllstand in Liter" style="min-width:0;border:1px solid #cbd5e1;border-radius:9px;padding:8px;font-size:13px">
         <button onclick="var el=document.getElementById('psPhRestInput');var v=parseFloat(String(el.value).replace(',','.'));if(!isNaN(v)){vis.conn.setState('${ns}.control.phCanister.measuredRestL',v);vis.conn.setState('${ns}.control.phCanister.applyCorrection',true);}" style="border:0;border-radius:9px;background:#2563eb;color:#fff;font-weight:900;padding:8px 10px;cursor:pointer">Setzen</button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">

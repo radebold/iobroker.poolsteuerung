@@ -318,7 +318,9 @@
           "sm": 12,
           "md": 4,
           "lg": 4,
-          "help": "Standard: 10 Liter. Kann später auch in der VIS geändert werden."
+          "help": "Standard: 10,00 Liter.",
+          "step": 0.01,
+          "min": 0
         },
         "phCanisterWarnL": {
           "type": "number",
@@ -327,7 +329,9 @@
           "sm": 12,
           "md": 4,
           "lg": 4,
-          "help": "Standard: 2 Liter."
+          "help": "Standard: 2 Liter.",
+          "step": 0.01,
+          "min": 0
         },
         "phCanisterCriticalL": {
           "type": "number",
@@ -336,26 +340,32 @@
           "sm": 12,
           "md": 4,
           "lg": 4,
-          "help": "Standard: 1 Liter."
+          "help": "Standard: 1 Liter.",
+          "step": 0.01,
+          "min": 0
         },
         "phCanisterCurrentRestL": {
           "type": "number",
-          "label": "Aktueller Füllstand pH-Minus (Liter)",
+          "label": "Aktueller Füllstand pH-Minus (Liter, 2 Nachkommastellen)",
           "newLine": true,
           "sm": 12,
           "md": 4,
           "lg": 4,
-          "help": "Hier den am Kanister gemessenen aktuellen Füllstand eintragen. Beim Speichern übernimmt der Adapter den Wert und berechnet Verbrauch und Prozent neu."
+          "help": "Hier den am Kanister gemessenen aktuellen Füllstand eintragen, z. B. 8,30. Beim Speichern übernimmt der Adapter den Wert und berechnet Verbrauch und Prozent neu.",
+          "step": 0.01,
+          "min": 0
         },
         "phCanisterUsedL": {
           "type": "number",
-          "label": "Verbraucht seit letztem Kanister (Liter)",
+          "label": "Verbraucht seit letztem Kanister (Liter, 2 Nachkommastellen)",
           "newLine": false,
           "sm": 12,
           "md": 4,
           "lg": 4,
           "disabled": true,
-          "help": "Anzeige. Wird vom Adapter aus Dosierdauer und Fördermenge berechnet."
+          "help": "Anzeige. Wird vom Adapter aus Dosierdauer und Fördermenge berechnet.",
+          "step": 0.01,
+          "min": 0
         },
         "phCanisterRestPercent": {
           "type": "number",
@@ -365,7 +375,9 @@
           "md": 4,
           "lg": 4,
           "disabled": true,
-          "help": "Anzeige. Wird vom Adapter berechnet."
+          "help": "Anzeige. Wird vom Adapter berechnet.",
+          "step": 0.1,
+          "min": 0
         },
         "phCanisterLastCorrection": {
           "type": "text",
