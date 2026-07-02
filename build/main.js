@@ -1199,14 +1199,21 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         <div style="font-size:11px;font-weight:900;color:${color}">${esc(c.critical ? 'KRITISCH' : c.warning ? 'BESTELLEN' : 'OK')}</div>
       </div>
       <div style="height:${barH}px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin:6px 0 8px"><div style="height:100%;width:${pct}%;background:${color};border-radius:999px"></div></div>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:8px;margin-bottom:8px">
+        <div style="font-size:10px;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:.03em">Aktueller Füllstand</div>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-top:2px">
+          <div style="font-size:${compact ? '22px' : '28px'};font-weight:900;color:#0f172a">${esc(c.restL)} l</div>
+          <div style="font-size:12px;color:#64748b">von ${esc(c.capacityL)} l · ${esc(c.restPercent)} %</div>
+        </div>
+      </div>
       <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px">
-        <div><div style="font-size:10px;color:#64748b">Rest</div><div style="font-size:${compact ? '14px' : '18px'};font-weight:900">${esc(c.restL)} l</div></div>
-        <div><div style="font-size:10px;color:#64748b">Verbraucht</div><div style="font-size:${compact ? '14px' : '18px'};font-weight:900">${esc(c.usedL)} l</div></div>
-        <div><div style="font-size:10px;color:#64748b">Füllstand</div><div style="font-size:${compact ? '14px' : '18px'};font-weight:900">${esc(c.restPercent)} %</div></div>
+        <div><div style="font-size:10px;color:#64748b">Kanistergröße</div><div style="font-size:${compact ? '13px' : '16px'};font-weight:900">${esc(c.capacityL)} l</div></div>
+        <div><div style="font-size:10px;color:#64748b">Verbraucht</div><div style="font-size:${compact ? '13px' : '16px'};font-weight:900">${esc(c.usedL)} l</div></div>
+        <div><div style="font-size:10px;color:#64748b">Füllstand</div><div style="font-size:${compact ? '13px' : '16px'};font-weight:900">${esc(c.restPercent)} %</div></div>
       </div>
       <div style="font-size:11px;color:#475569;line-height:1.35;margin-bottom:8px">${esc(c.statusText)}<br>Letzte Dosis: ${esc(c.lastDoseMl)} ml · ${esc(c.lastDoseAt)}</div>
       <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;margin-bottom:6px">
-        <input id="psPhRestInput" type="number" step="0.1" min="0" max="${esc(c.capacityL)}" placeholder="Rest Liter" style="min-width:0;border:1px solid #cbd5e1;border-radius:9px;padding:8px;font-size:13px">
+        <input id="psPhRestInput" type="number" step="0.1" min="0" max="${esc(c.capacityL)}" placeholder="Aktueller Füllstand in Liter" style="min-width:0;border:1px solid #cbd5e1;border-radius:9px;padding:8px;font-size:13px">
         <button onclick="var el=document.getElementById('psPhRestInput');var v=parseFloat(String(el.value).replace(',','.'));if(!isNaN(v)){vis.conn.setState('${ns}.control.phCanister.measuredRestL',v);vis.conn.setState('${ns}.control.phCanister.applyCorrection',true);}" style="border:0;border-radius:9px;background:#2563eb;color:#fff;font-weight:900;padding:8px 10px;cursor:pointer">Setzen</button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">

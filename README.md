@@ -1,6 +1,6 @@
 # ioBroker Poolsteuerung
 
-Version: `0.3.15-hotfix23`
+Version: `0.3.15-hotfix24`
 
 ## VIS HTML
 
@@ -68,3 +68,8 @@ Im Adapter-Admin unter `PH` gibt es neue Felder:
 - Kanistergröße pH-Minus, Standard `10 l`
 - Nachbestellen ab Rest, Standard `2 l`
 - Kritisch ab Rest, Standard `1 l`
+
+### Änderung 0.3.15-hotfix24
+
+- Der aktuelle pH-Minus-Füllstand wird in der UI jetzt prominent als eigener Wert angezeigt: `Aktueller Füllstand x l von y l`.
+- Das Korrekturfeld ist klar als aktueller Füllstand in Liter beschriftet.
