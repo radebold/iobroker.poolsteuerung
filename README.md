@@ -75,8 +75,9 @@ Im Adapter-Admin unter `PH` gibt es neue Felder:
 - Das Korrekturfeld ist klar als aktueller Füllstand in Liter beschriftet.
 
 
-## 0.3.15-hotfix27
-- pH-Minus-Kanister-Karte in der Haupt-UI kompakter dargestellt.
-- Außen- und Solltemperatur in der linken Spalte unter den Pool-Manager verschoben.
-- Button/Eingabe für manuelle pH-Dosierung in ml ergänzt.
+## 0.3.15-hotfix28
+
+- Layout zurück auf Stand hotfix25/hotfix26: Zusatzwerte bleiben unten rechts erhalten.
+- Keine kompakte Verschiebung der pH-Kanisterkarte.
+- Füllstand bleibt mit 2 Nachkommastellen/0,01-l-Schritten erhalten.
 
