@@ -2152,8 +2152,16 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         this.visTrace('renderVisFull Local-Sparklines ERROR', String(e && e.message ? e.message : e).slice(0, 300));
       }
     }
-    const phSparklineSvg = historySparklines.phSparklineSvg || '';
-    const orpSparklineSvg = historySparklines.orpSparklineSvg || '';
+    const phNumForSparkline = parseNum(ph);
+    const orpNumForSparkline = parseNum(orp);
+    const phSparklineSvg = historySparklines.phSparklineSvg || (Number.isFinite(phNumForSparkline) ? this.buildSparklineSvgFromValues([
+      { ts: Date.now() - 600000, val: phNumForSparkline },
+      { ts: Date.now(), val: phNumForSparkline }
+    ], 'sparkline-ph') : '');
+    const orpSparklineSvg = historySparklines.orpSparklineSvg || (Number.isFinite(orpNumForSparkline) ? this.buildSparklineSvgFromValues([
+      { ts: Date.now() - 600000, val: orpNumForSparkline },
+      { ts: Date.now(), val: orpNumForSparkline }
+    ], 'sparkline-orp') : '');
 
     const phNumStable = parseNum(ph);
     const orpNumStable = parseNum(orp);
@@ -3434,7 +3442,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       .filter(v => Number.isFinite(v.val))
       .sort((a, b) => a.ts - b.ts);
 
-    if (rows.length < 2) return '';
+    if (rows.length < 1) return '';
+    if (rows.length === 1) {
+      rows.push({ ts: Number(rows[0].ts || 0) + 1, val: rows[0].val });
+    }
 
     const maxPoints = 56;
     const sampled = [];
