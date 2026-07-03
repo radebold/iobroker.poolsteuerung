@@ -482,7 +482,7 @@ body{
   background:
     radial-gradient(circle at top right, rgba(82,199,255,.22), transparent 28%),
     linear-gradient(180deg,rgba(23,46,80,.97),rgba(11,26,48,.98));
-  min-height:360px;
+  min-height:300px;
   border-color:rgba(86,196,255,.18);
 }
 .head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
@@ -498,6 +498,8 @@ body{
 .scale-target{position:absolute;top:50%;left:${targetPct}%;width:3px;height:18px;border-radius:999px;background:#ffffff;box-shadow:0 0 0 1px rgba(15,33,60,.65), 0 0 0 2px rgba(255,255,255,.15);transform:translate(-50%,-50%)}
 .scale-dot{position:absolute;top:50%;width:13px;height:13px;border-radius:50%;background:#fff;border:3px solid #0f213c;box-shadow:0 0 0 3px rgba(255,255,255,.25), 0 4px 12px rgba(0,0,0,.35);transform:translate(-50%,-50%);left:${tempPct}%}
 .metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+.left-bottom-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+.left-bottom-metrics .metric{min-height:68px}
 .metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:9px;min-height:78px;position:relative}
 .metric.cool{background:linear-gradient(180deg,rgba(80,166,255,.15),rgba(255,255,255,.05))}
 .metric.warn{background:linear-gradient(180deg,rgba(255,145,96,.12),rgba(255,255,255,.05))}
@@ -561,12 +563,14 @@ body{
         <div class="scale-track"><div class="scale-target" title="Soll ${esc(data.targetTemp)} °C"></div><div class="scale-dot"></div></div>
         <div class="scale-row"><span>15 °C</span><span>Aktuell: ${esc(data.poolTemp)} °C</span><span>32 °C</span></div>
       </div>
-      <div class="metrics">
+      <div class="metrics main-metrics">
         ${metric('pH', data.ph, `Soll ${data.phSet}`, phBadge, 'warn')}
         ${metric('ORP', data.orp, `Soll ${data.orpSet}`, orpBadge, 'warn')}
-        ${metric('Außen', `${data.outsideTemp}°C`, 'Außen', null, 'cool')}
-        ${metric('Solltemp', `${data.targetTemp}°C`, 'Soll', null, 'metric-target')}
       </div>
+    </div>
+    <div class="left-bottom-metrics">
+      ${metric('Außen', `${data.outsideTemp}°C`, 'Außen', null, 'cool')}
+      ${metric('Solltemp', `${data.targetTemp}°C`, 'Soll', null, 'metric-target')}
     </div>
   </div>
 
@@ -603,7 +607,7 @@ body{
         ${status('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
       </div>
     </div>
-    ${this.buildPhCanisterCard(data)}
+    ${this.buildPhCanisterCard(data, true)}
     <div class="card" style="margin-top:10px">
       <div class="section extra">Zusatzwerte</div>
       <div class="mini-list">
@@ -1122,6 +1126,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     await this.ensureState('control.phCanister.measuredRestL', 'number', 'value.volume', 0, true);
     await this.ensureState('control.phCanister.applyCorrection', 'boolean', 'button', false, true);
     await this.ensureState('control.phCanister.newCanister', 'boolean', 'button', false, true);
+    await this.ensureState('control.phCanister.manualDoseMl', 'number', 'value.volume', 0, true);
+    await this.ensureState('control.phCanister.manualDoseStart', 'boolean', 'button', false, true);
     await this.ensureState('control.phCanister.capacityL', 'number', 'value.volume', cfg.capacityL, true);
 
     const capCtrl = await this.getStateAsync('control.phCanister.capacityL');
@@ -1219,6 +1225,27 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     this.queueRender();
   }
 
+
+  async startManualPhDoseFromCanister() {
+    await this.ensurePhCanisterStates();
+    const ml = Math.max(0, parseNum((await this.getStateAsync('control.phCanister.manualDoseMl'))?.val));
+    const flowMlPerMin = Math.max(0, parseNum(this.config.phPumpFlowMlPerMin || 0));
+    const maxSec = Math.max(1, parseNum(this.config.phDoseMaxDurationSec || 180));
+    if (!ml || !flowMlPerMin) {
+      await this.setStateAsync('control.phCanister.manualDoseStart', false, true);
+      await this.setStateIfChanged('status.debug.lastPhStartInfo', '[PH] Manuelle Dosierung nicht gestartet: ml oder Fördermenge ungültig', true);
+      return false;
+    }
+    const seconds = Math.min(maxSec, Math.max(1, Math.round((ml / flowMlPerMin) * 60)));
+    const ok = await this.runDosePumpOnce(seconds, { checkTime: 'manuell', phValue: 'manuell' });
+    await this.setStateAsync('control.phCanister.manualDoseStart', false, true);
+    if (ok) {
+      await this.setStateIfChanged('status.debug.lastPhStartInfo', `[PH] Manuelle Dosierung gestartet | ${ml.toFixed(1)} ml | ${seconds}s`, true);
+    }
+    this.queueRender();
+    return ok;
+  }
+
   async handlePhCanisterControl(id, state) {
     if (!state || state.ack) return;
     if (id.endsWith('.applyCorrection') && state.val === true) {
@@ -1227,6 +1254,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     }
     if (id.endsWith('.newCanister') && state.val === true) {
       await this.resetPhCanister();
+      return;
+    }
+    if (id.endsWith('.manualDoseStart') && state.val === true) {
+      await this.startManualPhDoseFromCanister();
       return;
     }
     if (id.endsWith('.capacityL')) {
@@ -1266,33 +1297,36 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const pct = Math.max(0, Math.min(100, parseNum(c.restPercent)));
     const color = c.critical ? '#dc2626' : c.warning ? '#f59e0b' : '#16a34a';
     const ns = this.namespace;
-    const barH = compact ? 8 : 12;
-    return `<div style="background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:${compact ? '8px' : '10px'};box-shadow:0 8px 18px rgba(0,0,0,.08);color:#0f172a;font-family:Arial,Helvetica,sans-serif">
-      <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:6px">
-        <div style="font-size:${compact ? '13px' : '15px'};font-weight:900">pH-Minus Kanister</div>
+    const cardPad = compact ? '8px' : '10px';
+    const titleSize = compact ? '14px' : '15px';
+    const mainSize = compact ? '24px' : '28px';
+    return `<div style="background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:${cardPad};box-shadow:0 8px 18px rgba(0,0,0,.08);color:#0f172a;font-family:Arial,Helvetica,sans-serif">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:5px">
+        <div style="font-size:${titleSize};font-weight:900">pH-Minus Kanister</div>
         <div style="font-size:11px;font-weight:900;color:${color}">${esc(c.critical ? 'KRITISCH' : c.warning ? 'BESTELLEN' : 'OK')}</div>
       </div>
-      <div style="height:${barH}px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin:6px 0 8px"><div style="height:100%;width:${pct}%;background:${color};border-radius:999px"></div></div>
-      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:8px;margin-bottom:8px">
-        <div style="font-size:10px;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:.03em">Aktueller Füllstand</div>
-        <div style="display:flex;align-items:baseline;gap:6px;margin-top:2px">
-          <div style="font-size:${compact ? '22px' : '28px'};font-weight:900;color:#0f172a">${esc(c.restL)} l</div>
-          <div style="font-size:12px;color:#64748b">von ${esc(c.capacityL)} l · ${esc(c.restPercent)} %</div>
-        </div>
+      <div style="height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin:5px 0 8px"><div style="height:100%;width:${pct}%;background:${color};border-radius:999px"></div></div>
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-end;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:7px;margin-bottom:7px">
+        <div><div style="font-size:10px;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:.03em">Füllstand</div><div style="font-size:${mainSize};font-weight:900;color:#0f172a;line-height:1">${esc(c.restL)} l</div></div>
+        <div style="font-size:12px;color:#64748b;text-align:right">von ${esc(c.capacityL)} l<br>${esc(c.restPercent)} %</div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px">
-        <div><div style="font-size:10px;color:#64748b">Kanistergröße</div><div style="font-size:${compact ? '13px' : '16px'};font-weight:900">${esc(c.capacityL)} l</div></div>
-        <div><div style="font-size:10px;color:#64748b">Verbraucht</div><div style="font-size:${compact ? '13px' : '16px'};font-weight:900">${esc(c.usedL)} l</div></div>
-        <div><div style="font-size:10px;color:#64748b">Füllstand</div><div style="font-size:${compact ? '13px' : '16px'};font-weight:900">${esc(c.restPercent)} %</div></div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-bottom:6px">
+        <div><div style="font-size:10px;color:#64748b">Größe</div><div style="font-size:14px;font-weight:900">${esc(c.capacityL)} l</div></div>
+        <div><div style="font-size:10px;color:#64748b">Verbraucht</div><div style="font-size:14px;font-weight:900">${esc(c.usedL)} l</div></div>
+        <div><div style="font-size:10px;color:#64748b">Letzte Dosis</div><div style="font-size:14px;font-weight:900">${esc(c.lastDoseMl)} ml</div></div>
       </div>
-      <div style="font-size:11px;color:#475569;line-height:1.35;margin-bottom:8px">${esc(c.statusText)}<br>Letzte Dosis: ${esc(c.lastDoseMl)} ml · ${esc(c.lastDoseAt)}</div>
-      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;margin-bottom:6px">
-        <input id="psPhRestInput" type="number" step="0.01" min="0" max="${esc(c.capacityL)}" placeholder="Aktueller Füllstand in Liter" style="min-width:0;border:1px solid #cbd5e1;border-radius:9px;padding:8px;font-size:13px">
-        <button onclick="var el=document.getElementById('psPhRestInput');var v=parseFloat(String(el.value).replace(',','.'));if(!isNaN(v)){vis.conn.setState('${ns}.control.phCanister.measuredRestL',v);vis.conn.setState('${ns}.control.phCanister.applyCorrection',true);}" style="border:0;border-radius:9px;background:#2563eb;color:#fff;font-weight:900;padding:8px 10px;cursor:pointer">Setzen</button>
+      <div style="font-size:10.5px;color:#475569;line-height:1.25;margin-bottom:7px">${esc(c.statusText)}<br>${esc(c.lastDoseAt)}</div>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px;margin-bottom:5px">
+        <input id="psPhRestInput" type="number" step="0.01" min="0" max="${esc(c.capacityL)}" placeholder="Füllstand l" style="min-width:0;border:1px solid #cbd5e1;border-radius:9px;padding:7px;font-size:12px">
+        <button onclick="var el=document.getElementById('psPhRestInput');var v=parseFloat(String(el.value).replace(',','.'));if(!isNaN(v)){vis.conn.setState('${ns}.control.phCanister.measuredRestL',v);vis.conn.setState('${ns}.control.phCanister.applyCorrection',true);}" style="border:0;border-radius:9px;background:#2563eb;color:#fff;font-weight:900;padding:7px 9px;cursor:pointer">Setzen</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-        <button onclick="if(confirm('Neuen pH-Minus-Kanister setzen?')){vis.conn.setState('${ns}.control.phCanister.newCanister',true);}" style="border:0;border-radius:9px;background:#16a34a;color:#fff;font-weight:900;padding:8px;cursor:pointer">Neuer Kanister</button>
-        <button onclick="var v=prompt('Kanistergröße in Liter:', '${esc(c.capacityL)}');if(v!==null){v=parseFloat(String(v).replace(',','.'));if(!isNaN(v)&&v>0){vis.conn.setState('${ns}.control.phCanister.capacityL',v);}}" style="border:0;border-radius:9px;background:#475569;color:#fff;font-weight:900;padding:8px;cursor:pointer">Größe</button>
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px;margin-bottom:5px">
+        <input id="psPhManualDoseMl" type="number" step="1" min="1" placeholder="Manuelle Dosis ml" style="min-width:0;border:1px solid #cbd5e1;border-radius:9px;padding:7px;font-size:12px">
+        <button onclick="var el=document.getElementById('psPhManualDoseMl');var v=parseFloat(String(el.value).replace(',','.'));if(!isNaN(v)&&v>0&&confirm('Manuelle pH-Dosierung mit '+v+' ml starten?')){vis.conn.setState('${ns}.control.phCanister.manualDoseMl',v);vis.conn.setState('${ns}.control.phCanister.manualDoseStart',true);}" style="border:0;border-radius:9px;background:#f97316;color:#fff;font-weight:900;padding:7px 9px;cursor:pointer">Dosieren</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+        <button onclick="if(confirm('Neuen pH-Minus-Kanister setzen?')){vis.conn.setState('${ns}.control.phCanister.newCanister',true);}" style="border:0;border-radius:9px;background:#16a34a;color:#fff;font-weight:900;padding:7px;cursor:pointer">Neuer Kanister</button>
+        <button onclick="var v=prompt('Kanistergröße in Liter:', '${esc(c.capacityL)}');if(v!==null){v=parseFloat(String(v).replace(',','.'));if(!isNaN(v)&&v>0){vis.conn.setState('${ns}.control.phCanister.capacityL',v);}}" style="border:0;border-radius:9px;background:#475569;color:#fff;font-weight:900;padding:7px;cursor:pointer">Größe</button>
       </div>
     </div>`;
   }
