@@ -1,6 +1,6 @@
 # ioBroker Poolsteuerung
 
-## 0.3.20
+## 0.3.21
 
 - Tablet-VIS: Auto-Status für Pumpe, Chlor, pH und Wärmepumpe ist jetzt als klickbarer Button umgesetzt.
 - Klick schaltet die jeweiligen States `control.auto.circulation`, `control.auto.chlor`, `control.auto.ph`, `control.auto.heatpump`.
@@ -39,8 +39,12 @@ Version 0.3.16-hotfix68
 - Tablet-VIS Schnellzugriff kompakter: PH-Manuell-Button und Eingabe kleiner.
 
 
-## v0.3.20
+## v0.3.21
 - VIS auf Basis des hochgeladenen stabilen Stands erweitert.
 - pH-Minus-Kanister in Tablet-/Phone-VIS ergänzt.
 - Manueller pH-Dosierbutton bleibt erhalten.
 - Füllstand mit 2 Nachkommastellen und Kanister-Reset.
+
+
+## 0.3.21
+- pH-Minus-Zusatzkachel als Ampelanzeige mit deutschem Zahlenformat ergänzt.
