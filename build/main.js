@@ -9,8 +9,46 @@ function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function getManualPhDoseDefaultSec(config) {
+  const raw = config && config.phManualDoseSec !== undefined && config.phManualDoseSec !== null && String(config.phManualDoseSec).trim() !== ''
+    ? config.phManualDoseSec
+    : 30;
+  return Math.max(1, parseNum(raw) || 30);
+}
+
+function getConfiguredManualPhDoseSec(config) {
+  if (!config || config.phManualDoseSec === undefined || config.phManualDoseSec === null) return null;
+  const raw = String(config.phManualDoseSec).trim();
+  if (raw === '') return null;
+  const n = parseNum(raw);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.max(1, Math.round(n));
+}
+
+function inWindow(now, startHHMM, endHHMM) {
+  const parseHHMM = (v) => {
+    const m = String(v || '').match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    const h = Number(m[1]);
+    const min = Number(m[2]);
+    if (h < 0 || h > 23 || min < 0 || min > 59) return null;
+    return h * 60 + min;
+  };
+  const start = parseHHMM(startHHMM);
+  const end = parseHHMM(endHHMM);
+  if (start === null || end === null) return false;
+  if (start === 0 && end === 0) return false;
+  const cur = now.getHours() * 60 + now.getMinutes();
+  if (start === end) return false;
+  if (start < end) return cur >= start && cur < end;
+  return cur >= start || cur < end;
+}
+
+
 class Poolsteuerung extends utils.Adapter {
 
+  lastTabletHtml = '';
+  lastPhoneHtml = '';
   lastTabletWidget = '';
   lastPhoneWidget = '';
   lastSlowUpdate = 0;
@@ -21,16 +59,25 @@ class Poolsteuerung extends utils.Adapter {
   alertLockMemory = {};
   lastCirculationPumpOn = false;
   circulationPumpStartedAt = 0;
+  lastPhPumpOn = false;
+  phManualStartedAt = 0;
+  phManagedActive = false;
+  trendCache = { ts: 0, data: null };
+  controlTransitionUntil = 0;
 
   constructor(options = {}) {
     super({ ...options, name: 'poolsteuerung' });
     this.timer = null;
     this.monitoredIds = [];
     this.renderQueued = false;
+    this.renderActive = false;
+    this.renderAgainRequested = false;
     this.lastWrittenPhStopAtTs = null;
     this.phDoseStopAtTsMemory = 0;
     this.phLastDoseTsMemory = 0;
     this.phLastDoseDurationSecMemory = 0;
+    this.isShuttingDown = false;
+    this.pendingTimeouts = new Set();
     this.on('ready', this.onReady.bind(this));
     this.on('stateChange', this.onStateChange.bind(this));
     this.on('unload', this.onUnload.bind(this));
@@ -38,6 +85,58 @@ class Poolsteuerung extends utils.Adapter {
 
   debug(msg) {
     if (this.config.debugMode) this.log.debug('[DEBUG] ' + msg);
+  }
+
+  visTrace(step, detail = '') {
+    const text = `[VIS] ${step}${detail ? ' | ' + detail : ''}`;
+    try { if (this.config.debugMode) this.log.debug(text); } catch {}
+    try {
+      this.setStateAsync('status.debug.lastVisTrace', text, true).catch(() => {});
+    } catch {}
+  }
+
+  trackTimeout(handle) {
+    this.pendingTimeouts.add(handle);
+    return handle;
+  }
+
+  clearTrackedTimeout(handle) {
+    try { clearTimeout(handle); } catch {}
+    this.pendingTimeouts.delete(handle);
+  }
+
+  beginControlTransition(ms = 3500) {
+    this.controlTransitionUntil = Date.now() + Math.max(500, Number(ms) || 3500);
+  }
+
+  isControlTransitionActive() {
+    return Date.now() < (Number(this.controlTransitionUntil) || 0);
+  }
+
+  isDbClosedError(e) {
+    const msg = String((e && (e.message || e.stack || e)) || '');
+    return msg.includes('DB closed') || msg.includes('Connection is closed') || msg.includes('connection is closed');
+  }
+
+  async forceImmediateRender() {
+    if (this.isShuttingDown) return;
+    try {
+      this.visTrace('forceImmediateRender START');
+      await this.updateComputedStates();
+      if (typeof this.applyControlLogic === 'function') {
+        this.visTrace('onReady applyControlLogic START');
+      await this.applyControlLogic();
+      this.visTrace('onReady applyControlLogic OK');
+        await this.syncControlStates();
+        await this.syncDeviceControlStates();
+      }
+      this.lastRenderSignature = '';
+      this.lastRenderAt = 0;
+      await this.renderVis(true);
+      this.visTrace('forceImmediateRender OK');
+    } catch (e) {
+      if (!this.isDbClosedError(e)) this.log.warn('VIS Sofort-Render Fehler: ' + (e && e.stack ? e.stack : e));
+    }
   }
 
   async ensureState(id, type, role, def, write = false) {
@@ -80,15 +179,24 @@ class Poolsteuerung extends utils.Adapter {
     return d;
   }
 
-  getPumpWindows() {
+  getPumpWindows(now = new Date()) {
+    const tableRules = Array.isArray(this.config.pumpSchedules) ? this.config.pumpSchedules : [];
+    const tableWindows = tableRules
+      .filter(rule => !!rule && rule.enabled !== false)
+      .filter(rule => this.matchesPumpScheduleDay(rule.days, now))
+      .map(rule => ({ start: rule.start, end: rule.end, days: rule.days || 'daily' }))
+      .filter(w => this.parseHHMM(w.start) !== null && this.parseHHMM(w.end) !== null && this.parseHHMM(w.start) !== this.parseHHMM(w.end) && !(this.parseHHMM(w.start) === 0 && this.parseHHMM(w.end) === 0));
+
+    if (tableWindows.length) return tableWindows;
+
     return [
-      { start: this.config.pumpWindow1Start, end: this.config.pumpWindow1End },
-      { start: this.config.pumpWindow2Start, end: this.config.pumpWindow2End }
+      { start: this.config.pumpWindow1Start, end: this.config.pumpWindow1End, days: 'legacy' },
+      { start: this.config.pumpWindow2Start, end: this.config.pumpWindow2End, days: 'legacy' }
     ].filter(w => this.parseHHMM(w.start) !== null && this.parseHHMM(w.end) !== null && this.parseHHMM(w.start) !== this.parseHHMM(w.end) && !(this.parseHHMM(w.start) === 0 && this.parseHHMM(w.end) === 0));
   }
 
   getNextPumpAction(now = new Date()) {
-    const windows = this.getPumpWindows();
+    const windows = this.getPumpWindows(now);
     if (!windows.length) return null;
     const candidates = [];
     for (const w of windows) {
@@ -171,7 +279,14 @@ class Poolsteuerung extends utils.Adapter {
     if (!id) return false;
     try {
       const s = await this.getForeignStateAsync(id);
-      return !!(s && s.val);
+      const val = s ? s.val : undefined;
+      if (typeof val === 'boolean') return val;
+      if (typeof val === 'number') return val !== 0;
+      const str = String(val ?? '').trim().toLowerCase();
+      if (!str) return false;
+      if (['true', '1', 'on', 'ein', 'yes', 'ja'].includes(str)) return true;
+      if (['false', '0', 'off', 'aus', 'no', 'nein'].includes(str)) return false;
+      return !!val;
     } catch {
       return false;
     }
@@ -184,6 +299,55 @@ class Poolsteuerung extends utils.Adapter {
     } catch {
       return null;
     }
+  }
+
+
+  getDeviceSyncInfo(state, maxAgeSec = 180) {
+    const ts = Number((state && (state.lc || state.ts)) || 0);
+    if (!ts) {
+      return { cls: 'bad', label: 'KEIN', ageSec: null };
+    }
+    const ageSec = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+    if (ageSec > Math.max(30, Number(maxAgeSec) || 180)) {
+      return { cls: 'warn', label: ageSec >= 3600 ? `${Math.floor(ageSec/3600)}h` : `${Math.max(1, Math.floor(ageSec/60))}m`, ageSec };
+    }
+    return { cls: 'ok', label: ageSec <= 9 ? `${ageSec}s` : `${Math.floor(ageSec/10)*10}s`, ageSec };
+  }
+
+  async getVerifiedDeviceSyncInfo(id, state, maxAgeSec = 180) {
+    const base = this.getDeviceSyncInfo(state, maxAgeSec);
+    const zbTarget = this.getTasmotaZigbeeWriteTarget(id);
+    if (!zbTarget) return base;
+    this.zigbeeVerifyMeta = this.zigbeeVerifyMeta || {};
+    const meta = this.zigbeeVerifyMeta[id];
+    const ts = Number((state && (state.lc || state.ts)) || 0);
+    if (!meta) {
+      return ts ? { cls: base.cls, label: base.label, ageSec: base.ageSec } : { cls: 'bad', label: 'KEIN', ageSec: null };
+    }
+    if (ts && ts > Number(meta.beforeTs || 0)) {
+      meta.verifiedTs = ts;
+      meta.lastSeenTs = ts;
+      return this.getDeviceSyncInfo({ lc: ts, ts }, maxAgeSec);
+    }
+    if (meta.activePowerStateId) {
+      try {
+        const ap = await this.getForeignStateAsync(meta.activePowerStateId);
+        const apTs = Number((ap && (ap.lc || ap.ts)) || 0);
+        if (apTs && apTs > Number(meta.activeBeforeTs || 0)) {
+          meta.verifiedTs = apTs;
+          meta.lastSeenTs = apTs;
+          return this.getDeviceSyncInfo({ lc: apTs, ts: apTs }, maxAgeSec);
+        }
+      } catch {}
+    }
+    const requestAgeSec = Math.max(0, Math.floor((Date.now() - Number(meta.requestTs || 0)) / 1000));
+    if (meta.requestTs && requestAgeSec >= 8) {
+      return { cls: 'bad', label: 'FEHLT', ageSec: requestAgeSec };
+    }
+    if (meta.requestTs && requestAgeSec > 0) {
+      return { cls: 'warn', label: 'REQ', ageSec: requestAgeSec };
+    }
+    return ts ? base : { cls: 'bad', label: 'KEIN', ageSec: null };
   }
 
   updateCirculationPumpRuntime(isOn, stateTs = 0) {
@@ -266,12 +430,18 @@ class Poolsteuerung extends utils.Adapter {
 
     for (const [label, stateId, maxAgeMin, targetId] of checks) {
       await this.ensureState(targetId, 'string', 'text', '', false);
+      const prevState = await this.getStateAsync(targetId);
+      const prevText = String((prevState && prevState.val) || '').trim();
       const result = await this.evaluateHeartbeat(label, stateId, maxAgeMin);
       await this.setStateIfChanged(targetId, result.text, true);
-      if (stateId && (Number(maxAgeMin) || 0) > 0) {
-        if (result.severity === 'error') this.log.warn(`[CHECK] ${result.text}`);
-        else if (result.severity === 'warn') this.log.warn(`[CHECK] ${result.text}`);
-        else this.log.info(`[CHECK] ${result.text}`);
+
+      const changed = prevText !== result.text;
+      if (stateId && (Number(maxAgeMin) || 0) > 0 && changed) {
+        if (result.severity === 'error' || result.severity === 'warn') {
+          this.log.warn(`[CHECK] ${result.text}`);
+        } else if (this.config.debugMode) {
+          this.log.info(`[CHECK] ${result.text}`);
+        }
       }
     }
   }
@@ -289,16 +459,170 @@ class Poolsteuerung extends utils.Adapter {
     }
   }
 
+  getTasmotaZigbeeWriteTarget(id) {
+    const s = String(id || '');
+    const m = s.match(/^(.*)\.ZbReceived_(0x[0-9A-Fa-f]+)_Power$/);
+    if (m) {
+      return {
+        cmdId: `${m[1]}.ZbSend`,
+        device: m[2]
+      };
+    }
+    return null;
+  }
+
+  getTasmotaZigbeeActivePowerStateId(id) {
+    const s = String(id || '');
+    const m = s.match(/^(.*)\.ZbReceived_(0x[0-9A-Fa-f]+)_Power$/);
+    if (!m) return '';
+    return `${m[1]}.ZbInfo_${m[2]}_ActivePower`;
+  }
+
+  async requestZigbeePowerRead(id, force = false) {
+    const zbTarget = this.getTasmotaZigbeeWriteTarget(id);
+    if (!zbTarget) return false;
+    this.zigbeeReadbackTs = this.zigbeeReadbackTs || {};
+    this.zigbeeVerifyMeta = this.zigbeeVerifyMeta || {};
+    const key = `${zbTarget.cmdId}|${zbTarget.device}`;
+    const now = Date.now();
+    const minGapMs = force ? 0 : 15000;
+    if (!force && this.zigbeeReadbackTs[key] && now - this.zigbeeReadbackTs[key] < minGapMs) {
+      return false;
+    }
+    let beforeTs = 0;
+    let activeBeforeTs = 0;
+    const activePowerStateId = this.getTasmotaZigbeeActivePowerStateId(id);
+    try {
+      const st = await this.getForeignStateAsync(id);
+      beforeTs = Number((st && (st.lc || st.ts)) || 0);
+    } catch {}
+    if (activePowerStateId) {
+      try {
+        const ap = await this.getForeignStateAsync(activePowerStateId);
+        activeBeforeTs = Number((ap && (ap.lc || ap.ts)) || 0);
+      } catch {}
+    }
+    this.zigbeeReadbackTs[key] = now;
+    this.zigbeeVerifyMeta[id] = {
+      key,
+      requestTs: now,
+      beforeTs,
+      lastSeenTs: beforeTs,
+      verifiedTs: Number((this.zigbeeVerifyMeta[id] && this.zigbeeVerifyMeta[id].verifiedTs) || 0)
+    };
+    try {
+      const payload = JSON.stringify({
+        Device: zbTarget.device,
+        Read: { Power: true }
+      });
+      await this.setForeignStateAsync(zbTarget.cmdId, payload, false);
+      return true;
+    } catch (e) {
+      this.debug(`Zigbee-Readback fehlgeschlagen für ${id}: ${e && e.message ? e.message : e}`);
+      return false;
+    }
+  }
+
+  async refreshZigbeeReadbacks(force = false) {
+    const ids = [
+      this.config.circulationPumpSocketStateId,
+      this.config.chlorinatorSocketStateId,
+      this.config.phPumpSocketStateId,
+      this.config.heatpumpPowerStateId
+    ].filter(Boolean);
+    for (const id of ids) {
+      try { await this.requestZigbeePowerRead(id, force); } catch {}
+    }
+  }
+
+  isSingleWriteDevice(id) {
+    const s = String(id || '');
+    return s.startsWith('tuya.') || s === String(this.config.heatpumpPowerStateId || '');
+  }
+
+  async waitForBoolState(id, expected, waits = [500, 1000, 1500, 2500]) {
+    for (const waitMs of waits) {
+      try {
+        await new Promise(resolve => setTimeout(resolve, waitMs));
+        const current = await this.getBool(id);
+        if (current === expected) return true;
+      } catch {}
+    }
+    return false;
+  }
+
+  resetHeatpumpLocks(reason = '') {
+    const suffix = reason ? ` (${reason})` : '';
+    this.heatpumpLock = { state: null, lastOnTs: 0, lastOffTs: 0, ignoreStartup: true };
+    this.debug('Heatpump-Locks zurückgesetzt' + suffix);
+  }
+
+  clearPendingRenderTimeouts(reason = '') {
+    const suffix = reason ? ` (${reason})` : '';
+    for (const h of Array.from(this.pendingTimeouts)) {
+      try { clearTimeout(h); } catch {}
+      this.pendingTimeouts.delete(h);
+    }
+    this.renderQueued = false;
+    this.debug('Pending-Timeouts gelöscht' + suffix);
+  }
+
   async setSwitchStateCompat(id, on) {
     if (!id) return;
+
+    const zbTarget = this.getTasmotaZigbeeWriteTarget(id);
+    if (zbTarget) {
+      const payload = JSON.stringify({
+        Device: zbTarget.device,
+        Send: { Power: on ? 1 : 0 }
+      });
+      await this.setForeignStateAsync(zbTarget.cmdId, payload, false);
+      try {
+        const st = await this.getForeignStateAsync(id);
+        const beforeTs = Number((st && (st.lc || st.ts)) || 0);
+        const activePowerStateId = this.getTasmotaZigbeeActivePowerStateId(id);
+        let activeBeforeTs = 0;
+        if (activePowerStateId) {
+          try {
+            const ap = await this.getForeignStateAsync(activePowerStateId);
+            activeBeforeTs = Number((ap && (ap.lc || ap.ts)) || 0);
+          } catch {}
+        }
+        const readPayload = JSON.stringify({
+          Device: zbTarget.device,
+          Read: { Power: true }
+        });
+        this.zigbeeReadbackTs = this.zigbeeReadbackTs || {};
+        this.zigbeeVerifyMeta = this.zigbeeVerifyMeta || {};
+        const now = Date.now();
+        this.zigbeeReadbackTs[`${zbTarget.cmdId}|${zbTarget.device}`] = now;
+        this.zigbeeVerifyMeta[id] = {
+          key: `${zbTarget.cmdId}|${zbTarget.device}`,
+          requestTs: now,
+          beforeTs,
+          activePowerStateId,
+          activeBeforeTs,
+          lastSeenTs: beforeTs,
+          verifiedTs: Number((this.zigbeeVerifyMeta[id] && this.zigbeeVerifyMeta[id].verifiedTs) || 0)
+        };
+        await this.setForeignStateAsync(zbTarget.cmdId, readPayload, false);
+      } catch {}
+      return;
+    }
 
     let mode = '';
     if (id === this.config.circulationPumpSocketStateId) mode = this.config.circulationPumpWriteMode || '';
     if (id === this.config.chlorinatorSocketStateId) mode = this.config.chlorinatorWriteMode || '';
     if (id === this.config.phPumpSocketStateId) mode = this.config.phPumpWriteMode || '';
+    if (id === this.config.heatpumpPowerStateId) mode = this.config.heatpumpWriteMode || '';
+    if (id === this.config.heatpumpPowerStateId) mode = this.config.heatpumpWriteMode || '';
 
     const obj = await this.getForeignObjectAsync(id);
     const common = obj && obj.common ? obj.common : {};
+    if (common && common.write === false) {
+      this.log.warn(`[WRITE-GUARD] Read-only State wird nicht direkt beschrieben: ${id}`);
+      return;
+    }
     let value;
 
     if (mode === 'num01') {
@@ -323,6 +647,19 @@ class Poolsteuerung extends utils.Adapter {
 
   async forceSwitchOnCompat(id) {
     if (!id) return false;
+    const zbTarget = this.getTasmotaZigbeeWriteTarget(id);
+    if (zbTarget) {
+      try { await this.setSwitchStateCompat(id, true); } catch {}
+      await this.waitForBoolState(id, true, [400, 700, 1000, 1500]);
+      return true;
+    }
+
+    if (this.isSingleWriteDevice(id)) {
+      try { await this.setSwitchStateCompat(id, true); } catch {}
+      await this.waitForBoolState(id, true, [500, 1000, 1500, 2500, 3500]);
+      return true;
+    }
+
     const attempts = [
       async () => this.setSwitchStateCompat(id, true),
       async () => this.setForeignStateAsync(id, true, false),
@@ -342,6 +679,19 @@ class Poolsteuerung extends utils.Adapter {
 
   async forceSwitchOffCompat(id) {
     if (!id) return false;
+    const zbTarget = this.getTasmotaZigbeeWriteTarget(id);
+    if (zbTarget) {
+      try { await this.setSwitchStateCompat(id, false); } catch {}
+      await this.waitForBoolState(id, false, [400, 700, 1000, 1500]);
+      return true;
+    }
+
+    if (this.isSingleWriteDevice(id)) {
+      try { await this.setSwitchStateCompat(id, false); } catch {}
+      await this.waitForBoolState(id, false, [500, 1000, 1500, 2500, 3500]);
+      return true;
+    }
+
     const attempts = [
       async () => this.setSwitchStateCompat(id, false),
       async () => this.setForeignStateAsync(id, false, false),
@@ -369,8 +719,76 @@ class Poolsteuerung extends utils.Adapter {
     }
   }
 
+  getDerivedHeatpumpAuxStateIds() {
+    const powerId = String(this.config.heatpumpPowerStateId || '').trim();
+    const match = powerId.match(/^(.*\.)(\d+)$/);
+    if (!match) return { speedId: '', modeId: '' };
+    return {
+      speedId: `${match[1]}104`,
+      modeId: `${match[1]}105`,
+    };
+  }
+
+  formatHeatpumpMode(value) {
+    const txt = String(value ?? '').trim();
+    if (!txt || txt === '--') return '--';
+    const normalized = txt.replace(',', '.').toLowerCase();
+    if (normalized === '0' || normalized === '0.0') return 'Auto';
+    if (normalized === '1' || normalized === '1.0') return 'Heizen';
+    if (normalized === '2' || normalized === '2.0') return 'Kühlen';
+    const m = txt.match(/^([^()]+)\(([^)]+)\)$/);
+    if (m) {
+      const code = m[2].trim().replace(',', '.').toLowerCase();
+      if (code === '0' || code === '0.0') return 'Auto';
+      if (code === '1' || code === '1.0') return 'Heizen';
+      if (code === '2' || code === '2.0') return 'Kühlen';
+      return `${m[1].trim()} (${m[2].trim()})`;
+    }
+    return txt;
+  }
+
   fmt(n, digits = 1, fallback = '--') {
     return n === null || n === undefined || !Number.isFinite(n) ? fallback : n.toFixed(digits);
+  }
+
+  formatDurationHours(hoursValue, fallback = '--') {
+    const hours = Number(hoursValue);
+    if (!Number.isFinite(hours)) return fallback;
+    const totalMinutes = Math.max(0, Math.round(hours * 60));
+    const hh = Math.floor(totalMinutes / 60);
+    const mm = totalMinutes % 60;
+    return `${hh}h ${String(mm).padStart(2, '0')}m`;
+  }
+
+  formatGermanDateTime(value, fallback = '--') {
+    const raw = String(value || '').trim();
+    if (!raw) return fallback;
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return raw;
+    return new Intl.DateTimeFormat('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }).format(d);
+  }
+
+  async getFormattedDateTimeFromState(id, fallback = '--') {
+    if (!id) return fallback;
+    try {
+      const s = await this.getForeignStateAsync(id);
+      if (!s) return fallback;
+      if (s.val !== undefined && s.val !== null && String(s.val).trim() !== '') {
+        return this.formatGermanDateTime(String(s.val), fallback);
+      }
+      const ts = Number(s.ts || s.lc || 0);
+      if (!ts) return fallback;
+      return this.formatGermanDateTime(new Date(ts).toISOString(), fallback);
+    } catch {
+      return fallback;
+    }
   }
 
   statusItemHtml(name, hint, state, compact = false) {
@@ -428,19 +846,34 @@ class Poolsteuerung extends utils.Adapter {
         <div class="kv-value">${esc(value)}</div>
       </div>`;
 
-    const status = (name, hint, on) => `
+    const autoBtn = (label, key, active) => `
+      <button type="button" class="kv auto auto-toggle js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}">
+        <span class="kv-label">${esc(label)}</span>
+        <span class="auto-toggle-state">${active ? 'AKTIV' : 'AUS'}</span>
+      </button>`;
+
+    const status = (name, hint, on, syncCls = 'warn', syncLabel = '?') => `
       <div class="status-row ${on ? 'status-on' : 'status-off'}">
         <div class="status-left">
           <div class="status-name">${esc(name)}</div>
           <div class="status-hint">${esc(hint)}</div>
         </div>
-        <div class="pill ${on ? 'on' : 'off'}">${on ? 'EIN' : 'AUS'}</div>
+        <div class="status-right">
+          <div class="sync-badge ${esc(syncCls)}">${esc(syncLabel)}</div>
+          <div class="pill ${on ? 'on' : 'off'}">${on ? 'EIN' : 'AUS'}</div>
+        </div>
       </div>`;
 
-    const metric = (label, value, sub = '', badge = null, accent = '') => `
+    const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
+    const phClass = phBadge && phBadge.cls ? phBadge.cls : '';
+    const orpClass = orpBadge && orpBadge.cls ? orpBadge.cls : '';
+    const metric = (label, value, sub = '', badge = null, accent = '', trend = '', trendOk = false, trendBad = false) => `
       <div class="metric ${accent}">
         <div class="metric-label">${esc(label)}</div>
-        <div class="metric-value">${esc(value)}</div>
+        <div class="metric-value">
+          <span class="metric-main ${trendOk ? 'ok' : (trendBad ? 'bad' : '')}">${esc(value)}</span>
+          ${trend ? `<span class="metric-trend ${trendClass(trend)} ${trendOk ? 'ok' : (trendBad ? 'bad' : '')}">${esc(trend)}</span>` : ''}
+        </div>
         ${sub ? `<div class="metric-sub">${esc(sub)}</div>` : ''}
         ${badge ? `<div class="badge ${badge.cls}">${badge.txt}</div>` : ''}
       </div>`;
@@ -468,30 +901,30 @@ body{
     radial-gradient(circle at bottom right, rgba(106,124,255,.13), transparent 22%),
     linear-gradient(180deg,var(--bg2),var(--bg));
 }
-.wrap{width:100%;padding:8px}
-.layout{display:flex;gap:10px;align-items:flex-start}
+.wrap{width:100%;max-width:1000px;height:730px;max-height:730px;padding:6px;overflow:hidden;margin:0 auto}
+.layout{display:flex;gap:8px;align-items:flex-start;width:100%;height:718px;max-height:718px;overflow:hidden}
 .col-left{flex:0 0 28%}
 .col-mid{flex:0 0 34%}
 .col-right{flex:1 1 0}
 .card{
   background:linear-gradient(180deg,rgba(15,32,57,.96),rgba(10,24,44,.98));
-  border:1px solid var(--line);border-radius:20px;padding:12px;overflow:hidden;
+  border:1px solid var(--line);border-radius:18px;padding:10px;overflow:hidden;
   box-shadow:0 18px 40px rgba(0,0,0,.28)
 }
 .hero{
   background:
     radial-gradient(circle at top right, rgba(82,199,255,.22), transparent 28%),
     linear-gradient(180deg,rgba(23,46,80,.97),rgba(11,26,48,.98));
-  min-height:360px;
+  min-height:330px;
   border-color:rgba(86,196,255,.18);
 }
 .head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-.title{font-size:16px;font-weight:900;letter-spacing:.2px}
+.title{font-size:15px;font-weight:900;letter-spacing:.2px}
 .meta{text-align:right;font-size:10px;color:var(--muted);line-height:1.15;max-width:86px}
-.mode{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:10px;font-weight:900;margin-bottom:6px;box-shadow:0 6px 18px rgba(88,172,255,.25)}
+.mode{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:9px;font-weight:900;margin-bottom:6px;box-shadow:0 6px 18px rgba(88,172,255,.25)}
 .temp-wrap{margin:18px 0 6px;display:flex;align-items:flex-end;gap:8px}
 .temp{font-size:68px;font-weight:900;line-height:.9}
-.unit{font-size:18px;color:#d4e5f6;padding-bottom:7px}
+.unit{font-size:16px;color:#d4e5f6;padding-bottom:7px}
 .temp-scale{margin:6px 0 10px}
 .scale-row{display:flex;justify-content:space-between;font-size:11px;color:#c7d6ea;margin-top:6px}
 .scale-track{position:relative;height:8px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
@@ -503,7 +936,10 @@ body{
 .metric.warn{background:linear-gradient(180deg,rgba(255,145,96,.12),rgba(255,255,255,.05))}
 .metric-target{background:linear-gradient(180deg,rgba(86,217,120,.10),rgba(255,255,255,.05))}
 .metric-label{font-size:12px;color:#c8d4e6;font-weight:800;margin-bottom:6px}
-.metric-value{font-size:17px;font-weight:900;line-height:1.05}
+.metric-value{font-size:17px;font-weight:900;line-height:1.05;display:flex;align-items:center;gap:8px}
+.metric-main.ok{color:#67dd7c}.metric-main.bad{color:#ff7a6a}
+.metric-trend{display:inline-flex;min-width:18px;justify-content:center;font-size:20px;font-weight:900;line-height:1;margin-left:10px}
+.metric-trend.up{color:#ffb36b}.metric-trend.down{color:#7dd3fc}.metric-trend.flat{color:#d5e4f8}.metric-trend.ok{color:#67dd7c}.metric-trend.bad{color:#ff7a6a}
 .metric-sub{font-size:10px;color:#aebed5;margin-top:4px}
 .badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;margin-top:8px;font-size:11px;font-weight:900}
 .badge.ok{background:rgba(64,196,99,.18);color:#9ff5b3}
@@ -514,36 +950,45 @@ body{
 .section.energy{color:#8eddff}
 .section.status{color:#89ffa7}
 .section.extra{color:#ffd37d}
-.stack{display:grid;gap:6px}
-.kv{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:14px;padding:8px}
+.stack{display:grid;gap:5px}
+.kv{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:6px}
 .kv.energy{background:linear-gradient(90deg,rgba(68,171,255,.10),rgba(255,255,255,.04))}
 .kv.auto{background:linear-gradient(90deg,rgba(109,128,255,.14),rgba(255,255,255,.04))}
+.auto-toggle{appearance:none;border:1px solid rgba(255,255,255,.07);cursor:pointer;width:100%;font-family:inherit;color:inherit;text-align:left}
+.auto-toggle:active{transform:translateY(1px)}
+.auto-toggle.is-on{background:linear-gradient(90deg,rgba(74,205,104,.16),rgba(255,255,255,.04))}
+.auto-toggle.is-off{background:linear-gradient(90deg,rgba(255,108,95,.14),rgba(255,255,255,.04))}
+.auto-toggle-state{font-size:12px;font-weight:900;line-height:1.15;text-align:right;border-radius:999px;padding:4px 9px;min-width:58px}
+.auto-toggle.is-on .auto-toggle-state{color:#9ff5b3;background:rgba(64,196,99,.16)}
+.auto-toggle.is-off .auto-toggle-state{color:#ffc0b7;background:rgba(255,107,87,.14)}
 .kv.reason{background:linear-gradient(90deg,rgba(94,210,158,.11),rgba(255,255,255,.04))}
 .kv-label{font-size:12px;color:#c6d7ea;font-weight:800;max-width:42%}
 .kv-value{font-size:13px;font-weight:900;line-height:1.15;text-align:right;word-break:break-word;max-width:58%}
 .status-card{margin-bottom:10px}
-.status-list{display:grid;gap:8px}
-.status-row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:14px;padding:9px}
+.status-list{display:grid;gap:6px}
+.status-row{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:6px}
 .status-on{background:linear-gradient(90deg,rgba(78,204,102,.10),rgba(255,255,255,.04))}
 .status-off{background:linear-gradient(90deg,rgba(255,108,95,.10),rgba(255,255,255,.04))}
 .status-left{min-width:0;max-width:calc(100% - 86px)}
-.status-name{font-size:14px;font-weight:900;line-height:1.1}
+.status-name{font-size:13px;font-weight:900;line-height:1.1}
 .status-hint{font-size:10px;color:#aebed5;margin-top:2px}
-.pill{min-width:64px;text-align:center;padding:7px 8px;border-radius:999px;font-size:10px;font-weight:900;color:#fff;flex:0 0 auto}
+.pill{min-width:64px;text-align:center;padding:7px 8px;border-radius:999px;font-size:9px;font-weight:900;color:#fff;flex:0 0 auto}
 .pill.on{background:linear-gradient(180deg,#56d56e,#36b357);box-shadow:0 8px 18px rgba(56,179,87,.25)}
 .pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d);box-shadow:0 8px 18px rgba(223,74,61,.25)}
-.mini-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.mini-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
 .mini{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:14px;padding:9px}
 .mini.info{background:linear-gradient(180deg,rgba(90,166,255,.09),rgba(255,255,255,.04))}
 .mini.highlight{background:linear-gradient(180deg,rgba(255,190,76,.11),rgba(255,255,255,.04))}
 .mini-label{font-size:12px;color:#c8d7eb;font-weight:800;margin-bottom:6px}
-.mini-value{font-size:14px;font-weight:900;line-height:1.1}
-.canister-card{margin-bottom:10px;background:linear-gradient(180deg,#fff,#f8fafc);color:#0f172a}
-.can-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
-.can-title{font-size:15px;font-weight:900;color:#0f172a}
-.can-ok{font-size:12px;font-weight:900;color:#16a34a}.can-ok.warn{color:#b45309}.can-ok.critical{color:#b91c1c}
-.can-bar{height:10px;border-radius:999px;background:#e5e7eb;overflow:hidden;margin-bottom:8px}.can-fill{height:100%;border-radius:999px;background:#33a852}.can-fill.warn{background:#f0ad00}.can-fill.critical{background:#e64a45}
-.can-big{background:#f8fafc;border:1px solid rgba(15,23,42,.10);border-radius:12px;padding:9px;margin-bottom:8px}.can-label{font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.can-value{font-size:25px;font-weight:900;line-height:1.05}.can-small{font-size:11px;color:#64748b}.can-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:7px}.can-grid b{display:block;font-size:14px;color:#0f172a;margin-top:2px}.can-note{font-size:11px;color:#334155;line-height:1.25}.can-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;margin-top:8px}.can-actions input{min-width:0;border:1px solid #cbd5e1;border-radius:10px;padding:8px;font-size:13px}.can-actions button,.can-bottom button{border:0;border-radius:10px;padding:8px 10px;font-weight:900;color:white;cursor:pointer}.can-set{background:#4361ee}.can-dose{background:#f97316}.can-bottom{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}.can-new{background:#31a950}
+.mini-value{font-size:11px;font-weight:500;line-height:1.15;white-space:pre-line}
+.manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:6px 10px;border-radius:14px;min-height:40px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}
+.manual-btn span{font-size:16px}
+.manual-btn small{font-size:10px;color:#dbeafe}
+.manual-dose-control{display:grid;grid-template-columns:minmax(110px,.9fr) minmax(130px,1fr);gap:6px;align-items:center;grid-column:1 / -1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:6px}
+.manual-dose-field{display:flex;flex-direction:column;justify-content:center;gap:3px}
+.manual-dose-field label{font-size:10px;color:#c8d7eb;font-weight:900}
+.manual-dose-input{width:100%;height:32px;border-radius:9px;border:1px solid rgba(255,255,255,.16);background:#fff;color:#0f172a;font-size:18px;font-weight:900;text-align:center;padding:3px 8px}
+.phcan{background:linear-gradient(180deg,#ffffff 0%,#f4f8ff 100%);color:#0f172a;border-radius:18px;padding:12px;border:1px solid rgba(15,23,42,.10)}.phcan-head{display:flex;justify-content:space-between;align-items:center;font-weight:900;font-size:17px;margin-bottom:8px}.phcan-ok{color:#16a34a}.phcan-warn{color:#d97706}.phcan-critical{color:#dc2626}.phcan-bar{height:12px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin-bottom:10px}.phcan-fill{height:100%;border-radius:99px;background:#22c55e}.phcan-fill.warn{background:#f59e0b}.phcan-fill.critical{background:#ef4444}.phcan-main{border:1px solid #dbe3ef;background:#f8fafc;border-radius:14px;padding:10px;margin-bottom:10px}.phcan-label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#64748b;font-weight:900}.phcan-level{font-size:32px;font-weight:950;line-height:1}.phcan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px}.phcan-k{font-size:10px;color:#64748b}.phcan-v{font-size:16px;font-weight:950}.phcan-info{font-size:11px;color:#334155;margin-bottom:8px;line-height:1.35}.phcan-actions{display:grid;grid-template-columns:1fr 72px;gap:6px;margin-bottom:7px}.phcan-actions.two{grid-template-columns:1fr 1fr}.phcan-input{height:34px;border-radius:10px;border:1px solid #cbd5e1;padding:4px 8px;font-size:14px}.phcan-btn{border:none;border-radius:10px;color:white;font-weight:900;cursor:pointer;background:#3b5bff}.phcan-btn.green{background:#25a84a}.phcan-btn.gray{background:#475569}
 @media (max-width:1100px){
   .layout{display:block}
   .col-left,.col-mid,.col-right{width:auto}
@@ -553,10 +998,10 @@ body{
   <div class="col-left">
     <div class="card hero">
       <div class="head">
-        <div class="title">Pool Manager</div>
+        <div class="title">Pool Manager <span class="ver">${esc(data.adapterVersion)}</span></div>
         <div class="meta">
           <div class="mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>
-          v${esc(data.adapterVersion)}<br>Aktualisiert<br>${esc(data.updated)}
+          Aktualisiert<br>${esc(data.updated)}
         </div>
       </div>
       <div class="temp-wrap">
@@ -568,22 +1013,46 @@ body{
         <div class="scale-row"><span>15 °C</span><span>Aktuell: ${esc(data.poolTemp)} °C</span><span>32 °C</span></div>
       </div>
       <div class="metrics">
-        ${metric('pH', data.ph, `Soll ${data.phSet}`, phBadge, 'warn')}
-        ${metric('ORP', data.orp, `Soll ${data.orpSet}`, orpBadge, 'warn')}
-        ${metric('Außen', `${data.outsideTemp}°C`, 'Außen', null, 'cool')}
+        ${metric('pH', data.ph, `Soll ${data.phSet} · ${data.phTargetRangeText}`, phBadge, 'warn', data.phTrend || '→', phClass === 'ok', phClass === 'low' || phClass === 'high')}
+        ${metric('ORP', data.orp, `EIN ≤ ${data.orpOnThreshold} / AUS > ${data.orpOffThreshold}`, orpBadge, 'warn', data.orpTrend || '→', orpClass === 'ok', orpClass === 'low' || orpClass === 'high')}
+        ${metric('Außen', `${data.outsideTemp}°C`, 'Außen', null, 'cool', data.outsideTempTrend || '→', false)}
         ${metric('Solltemp', `${data.targetTemp}°C`, 'Soll', null, 'metric-target')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="section energy">Auto & Wallbox</div>
+      <div class="mini-list">
+        ${mini('Status', data.wallboxChargingStatus, data.wallboxCharging ? 'highlight' : 'info')}
+        ${mini('Stecker', data.wallboxPlugStatus, 'info')}
+        ${mini('Leistung', `${data.wallboxPowerKw} kW`, 'highlight')}
+        ${mini('SoC', `${data.wallboxSoc} % / ${data.wallboxTargetSoc} %`, 'highlight')}
+        ${mini('Restzeit', data.wallboxTimeToFull, 'info')}
+        ${mini('Reichweite', `${data.wallboxRangeKm} km`, 'info')}
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:#64748b;line-height:1.45;">
+        Stand: ${esc(data.wallboxTibberLastSeen || '--')}
       </div>
     </div>
   </div>
 
   <div class="col-mid">
     <div class="card">
+      <div class="section energy">Schnellzugriff</div>
+      <div class="mini-list">
+        ${mini('Poolsolltemperatur', `${data.targetTemp} °C`, 'info')}
+        <div class="manual-dose-control">
+          <div class="manual-dose-field"><label>PH Manuell Sekunden</label><input class="manual-dose-input js-manual-dose-sec" type="number" min="1" max="600" step="1" value="${esc(data.manualDoseButtonSec || 30)}"></div>
+          <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.manualDoseButtonSec || 30) || 30}"><span>PH Manuell</span><small>Start Dosierung</small></button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
       <div class="section energy">Energie & Steuerung</div>
       <div class="stack">
-        ${kv('Pumpe Auto', data.autoCirculation, 'auto')}
-        ${kv('Chlor Auto', data.autoChlor, 'auto')}
-        ${kv('pH Auto', data.autoPh, 'auto')}
-        ${kv('WP Auto', data.autoHeatpump, 'auto')}
+        ${autoBtn('Pumpe Auto', 'circulation', !!data.autoCirculationControl)}
+        ${autoBtn('Chlor Auto', 'chlor', !!data.autoChlorControl)}
+        ${autoBtn('pH Auto', 'ph', !!data.autoPhControl)}
+        ${autoBtn('WP Auto', 'heatpump', !!data.autoHeatpumpControl)}
         ${kv('PV-Leistung', `${data.pv} W`, 'energy')}
         ${kv('Netzeinspeisung', `${data.feedIn} W`, 'energy')}
         ${kv('Netzbezug', `${data.gridSupply} W`, 'energy')}
@@ -591,10 +1060,8 @@ body{
         ${kv('WP Freigabe', data.heatReason, 'reason')}
         ${kv('Chlor Freigabe', data.chlorDecision, 'reason')}
         ${kv('Zeitplan', data.pumpDecision, 'reason')}
-        ${kv('pH Prüfung', data.phDecision, 'reason')}
         ${kv('pH Zeiten', data.phTimes)}
-        ${kv('Standby nächster Lauf', data.standbyNext)}
-        ${kv('Letzte Dosierung', `${data.phLastDoseDurationSec} s`)}
+        ${kv('Letzte Dosierung', data.phLastDoseInfo)}
       </div>
     </div>
   </div>
@@ -603,71 +1070,167 @@ body{
     <div class="card status-card">
       <div class="section status">Aktoren & Status</div>
       <div class="status-list">
-        ${status('Umwälzpumpe', 'IST-Zustand', data.pumpOn)}
-        ${status('Chlorinator', 'ORP-Regelung', data.chlorOn)}
-        ${status('pH-Dosierpumpe', 'Prüfzeiten', data.phPumpOn)}
-        ${status('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
+        ${status('Umwälzpumpe', 'IST-Zustand', data.pumpOn, data.pumpSyncCls, data.pumpSyncLabel)}
+        ${status('Chlorinator', 'ORP-Regelung', data.chlorOn, data.chlorSyncCls, data.chlorSyncLabel)}
+        ${status('pH-Dosierpumpe', 'Prüfzeiten', data.phPumpOn, data.phPumpSyncCls, data.phPumpSyncLabel)}
+        ${status('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn, data.heatpumpSyncCls, data.heatpumpSyncLabel)}
       </div>
     </div>
-    <div class="card canister-card">
-      <div class="can-head"><div class="can-title">pH-Minus Kanister</div><div class="can-ok ${data.phCanisterCritical ? 'critical' : data.phCanisterWarning ? 'warn' : ''}">${data.phCanisterCritical ? 'KRITISCH' : data.phCanisterWarning ? 'WARNUNG' : 'OK'}</div></div>
-      <div class="can-bar"><div class="can-fill ${data.phCanisterCritical ? 'critical' : data.phCanisterWarning ? 'warn' : ''}" style="width:${Math.max(0, Math.min(100, parseNum(data.phCanisterPercent)))}%"></div></div>
-      <div class="can-big"><div class="can-label">Aktueller Füllstand</div><div class="can-value">${esc(data.phCanisterFillL)} l</div><div class="can-small">von ${esc(data.phCanisterSizeL)} l · ${esc(data.phCanisterPercent)} %</div></div>
-      <div class="can-grid"><div class="can-small">Größe<b>${esc(data.phCanisterSizeL)} l</b></div><div class="can-small">Verbraucht<b>${esc(data.phCanisterConsumedL)} l</b></div><div class="can-small">Letzte Dosis<b>${esc(data.phLastDoseMl)} ml</b></div></div>
-      <div class="can-note">${esc(data.phCanisterStatusText)}<br>${esc(data.phCanisterLastCorrection)}</div>
-      <div class="can-actions"><input type="number" step="0.01" min="0" placeholder="Füllstand l" id="phFillDesktop"><button class="can-set" onclick="var e=document.getElementById('phFillDesktop');var v=parseFloat(String(e.value).replace(',','.'));if(!isNaN(v)){vis.conn.setState('poolsteuerung.0.control.phCanister.currentFillL',v);e.value='';}">Setzen</button></div>
-      <div class="can-actions"><input type="number" step="1" min="1" placeholder="Manuelle Dosis ml" id="phDoseDesktop"><button class="can-dose" onclick="var e=document.getElementById('phDoseDesktop');var v=parseFloat(String(e.value).replace(',','.'));if(!isNaN(v)&&v>0){vis.conn.setState('poolsteuerung.0.control.ph.manualDoseMl',v);e.value='';}">Dosieren</button></div>
-      <div class="can-bottom"><button class="can-new" onclick="vis.conn.setState('poolsteuerung.0.control.phCanister.newCanister',true);">Neuer Kanister</button><button class="can-set" onclick="var v=prompt('Aktueller Füllstand in Liter', '${esc(data.phCanisterFillL)}');if(v!==null){v=parseFloat(String(v).replace(',','.'));if(!isNaN(v)){vis.conn.setState('poolsteuerung.0.control.phCanister.currentFillL',v);}}">Korrigieren</button></div>
+
+    <div class="phcan">
+      <div class="phcan-head"><span>pH-Minus Kanister</span><span class="${data.phCanister.critical ? 'phcan-critical' : (data.phCanister.warn ? 'phcan-warn' : 'phcan-ok')}">${data.phCanister.critical ? 'KRITISCH' : (data.phCanister.warn ? 'WARNUNG' : 'OK')}</span></div>
+      <div class="phcan-bar"><div class="phcan-fill ${data.phCanister.critical ? 'critical' : (data.phCanister.warn ? 'warn' : '')}" style="width:${Math.max(0, Math.min(100, parseNum(data.phCanister.percent)))}%"></div></div>
+      <div class="phcan-main"><div class="phcan-label">Aktueller Füllstand</div><div class="phcan-level">${esc(data.phCanister.levelL)} l</div></div>
+      <div class="phcan-grid"><div><div class="phcan-k">Größe</div><div class="phcan-v">${esc(data.phCanister.sizeL)} l</div></div><div><div class="phcan-k">Verbraucht</div><div class="phcan-v">${esc(data.phCanister.consumedL)} l</div></div><div><div class="phcan-k">Füllstand</div><div class="phcan-v">${esc(data.phCanister.percent)} %</div></div></div>
+      <div class="phcan-info">Letzte Dosis: ${esc(data.phCanister.lastDoseMl)} ml<br>Letzte Korrektur: ${esc(data.phCanister.lastCorrection)}</div>
+      <div class="phcan-actions"><input class="phcan-input js-phcan-level" type="number" min="0" step="0.01" placeholder="Füllstand l"><button class="phcan-btn" onclick="poolPhSetCanisterLevel()">Setzen</button></div>
+      <div class="phcan-actions two"><button class="phcan-btn green" onclick="poolPhNewCanister()">Neuer Kanister</button><button class="phcan-btn gray" onclick="var e=document.querySelector('.js-phcan-level'); if(e) e.value='${esc(data.phCanister.sizeL)}';">Größe</button></div>
     </div>
+
     <div class="card">
       <div class="section extra">Zusatzwerte</div>
       <div class="mini-list">
-        ${mini('Zeitplan', data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV', 'highlight')}
-        ${mini('PV Schwelle', `${data.threshold} W`, 'info')}
-        ${mini('ORP Grenzen', `${data.orpOnThreshold} / ${data.orpOffThreshold}`, 'highlight')}
+        ${mini('pH zum Soll', data.phCorrectionText, data.phCorrectionNeeded ? 'highlight' : 'info')}
+        ${mini('pH Zielbereich', data.phTargetRangeText, 'info')}
         ${mini('pH Tag', `${data.phDailyCount}`, 'info')}
-        ${mini('Pumpe ml/min', `${data.phFlowMlMin}`, 'info')}
-        ${mini('ml je 0,1 / 10m³', `${data.phMlPer01Per10}`, 'info')}
-        ${mini('Poolvolumen', `${data.volume} m³`, 'highlight')}
-        ${mini('Granulat manuell', data.manualGranulateText, 'highlight')}
+        ${mini('Nächste Schaltungen', data.nextActionsText, 'highlight')}
+        ${mini('WP Lüfter', String(data.heatpumpFanPercent ?? '--'), 'info')}
+        ${mini('WP Modus', data.heatpumpMode || '--', 'highlight')}
       </div>
     </div>
   </div>
-</div></div></body></html>`;
+<script>
+(function(){
+  function getVisApi(){
+    try{ if(window.vis) return window.vis; }catch(e){}
+    try{ if(window.parent&&window.parent.vis) return window.parent.vis; }catch(e){}
+    try{ if(window.top&&window.top.vis) return window.top.vis; }catch(e){}
+    return null;
+  }
+  function getConn(){
+    try{ const v=getVisApi(); if(v&&v.conn&&typeof v.conn.setState==='function') return v.conn; }catch(e){}
+    return null;
+  }
+  window.poolSetState = async function(id,val){
+    const v=getVisApi();
+    const conn=getConn();
+    try{
+      if(v && typeof v.setValue === 'function'){
+        const r=v.setValue(id,val);
+        if(r && typeof r.then==='function'){ await r; }
+        return true;
+      }
+    }catch(e){}
+    if(!conn) return false;
+    const attempts = [
+      () => conn.setState(id,val),
+      () => conn.setState(id,val,false),
+      () => conn.setState(id,val,()=>{}),
+      () => conn.setState(id,val,false,()=>{})
+    ];
+    for(const fn of attempts){
+      try{
+        const r=fn();
+        if(r && typeof r.then==='function'){ await r; }
+        return true;
+      }catch(e){}
+    }
+    return false;
+  };
+  window.poolToggleControl = async function(key,current){
+    const ns=${JSON.stringify(data.namespace)};
+    const ok=await window.poolSetState(ns+'.control.auto.'+key, !current);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+  window.poolPhManualDose = async function(sec){
+    const ns=${JSON.stringify(data.namespace)};
+    await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30);
+    const ok=await window.poolSetState(ns + '.control.ph.manualTrigger', Date.now());
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+  window.poolPhSetCanisterLevel = async function(){
+    const ns=${JSON.stringify(data.namespace)};
+    const el=document.querySelector('.js-phcan-level');
+    const v=el ? Number(String(el.value).replace(',', '.')) : NaN;
+    if(!Number.isFinite(v)) { alert('Bitte Füllstand in Liter eingeben'); return; }
+    const ok=await window.poolSetState(ns + '.control.ph.canister.setLevelL', Math.round(v*100)/100);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+  window.poolPhNewCanister = async function(){
+    if(!confirm('Neuen pH-Minus-Kanister setzen?')) return;
+    const ns=${JSON.stringify(data.namespace)};
+    const ok=await window.poolSetState(ns + '.control.ph.canister.newCanister', true);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+  const bindOne = (selector, handler) => {
+    document.querySelectorAll(selector).forEach(el => {
+      const run = (ev) => {
+        try{ if(ev){ ev.preventDefault(); ev.stopPropagation(); } }catch(e){}
+        const now = Date.now();
+        const last = Number(el.dataset.lastTapTs || 0);
+        if (now - last < 700) return false;
+        el.dataset.lastTapTs = String(now);
+        handler(el);
+        return false;
+      };
+      try{ el.addEventListener('touchend', run, {passive:false}); }catch(e){}
+      try{ el.addEventListener('click', run, false); }catch(e){}
+      try{ el.style.cursor = 'pointer'; }catch(e){}
+    });
+  };
+  const bind = () => {
+    bindOne('.js-auto-btn', el => window.poolToggleControl(el.dataset.key, el.dataset.current === '1'));
+    bindOne('.js-device-btn', el => window.poolToggleState(el.dataset.key || '', el.dataset.current === '1'));
+    bindOne('.js-standby-btn', el => window.poolToggleStandby(el.dataset.current === '1'));
+    bindOne('.js-manual-dose-btn', el => {
+      const wrap = el.closest('.manual-dose-control');
+      const input = wrap ? wrap.querySelector('.js-manual-dose-sec') : null;
+      const sec = Math.max(1, Number((input && input.value) || el.dataset.sec || 30) || 30);
+      if (input) input.value = String(sec);
+      window.poolPhManualDose(sec);
+    });
+    document.querySelectorAll('.js-manual-dose-sec').forEach(input => {
+      const save = async () => {
+        const ns=${JSON.stringify(data.namespace)};
+        const sec=Math.max(1, Number(input.value || 30) || 30);
+        input.value=String(sec);
+        await window.poolSetState(ns + '.control.ph.manualDoseSec', sec);
+      };
+      input.addEventListener('change', save);
+      input.addEventListener('blur', save);
+      input.addEventListener('click', ev => ev.stopPropagation());
+      input.addEventListener('touchend', ev => ev.stopPropagation(), {passive:false});
+    });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind); else bind();
+})();
+</script></body></html>`;
   }
 
   buildPhoneHtml(data) {
     const poolTempNum = parseNum(data.poolTemp);
     const tempScaleMin = 15;
     const tempScaleMax = 32;
-    const tempPct = Number.isFinite(poolTempNum)
-      ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100))
-      : 0;
+    const tempPct = Number.isFinite(poolTempNum) ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
     const targetTempNum = parseNum(data.targetTemp);
-    const targetPct = Number.isFinite(targetTempNum)
-      ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100))
-      : 0;
-
-    const autoBox = (name, state) => {
-      const cls = state === 'AKTIV' ? 'is-on' : state === 'STANDBY' ? 'is-standby' : 'is-off';
-      return `
-      <div class="status-box ${cls}">
-        <div class="status-name">${esc(name)}</div>
-        <div class="status-hint">${esc(state)}</div>
-      </div>`;
-    };
-
-    const statusBox = (name, hint, on) => `
-      <div class="status-box ${on ? 'is-on' : 'is-off'}">
-        <div class="status-name">${esc(name)}</div>
-        <div class="status-hint">${esc(hint)} · ${on ? 'EIN' : 'AUS'}</div>
-      </div>`;
-
-    const quick = (label, value) => `
+    const targetPct = Number.isFinite(targetTempNum) ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
+    const autoBtn = (label, key, active) => `<button type="button" class="action-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
+    const deviceBtn = (label, key, active, syncCls = 'warn', syncLabel = '?') => `<button type="button" class="action-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="action-sync ${esc(syncCls)}">${esc(syncLabel)}</span><span class="action-name">${esc(label)}</span><span class="action-state">${active ? 'EIN' : 'AUS'}</span></button>`;
+    const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
+    const phClass = data.phBadge && data.phBadge.cls ? data.phBadge.cls : '';
+    const orpClass = data.orpBadge && data.orpBadge.cls ? data.orpBadge.cls : '';
+    const quick = (label, value, trend = '', barHtml = '') => `
       <div class="quick-card">
         <div class="quick-label">${esc(label)}</div>
-        <div class="quick-value">${esc(value)}</div>
+        <div class="quick-value-row">
+          <div class="quick-value">${esc(value)}</div>
+          ${trend ? `<div class="quick-trend ${trendClass(trend)}">${esc(trend)}</div>` : ''}
+        </div>
+        ${barHtml || ''}
       </div>`;
+    const metricValue = (value, trend = '→', ok = false) => `<span class="metric-main ${ok ? 'ok' : ''}">${esc(value)}</span><span class="trend ${trendClass(trend)} ${ok ? 'ok' : ''}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>`;
+    const batteryPct = Math.max(0, Math.min(100, parseNum(data.battery)));
+    const batteryBar = `<div class="mini-bar"><div class="mini-fill battery-fill" style="width:${batteryPct}%"></div></div>`;
 
     return `<!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
@@ -675,114 +1238,197 @@ body{
 :root{--bg:#08111f;--bg2:#10203a;--line:rgba(15,23,42,.08);--text:#0f172a;--muted:#66758a}
 *{box-sizing:border-box}
 body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,var(--bg2),var(--bg));font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;color:var(--text)}
-.wrap{padding:4px;display:grid;gap:5px}
-.card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid var(--line);border-radius:16px;padding:7px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
+.wrap{width:100%;max-width:510px;min-height:100vh;overflow:visible;margin:0 auto;padding:4px 4px 64px;display:grid;gap:4px;align-content:start}
+.card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid var(--line);border-radius:14px;padding:6px;box-shadow:0 6px 14px rgba(0,0,0,.12)}
 .hero{background:radial-gradient(circle at top right, rgba(85,200,255,.24), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
 .header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}
-.title{font-size:16px;font-weight:900}
-.meta{text-align:right;font-size:10px;color:#d2dded;line-height:1.15}
-.mode-pill{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#67cfff,#6f7bff);color:#fff;font-size:9px;font-weight:900;margin-bottom:4px}
-.temp-row{display:flex;align-items:flex-end;gap:5px;margin:6px 0 5px}
-.temp{font-size:44px;font-weight:900;line-height:.9}
-.unit{font-size:17px;padding-bottom:5px;color:#d5e5f6}
-.scale{margin:3px 0 7px}.track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.target-mark{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#ffffff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%);box-shadow:0 0 0 1px rgba(255,255,255,.15)}.dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #11305b;transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(255,255,255,.28)}.scale-labels{display:flex;justify-content:space-between;font-size:10px;color:#d2dded;margin-top:4px}
-.metrics,.auto-grid,.status-grid,.quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
-.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:7px}
-.metric-label{font-size:11px;color:#d9e5f5}.metric-value{font-size:14px;font-weight:900;color:#fff}.metric-sub{font-size:10px;color:#c4d4e8;margin-top:3px}
-.section-title{font-size:13px;font-weight:900;color:#0f172a;margin-bottom:4px}
-.quick-card,.status-box{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}
-.quick-label,.status-hint{font-size:10px;color:#64748b}
-.quick-label{font-weight:700;margin-bottom:4px}
-.quick-value{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
-.log-card{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.log-card.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.log-card.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.log-card.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.log-text{font-size:12px;font-weight:700;line-height:1.3;color:#0f172a;word-break:break-word}.log-meta{margin-top:4px;font-size:10px;color:#64748b}
-.status-grid{gap:5px}
-.status-box{padding:6px 7px;min-height:46px;display:flex;flex-direction:column;justify-content:center}
-.status-box.is-on{background:linear-gradient(180deg,#f7fff8,#eefcf1)}
-.status-box.is-off{background:linear-gradient(180deg,#fff8f7,#fff0ee)}
-.status-box.is-standby{background:linear-gradient(180deg,#f6f8fb,#eef2f7)}
-.status-name{font-size:14px;font-weight:900;line-height:1.1}
-.status-box.is-on .status-name{color:#179a3b}
-.status-box.is-off .status-name{color:#d6493b}
-.status-box.is-standby .status-name{color:#64748b}
-.status-hint{margin-top:3px}
-.can-card{background:#fff}.can-head{display:flex;justify-content:space-between;align-items:center}.can-ok{font-size:12px;font-weight:900;color:#16a34a}.can-ok.warn{color:#b45309}.can-ok.critical{color:#b91c1c}.can-bar{height:10px;border-radius:999px;background:#e5e7eb;overflow:hidden;margin:7px 0}.can-fill{height:100%;background:#33a852}.can-fill.warn{background:#f0ad00}.can-fill.critical{background:#e64a45}.can-big{font-size:26px;font-weight:900;color:#0f172a}.can-small{font-size:11px;color:#64748b}.can-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:8px 0}.can-actions{display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:8px}.can-actions input{min-width:0;border:1px solid #cbd5e1;border-radius:10px;padding:9px;font-size:14px}.can-actions button,.can-bottom button{border:0;border-radius:10px;padding:9px 10px;font-weight:900;color:#fff}.can-set{background:#4361ee}.can-dose{background:#f97316}.can-new{background:#31a950}.can-bottom{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
-</style></head><body><div class="wrap">
+.title{font-size:17px;font-weight:900}.ver{font-size:9px;font-weight:800;color:#b9d7ff;margin-left:5px}
+.meta{font-size:9px;color:#d2dded;text-align:right;line-height:1.05}.mode-badge{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(180deg,#334f84,#1b3158);font-size:9px;font-weight:900;color:#fff;margin-bottom:3px}
+.temp-row{display:flex;align-items:flex-end;gap:5px;margin:3px 0 4px}.temp{font-size:54px;font-weight:900;line-height:.9}.unit{font-size:17px;padding-bottom:5px;color:#d5e5f6}
+.scale{margin:2px 0 4px}.track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.target-mark{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#ffffff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.target-label{position:relative;height:12px;font-size:9px;color:#d2dded}.target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}.scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}
+.metrics,.quick-grid,.auto-grid,.status-grid,.control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+.ph-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.metric-label{font-size:10px;color:#d9e5f5}.metric-value{font-size:13px;font-weight:900;color:#fff}
+.section-title{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px;line-height:1.05}
+.quick-card{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:11px;padding:5px}.quick-label{font-size:8px;color:#64748b;font-weight:700;margin-bottom:2px}.quick-value-row{display:flex;align-items:center;gap:6px}.quick-value{font-size:11px;font-weight:900;color:#0f172a;line-height:1.03}.quick-trend{font-size:15px;font-weight:900;line-height:1}.quick-trend.up{color:#ffb36b}.quick-trend.down{color:#52b7ff}.quick-trend.flat{color:#8fa3bc}.mini-bar{margin-top:4px;height:6px;border-radius:999px;background:linear-gradient(90deg,#ff6b6b 0%,#f59e0b 35%,#84cc16 65%,#22c55e 100%);position:relative;overflow:hidden}.mini-fill{height:100%;border-radius:999px}.battery-fill{background:linear-gradient(90deg,rgba(255,255,255,.28),rgba(255,255,255,.12));box-shadow:inset 0 0 0 999px rgba(255,255,255,.10)}
+.action-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:8px 10px;border-radius:12px;min-height:46px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 6px 14px rgba(6,24,44,.22);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}
+.action-name{font-size:12px;font-weight:800}.action-state{font-size:9px;font-weight:800}
+.action-btn.is-on .action-name,.action-btn.is-on .action-state{color:#67dd7c}
+.action-btn.is-off .action-name,.action-btn.is-off .action-state{color:#ff8d7b}
+.manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:8px 10px;border-radius:999px;min-height:42px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 6px 14px rgba(6,24,44,.22);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}
+.manual-btn span{font-size:12px}.manual-btn small{font-size:8px;color:#dbeafe}.manual-dose-control{display:grid;grid-template-columns:1fr;gap:5px;grid-column:1 / -1;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.manual-dose-field label{display:block;font-size:9px;color:#64748b;font-weight:800;margin-bottom:3px}.manual-dose-input{width:100%;height:36px;border-radius:10px;border:1px solid rgba(15,23,42,.14);background:#f8fafc;color:#0f172a;font-size:18px;font-weight:900;text-align:center;padding:4px 8px}
+.temp-btn{appearance:none;border:none;cursor:pointer;border-radius:12px;min-height:52px;padding:8px 10px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:16px}
+.temp-center{display:flex;flex-direction:column;justify-content:center;align-items:center;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}
+.temp-center .quick-label{margin-bottom:1px}
+.temp-center .quick-value{font-size:16px}
+</style>
+</head><body><div class="wrap">
   <div class="card hero">
-    <div class="header">
-      <div class="title">Pool Manager</div>
-      <div class="meta"><div class="mode-pill">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>v${esc(data.adapterVersion)}<br>Aktualisiert<br>${esc(data.updated)}</div>
-    </div>
+    <div class="header"><div class="title">Pool Manager <span class="ver">${esc(data.adapterVersion)}</span></div><div class="meta"><div class="mode-badge">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div></div>
     <div class="temp-row"><div class="temp">${esc(data.poolTemp)}</div><div class="unit">°C</div></div>
-    <div class="scale"><div class="track"><div class="target-mark" title="Soll ${esc(data.targetTemp)} °C"></div><div class="dot"></div></div><div class="scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
+    <div class="scale"><div class="track"><div class="target-mark"></div><div class="dot"></div></div><div class="target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="metrics">
-      <div class="metric"><div class="metric-label">pH</div><div class="metric-value">${esc(data.ph)}</div><div class="metric-sub">Soll ${esc(data.phSet)}</div></div>
-      <div class="metric"><div class="metric-label">ORP</div><div class="metric-value">${esc(data.orp)}</div><div class="metric-sub">Soll ${esc(data.orpSet)}</div></div>
-      <div class="metric"><div class="metric-label">Außen</div><div class="metric-value">${esc(data.outsideTemp)}°C</div><div class="metric-sub">Außen</div></div>
-      <div class="metric"><div class="metric-label">Soll</div><div class="metric-value">${esc(data.targetTemp)}°C</div><div class="metric-sub">Soll</div></div>
+      <div class="metric"><div class="metric-label">pH</div><div class="metric-value">${metricValue(data.ph, data.phTrend, ((data.phBadge && data.phBadge.cls) === 'ok' ? 'ok' : ((((data.phBadge && data.phBadge.cls) === 'warn') || ((data.phBadge && data.phBadge.cls) === 'bad')) ? 'bad' : '')))}</div></div>
+      <div class="metric"><div class="metric-label">ORP</div><div class="metric-value">${metricValue(data.orp, data.orpTrend, ((data.orpBadge && data.orpBadge.cls) === 'ok' ? 'ok' : ((((data.orpBadge && data.orpBadge.cls) === 'warn') || ((data.orpBadge && data.orpBadge.cls) === 'bad')) ? 'bad' : '')))}</div></div>
+      <div class="metric"><div class="metric-label">Außen</div><div class="metric-value">${metricValue(`${data.outsideTemp}°C`, data.outsideTempTrend, false)}</div></div>
+      <div class="metric"><div class="metric-label">Soll</div><div class="metric-value">${esc(data.targetTemp)}°C</div></div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="section-title">Automatik</div>
-    <div class="status-grid">
-      ${autoBox('Umwälzpumpe', data.autoCirculation)}
-      ${autoBox('Chlor', data.autoChlor)}
-      ${autoBox('pH', data.autoPh)}
-      ${autoBox('Wärmepumpe', data.autoHeatpump)}
+  <div class="card" style="min-height:132px;"><div class="section-title">Schnellzugriff</div><div class="control-grid">
+    <button type="button" class="action-btn js-standby-btn ${data.standbyControl ? 'is-on' : 'is-off'}" data-current="${data.standbyControl ? '1' : '0'}"><span class="action-name">Standby</span><span class="action-state">${data.standbyControl ? 'AKTIV' : 'AUS'}</span></button>
+    <div class="temp-center"><div class="quick-label">Poolsolltemperatur</div><div class="quick-value">${esc(data.targetTemp)}°C</div></div>
+    <div class="manual-dose-control">
+      <div class="manual-dose-field"><label>PH Manuell Sekunden</label><input class="manual-dose-input js-manual-dose-sec" type="number" min="1" max="600" step="1" value="${esc(data.manualDoseButtonSec || 30)}"></div>
+      <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.manualDoseButtonSec || 30) || 30}"><span>PH Manuell</span><small>Start Dosierung</small></button>
     </div>
-  </div>
+  </div></div>
 
-  <div class="card">
-    <div class="section-title">Aktoren & Status</div>
-    <div class="status-grid">
-      ${statusBox('Umwälzpumpe', 'IST-Zustand', data.pumpOn)}
-      ${statusBox('Chlorinator', 'ORP-Regelung', data.chlorOn)}
-      ${statusBox('pH-Dosierpumpe', 'Prüfzeiten', data.phPumpOn)}
-      ${statusBox('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
-    </div>
-  </div>
+  <div class="card" style="min-height:138px;"><div class="section-title">Automatik</div><div class="auto-grid">
+    ${autoBtn('Umwälzpumpe','circulation',!!data.autoCirculationControl)}
+    ${autoBtn('Chlor','chlor',!!data.autoChlorControl)}
+    ${autoBtn('pH','ph',!!data.autoPhControl)}
+    ${autoBtn('Wärmepumpe','heatpump',!!data.autoHeatpumpControl)}
+  </div></div>
 
-  <div class="card">
-    <div class="section-title">Energie & Steuerung</div>
-    <div class="quick-grid">
-      ${quick('PV-Leistung', `${data.pv} W`)}
-      ${quick('Einspeisung', `${data.feedIn} W`)}
-      ${quick('Batterie', `${data.battery} %`)}
-      ${quick('WP Freigabe', data.heatReason)}
-      ${quick('Chlor Freigabe', data.chlorDecision)}
-      ${quick('pH Prüfung', data.phDecision)}
-    </div>
-  </div>
+  <div class="card" style="min-height:138px;"><div class="section-title">Aktoren & Status</div><div class="status-grid">
+    ${deviceBtn('Umwälzpumpe','circulation',!!data.pumpOn, data.pumpSyncCls, data.pumpSyncLabel)}
+    ${deviceBtn('Chlorinator','chlorinator',!!data.chlorOn, data.chlorSyncCls, data.chlorSyncLabel)}
+    ${deviceBtn('pH-Dosierpumpe','phPump',!!data.phPumpOn, data.phPumpSyncCls, data.phPumpSyncLabel)}
+    ${deviceBtn('Wärmepumpe','heatpump',!!data.heatpumpOn, data.heatpumpSyncCls, data.heatpumpSyncLabel)}
+  </div></div>
 
-  <div class="card">
-    <div class="section-title">pH Info</div>
-    <div class="quick-grid">
-      ${quick('Berechnet', `${data.phCalculatedDoseSec} s / ${data.phCalculatedDoseMl} ml`)}
-      ${quick('Letzte Dosis', `${data.phLastDoseDurationSec} s / ${data.phLastDoseMl} ml`)}
-      ${quick('Heute dosiert', `${data.phDailyCount}x`)}
-      ${quick('Nächste Prüfung', data.phNextCheck)}
-    ${quick('Granulat manuell', data.manualGranulateText)}
-      
-    </div>
-    <div class="log-card info-${esc(data.phInfoLevel)}">
-      <div class="quick-label">Letzte Meldung</div>
-      <div class="log-text">${esc(data.phInfoText)}</div>
-      <div class="log-meta">Letzte Dosierung: ${esc(data.phLastDoseAt)}</div>
-    </div>
-  </div>
+  <div class="card" style="min-height:190px;"><div class="section-title">Energie & Steuerung</div><div class="quick-grid">
+    ${quick('PV-Leistung', `${data.pv} W`, data.pvTrend || '→')}
+    ${quick('Einspeisung', `${data.feedIn} W`, data.feedInTrend || '→')}
+    ${quick('Batterie', `${data.battery} %`, '', batteryBar)}
+    ${quick('WP Freigabe', data.heatDecision)}
+    ${quick('WP Lüfter', String(data.heatpumpFanPercent ?? '--'))}
+    ${quick('WP Modus', data.heatpumpMode || '--')}
+    ${quick('Chlor Freigabe', data.chlorDecision)}
+    ${quick('Poolwert von', data.poolTempUpdatedAt)}
+  </div></div>
 
-  <div class="card can-card">
-    <div class="section-title">pH-Minus Kanister</div>
-    <div class="can-head"><span>Aktueller Füllstand</span><span class="can-ok ${data.phCanisterCritical ? 'critical' : data.phCanisterWarning ? 'warn' : ''}">${data.phCanisterCritical ? 'KRITISCH' : data.phCanisterWarning ? 'WARNUNG' : 'OK'}</span></div>
-    <div class="can-bar"><div class="can-fill ${data.phCanisterCritical ? 'critical' : data.phCanisterWarning ? 'warn' : ''}" style="width:${Math.max(0, Math.min(100, parseNum(data.phCanisterPercent)))}%"></div></div>
-    <div class="can-big">${esc(data.phCanisterFillL)} l</div><div class="can-small">von ${esc(data.phCanisterSizeL)} l · ${esc(data.phCanisterPercent)} %</div>
-    <div class="can-grid"><div class="can-small">Größe<br><b>${esc(data.phCanisterSizeL)} l</b></div><div class="can-small">Verbraucht<br><b>${esc(data.phCanisterConsumedL)} l</b></div><div class="can-small">Letzte Dosis<br><b>${esc(data.phLastDoseMl)} ml</b></div></div>
-    <div class="can-small">${esc(data.phCanisterStatusText)}<br>${esc(data.phCanisterLastCorrection)}</div>
-    <div class="can-actions"><input type="number" step="0.01" min="0" placeholder="Füllstand l" id="phFillPhone"><button class="can-set" onclick="var e=document.getElementById('phFillPhone');var v=parseFloat(String(e.value).replace(',','.'));if(!isNaN(v)){vis.conn.setState('poolsteuerung.0.control.phCanister.currentFillL',v);e.value='';}">Setzen</button></div>
-    <div class="can-actions"><input type="number" step="1" min="1" placeholder="Manuelle Dosis ml" id="phDosePhone"><button class="can-dose" onclick="var e=document.getElementById('phDosePhone');var v=parseFloat(String(e.value).replace(',','.'));if(!isNaN(v)&&v>0){vis.conn.setState('poolsteuerung.0.control.ph.manualDoseMl',v);e.value='';}">Dosieren</button></div>
-    <div class="can-bottom"><button class="can-new" onclick="vis.conn.setState('poolsteuerung.0.control.phCanister.newCanister',true);">Neuer Kanister</button><button class="can-set" onclick="var v=prompt('Aktueller Füllstand in Liter', '${esc(data.phCanisterFillL)}');if(v!==null){v=parseFloat(String(v).replace(',','.'));if(!isNaN(v)){vis.conn.setState('poolsteuerung.0.control.phCanister.currentFillL',v);}}">Korrigieren</button></div>
-  </div>
-</div></body></html>`;
+
+</div>
+<script>
+(function(){
+  function getVisApi(){
+    try{ if(window.vis) return window.vis; }catch(e){}
+    try{ if(window.parent&&window.parent.vis) return window.parent.vis; }catch(e){}
+    try{ if(window.top&&window.top.vis) return window.top.vis; }catch(e){}
+    return null;
+  }
+  function getConn(){
+    try{ const v=getVisApi(); if(v&&v.conn&&typeof v.conn.setState==='function') return v.conn; }catch(e){}
+    return null;
+  }
+  window.poolSetState = async function(id,val){
+    const v=getVisApi();
+    const conn=getConn();
+    try{
+      if(v && typeof v.setValue === 'function'){
+        const r=v.setValue(id,val);
+        if(r && typeof r.then==='function'){ await r; }
+        return true;
+      }
+    }catch(e){}
+    if(!conn) return false;
+    const attempts = [
+      () => conn.setState(id,val),
+      () => conn.setState(id,val,false),
+      () => conn.setState(id,val,()=>{}),
+      () => conn.setState(id,val,false,()=>{})
+    ];
+    for(const fn of attempts){
+      try{
+        const r=fn();
+        if(r && typeof r.then==='function'){ await r; }
+        return true;
+      }catch(e){}
+    }
+    return false;
+  };
+  window.poolToggleControl = async function(key,current){
+    const ns=${JSON.stringify(data.namespace)};
+    const ok=await window.poolSetState(ns+'.control.auto.'+key, !current);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+  window.poolToggleStandby = async function(current){
+    const ns=${JSON.stringify(data.namespace)};
+    const ok=await window.poolSetState(ns+'.control.standby', !current);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+  window.poolToggleState = async function(key,current){
+    const ns=${JSON.stringify(data.namespace)};
+    let ctrl='';
+    if(key==='circulation') ctrl='.control.device.circulation';
+    else if(key==='chlorinator') ctrl='.control.device.chlorinator';
+    else if(key==='phPump') ctrl='.control.device.phPump';
+    else if(key==='heatpump') ctrl='.control.device.heatpump';
+    if(!ctrl){ alert('Kein Control-Key hinterlegt'); return; }
+    const ok=await window.poolSetState(ns+ctrl, !current);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+  window.poolPhManualDose = async function(sec){
+    const ns=${JSON.stringify(data.namespace)};
+    await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30);
+    const ok=await window.poolSetState(ns + '.control.ph.manualTrigger', Date.now());
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+  window.poolAdjustSetTemp = async function(delta){
+    const ns=${JSON.stringify(data.namespace)};
+    const hpOn=${data.heatpumpOn ? 'true' : 'false'};
+    if(!hpOn){ alert('Solltemperatur nur bei laufender Wärmepumpe änderbar'); return; }
+    if(!${JSON.stringify(data.heatpumpSetTempStateId || '')}){ alert('Kein Solltemperatur-State hinterlegt'); return; }
+    const current=Number(${JSON.stringify(data.targetTemp)}.replace(',', '.'));
+    const next=Math.max(10, Math.min(40, Math.round((current + Number(delta))*10)/10));
+    const ok=await window.poolSetState(ns+'.control.heatpump.setTemp', next);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+  const bindOne = (selector, handler) => {
+    document.querySelectorAll(selector).forEach(el => {
+      const run = (ev) => {
+        try{ if(ev){ ev.preventDefault(); ev.stopPropagation(); } }catch(e){}
+        const now = Date.now();
+        const last = Number(el.dataset.lastTapTs || 0);
+        if (now - last < 700) return false;
+        el.dataset.lastTapTs = String(now);
+        handler(el);
+        return false;
+      };
+      try{ el.addEventListener('touchend', run, {passive:false}); }catch(e){}
+      try{ el.addEventListener('click', run, false); }catch(e){}
+      try{ el.style.cursor = 'pointer'; }catch(e){}
+    });
+  };
+  const bind = () => {
+    bindOne('.js-auto-btn', el => window.poolToggleControl(el.dataset.key, el.dataset.current === '1'));
+    bindOne('.js-device-btn', el => window.poolToggleState(el.dataset.key || '', el.dataset.current === '1'));
+    bindOne('.js-standby-btn', el => window.poolToggleStandby(el.dataset.current === '1'));
+    bindOne('.js-manual-dose-btn', el => {
+      const wrap = el.closest('.manual-dose-control');
+      const input = wrap ? wrap.querySelector('.js-manual-dose-sec') : null;
+      const sec = Math.max(1, Number((input && input.value) || el.dataset.sec || 30) || 30);
+      if (input) input.value = String(sec);
+      window.poolPhManualDose(sec);
+    });
+    document.querySelectorAll('.js-manual-dose-sec').forEach(input => {
+      const save = async () => {
+        const ns=${JSON.stringify(data.namespace)};
+        const sec=Math.max(1, Number(input.value || 30) || 30);
+        input.value=String(sec);
+        await window.poolSetState(ns + '.control.ph.manualDoseSec', sec);
+      };
+      input.addEventListener('change', save);
+      input.addEventListener('blur', save);
+      input.addEventListener('click', ev => ev.stopPropagation());
+      input.addEventListener('touchend', ev => ev.stopPropagation(), {passive:false});
+    });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind); else bind();
+})();
+</script></body></html>`;
   }
 
   async updateComputedStates() {
@@ -800,287 +1446,429 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       if (n > high) return 'bad';
       return 'good';
     };
-
     const phClass = badgeClass(data.ph, 7.1, 7.25);
     const orpClass = badgeClass(data.orp, Number(data.orpOnThreshold || 725), Number(data.orpOffThreshold || 750));
-
-    const item = (name, hint, on) => `
-      <div class="ps-status">
-        <div class="ps-status-left">
-          <div class="ps-status-name">${esc(name)}</div>
-          <div class="ps-status-hint">${esc(hint)}</div>
-        </div>
-        <div class="ps-pill ${on ? 'on' : 'off'}">${on ? 'EIN' : 'AUS'}</div>
-      </div>`;
-
+    const metricTextClass = cls => cls === 'good' ? 'metric-good' : (cls === 'warn' || cls === 'bad' ? 'metric-bad' : '');
+    const autoBtn = (label, key, active) => `
+      <button class="ps-action-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}">
+        <span class="ps-action-name">${esc(label)}</span>
+        <span class="ps-action-state">${active ? 'AKTIV' : 'AUS'}</span>
+      </button>`;
+    const deviceBtn = (label, key, active) => `
+      <button class="ps-action-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}">
+        <span class="ps-action-name">${esc(label)}</span>
+        <span class="ps-action-state">${active ? 'EIN' : 'AUS'}</span>
+      </button>`;
     const decisionValue = v => `<div class="ps-v ps-wrap">${esc(v)}</div>`;
-
+    const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
+    const metricValue = (value, trend = '→', stateCls = '') => `<span class="ps-mmain ${stateCls}">${esc(value)}</span><span class="ps-trend ${trendClass(trend)} ${stateCls}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>`;
+    const batteryPct = Math.max(0, Math.min(100, parseNum(data.battery)));
+    const batteryBar = `<div class="ps-bbar"><div class="ps-bfill" style="width:${batteryPct}%"></div></div>`;
     return `
 <!-- widget-render:${esc(data.updated)} -->
 <style>
 .ps-root,*{box-sizing:border-box}
-.ps-root{
-  width:100%;height:100%;padding:10px;
-  color:#0f172a;font-family:Arial,Helvetica,sans-serif;
-  background:linear-gradient(180deg,#0b1220 0%,#0f172a 100%);
-}
-.ps-grid{
-  display:grid;
-  grid-template-columns:minmax(320px,1.15fr) minmax(250px,.9fr) minmax(240px,.8fr);
-  gap:10px;
-  height:100%;
-}
-.ps-card{
-  display:flex;flex-direction:column;min-width:0;overflow:hidden;
-  background:linear-gradient(180deg,#f8fbff 0%,#eef4fb 100%);
-  border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:10px;
-  box-shadow:0 14px 28px rgba(0,0,0,.18);
-}
-.ps-hero{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%)}
-.ps-header{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
-.ps-title{font-size:18px;font-weight:800;color:#0f172a}
-.ps-sub{font-size:11px;color:#475569;text-align:right;flex:0 0 auto}
-.ps-tempRow{display:flex;align-items:flex-end;gap:8px;margin:10px 0 12px}
-.ps-temp{font-size:70px;font-weight:900;line-height:.9;color:#0f172a}
-.ps-unit{font-size:20px;color:#475569;padding-bottom:8px}
-.ps-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:auto}
-.ps-metric{
-  background:#ffffff;border:1px solid rgba(15,23,42,.08);
-  border-radius:14px;padding:8px;min-height:76px;
-}
-.ps-k{font-size:12px;color:#475569;margin-bottom:6px;font-weight:700}
-.ps-v{font-size:22px;font-weight:800;line-height:1.15;color:#0f172a}
-.ps-v.ps-wrap{
-  font-size:14px;font-weight:700;line-height:1.25;
-  word-break:break-word;overflow-wrap:anywhere;white-space:normal;
-}
-.ps-s{font-size:11px;color:#64748b;margin-top:6px}
-.ps-chip{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:800;margin-top:6px}
-.ps-chip.good{background:#dcfce7;color:#166534}
-.ps-chip.warn{background:#fef3c7;color:#92400e}
-.ps-chip.bad{background:#fee2e2;color:#991b1b}
-.ps-chip.neutral{background:#e2e8f0;color:#334155}
-.ps-list{display:grid;gap:8px}
-.ps-row{
-  display:grid;grid-template-columns:minmax(90px,120px) minmax(0,1fr);gap:8px;align-items:start;
-  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px;
-}
-.ps-statuswrap{display:grid;gap:8px}
-.ps-status{
-  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;
-  background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:9px;
-}
-.ps-status-left{min-width:0}
-.ps-status-name{font-size:16px;font-weight:800;color:#0f172a;line-height:1.15}
-.ps-status-hint{
-  font-size:10px;color:#64748b;margin-top:2px;
-  white-space:normal;overflow-wrap:anywhere;
-}
-.ps-pill{
-  min-width:72px;text-align:center;padding:9px 12px;border-radius:999px;
-  font-size:13px;font-weight:800;color:#fff
-}
-.ps-pill.on{background:#43c05b}
-.ps-pill.off{background:#e64a45}
-.ps-canister{margin-top:10px}.ps-bar{height:10px;border-radius:999px;background:#d9dde5;overflow:hidden;margin:7px 0 10px}.ps-barfill{height:100%;border-radius:999px;background:#33a852}.ps-barfill.warn{background:#f0ad00}.ps-barfill.critical{background:#e64a45}.ps-can-head{display:flex;justify-content:space-between;align-items:center;gap:8px}.ps-can-title{font-size:17px;font-weight:900;color:#0f172a}.ps-ok{font-size:12px;font-weight:900;color:#16a34a}.ps-ok.warn{color:#b45309}.ps-ok.critical{color:#b91c1c}.ps-can-big{background:#f8fafc;border:1px solid rgba(15,23,42,.10);border-radius:12px;padding:9px;margin-bottom:8px}.ps-can-label{font-size:11px;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.ps-can-value{font-size:25px;font-weight:900;color:#0f172a}.ps-can-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:7px}.ps-can-small{font-size:11px;color:#64748b}.ps-can-small b{display:block;font-size:14px;color:#0f172a;margin-top:2px}.ps-can-note{font-size:11px;color:#334155;line-height:1.25}.ps-can-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;margin-top:8px}.ps-can-actions input{min-width:0;border:1px solid #cbd5e1;border-radius:10px;padding:8px;font-size:13px}.ps-can-actions button,.ps-can-bottom button{border:0;border-radius:10px;padding:8px 10px;font-weight:900;color:white;cursor:pointer}.ps-can-set{background:#4361ee}.ps-can-bottom{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}.ps-can-new{background:#31a950}.ps-can-dose{background:#f97316}
-@media (max-width: 1050px){
-  .ps-grid{grid-template-columns:1fr}
-}
+.ps-root{width:100%;max-width:1000px;height:730px;max-height:730px;overflow:hidden;padding:8px;margin:0 auto;color:#0f172a;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(180deg,#0b1220 0%,#0f172a 100%)}
+.ps-grid{display:grid;grid-template-columns:278px 330px 368px;gap:8px;width:100%;height:714px;overflow:hidden}
+.ps-card{display:flex;flex-direction:column;min-width:0;overflow:hidden;background:linear-gradient(180deg,#f8fbff 0%,#eef4fb 100%);border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:10px;box-shadow:0 14px 28px rgba(0,0,0,.18)}
+.ps-hero{background:radial-gradient(circle at top right, rgba(85,200,255,.22), transparent 28%),linear-gradient(180deg,#1b3763 0%,#102342 100%);color:#fff;border-color:rgba(255,255,255,.1)}
+.ps-header{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.ps-title{font-size:16px;font-weight:800;color:inherit}.ps-ver{font-size:9px;font-weight:800;color:#b9d7ff;margin-left:6px}.ps-sub{font-size:11px;color:#d4deec;text-align:right;flex:0 0 auto}.ps-mode{display:inline-flex;align-items:center;justify-content:center;padding:3px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(180deg,#334f84,#1b3158);font-weight:800;font-size:11px;color:#fff;cursor:pointer}
+.ps-tempRow{display:flex;align-items:flex-end;gap:8px;margin:10px 0 10px}.ps-temp{font-size:70px;font-weight:900;line-height:.9;color:inherit}.ps-unit{font-size:20px;color:#d7e5f5;padding-bottom:8px}
+.ps-scale{margin:2px 0 10px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-target{position:absolute;top:50%;left:${Math.max(0, Math.min(100, ((parseNum(data.targetTemp)-15)/(32-15))*100 || 0))}%;width:3px;height:14px;border-radius:999px;background:#fff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.ps-dot{position:absolute;top:50%;left:${Math.max(0, Math.min(100, ((parseNum(data.poolTemp)-15)/(32-15))*100 || 0))}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}.ps-target-label{position:relative;height:12px;font-size:10px;color:#e3edf9}.ps-target-label span{position:absolute;left:${Math.max(0, Math.min(100, ((parseNum(data.targetTemp)-15)/(32-15))*100 || 0))}%;transform:translateX(-50%)}
+.ps-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:auto}.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px;min-height:74px}.ps-k{font-size:12px;color:inherit;opacity:.88;margin-bottom:6px;font-weight:700}.ps-v{font-size:22px;font-weight:800;line-height:1.15;color:#0f172a}.ps-v.ps-wrap{font-size:13px;font-weight:700;line-height:1.2;word-break:break-word;overflow-wrap:anywhere;white-space:normal}.ps-s{font-size:11px;color:#e3edf9;margin-top:6px}.ps-hero .ps-v{color:#fff}.ps-chip{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;font-size:9px;font-weight:800;margin-top:6px}.ps-chip.good{background:#dcfce7;color:#166534}.ps-chip.warn{background:#fef3c7;color:#92400e}.ps-chip.bad{background:#fee2e2;color:#991b1b}.ps-chip.neutral{background:#e2e8f0;color:#334155}
+.ps-block-title{font-size:16px;font-weight:800;color:#0f172a;margin-bottom:8px}.ps-list{display:grid;gap:6px}.ps-row{display:grid;grid-template-columns:minmax(88px,116px) minmax(0,1fr);gap:8px;align-items:start;background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}.ps-actions-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}.ps-action-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:10px 12px;border-radius:14px;min-height:58px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:4px}.ps-action-btn:disabled{opacity:.5;cursor:default}.ps-action-name{font-size:14px;font-weight:800}.ps-action-state{font-size:12px;font-weight:800}.ps-action-btn.is-on .ps-action-name,.ps-action-btn.is-on .ps-action-state{color:#67dd7c}.ps-action-btn.is-off .ps-action-name,.ps-action-btn.is-off .ps-action-state{color:#ff8d7b}.ps-statuswrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+@media (max-width: 1050px){.ps-grid{grid-template-columns:1fr}}
 </style>
-<div class="ps-root">
-  <div class="ps-grid">
-    <div class="ps-card ps-hero">
-      <div class="ps-header">
-        <div>
-          <div class="ps-title">Pool Manager</div>
-        </div>
-        <div class="ps-sub">v${esc(data.adapterVersion)}<br>Modus ${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}<br>v${esc(data.adapterVersion)}<br>Aktualisiert<br>${esc(data.updated)}</div>
-      </div>
-      <div class="ps-tempRow">
-        <div class="ps-temp">${esc(data.poolTemp)}</div>
-        <div class="ps-unit">°C</div>
-      </div>
-      <div class="ps-metrics">
-        <div class="ps-metric">
-          <div class="ps-k">pH</div>
-          <div class="ps-v">${esc(data.ph)}</div>
-          <div class="ps-s">Soll ${esc(data.phSet)}</div>
-          <div class="ps-chip ${phClass}">${phClass === 'good' ? 'OK' : phClass === 'warn' ? 'Niedrig' : 'Hoch'}</div>
-        </div>
-        <div class="ps-metric">
-          <div class="ps-k">ORP</div>
-          <div class="ps-v">${esc(data.orp)}</div>
-          <div class="ps-s">Soll ${esc(data.orpSet)}</div>
-          <div class="ps-chip ${orpClass}">${orpClass === 'good' ? 'OK' : orpClass === 'warn' ? 'Niedrig' : 'Hoch'}</div>
-        </div>
-        <div class="ps-metric">
-          <div class="ps-k">Außen</div>
-          <div class="ps-v">${esc(data.outsideTemp)}°C</div>
-          <div class="ps-s">Außen</div>
-        </div>
-        <div class="ps-metric">
-          <div class="ps-k">Solltemp</div>
-          <div class="ps-v">${esc(data.targetTemp)}°C</div>
-          <div class="ps-s">Soll</div>
-        </div>
-      </div>
+<div class="ps-root"><div class="ps-grid">
+  <div class="ps-card ps-hero">
+    <div class="ps-header">
+      <div><div class="ps-title">Pool Manager <span class="ps-ver">${esc(data.adapterVersion)}</span></div></div>
+      <div class="ps-sub"><button class="ps-mode js-standby-btn" data-current="${data.standbyControl ? '1' : '0'}">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</button><br>Aktualisiert<br>${esc(data.updated)}</div>
     </div>
-    <div class="ps-card">
-      <div class="ps-title">Energie & Steuerung</div>
-      <div class="ps-list">
-        <div class="ps-row"><div class="ps-k">Pumpe Auto</div><div class="ps-v">${esc(data.autoCirculation)}</div></div>
-        <div class="ps-row"><div class="ps-k">Chlor Auto</div><div class="ps-v">${esc(data.autoChlor)}</div></div>
-        <div class="ps-row"><div class="ps-k">pH Auto</div><div class="ps-v">${esc(data.autoPh)}</div></div>
-        <div class="ps-row"><div class="ps-k">WP Auto</div><div class="ps-v">${esc(data.autoHeatpump)}</div></div>
-        <div class="ps-row"><div class="ps-k">PV-Leistung</div><div class="ps-v">${esc(data.pv)} W</div></div>
-        <div class="ps-row"><div class="ps-k">Netzeinspeisung</div><div class="ps-v">${esc(data.feedIn)} W</div></div>
-        <div class="ps-row"><div class="ps-k">Netzbezug</div><div class="ps-v">${esc(data.gridSupply)} W</div></div>
-        <div class="ps-row"><div class="ps-k">Batterie SoC</div><div class="ps-v">${esc(data.battery)} %</div></div>
-        <div class="ps-row"><div class="ps-k">WP Freigabe</div>${decisionValue(data.heatDecision)}</div>
-        <div class="ps-row"><div class="ps-k">Chlor Freigabe</div>${decisionValue(data.chlorDecision)}</div>
-        <div class="ps-row"><div class="ps-k">Zeitplan</div>${decisionValue(data.pumpDecision)}</div>
-        <div class="ps-row"><div class="ps-k">pH Prüfung</div>${decisionValue(data.phDecision)}</div>
-        <div class="ps-row"><div class="ps-k">pH Zeiten</div>${decisionValue(data.phTimes)}</div>
-        <div class="ps-row"><div class="ps-k">Standby nächster Lauf</div>${decisionValue(data.standbyNext)}</div>
-        <div class="ps-row"><div class="ps-k">Letzte Dosierung</div><div class="ps-v">${esc(data.phLastDoseDurationSec)} s</div></div>
-      </div>
-    </div>
-    <div class="ps-card">
-      <div class="ps-title">Aktoren & Status</div>
-      <div class="ps-statuswrap">
-        ${item('Umwälzpumpe','IST-Zustand',data.pumpOn)}
-        ${item('Chlorinator','ORP-Regelung',data.chlorOn)}
-        ${item('pH-Dosierpumpe','Prüfzeiten',data.phPumpOn)}
-        ${item('Wärmepumpe','PV-Freigabe',data.heatpumpOn)}
-      </div>
-      <div class="ps-canister">
-        <div class="ps-can-head"><div class="ps-can-title">pH-Minus Kanister</div><div class="ps-ok ${data.phCanisterCritical ? 'critical' : data.phCanisterWarning ? 'warn' : ''}">${data.phCanisterCritical ? 'KRITISCH' : data.phCanisterWarning ? 'WARNUNG' : 'OK'}</div></div>
-        <div class="ps-bar"><div class="ps-barfill ${data.phCanisterCritical ? 'critical' : data.phCanisterWarning ? 'warn' : ''}" style="width:${Math.max(0, Math.min(100, parseNum(data.phCanisterPercent)))}%"></div></div>
-        <div class="ps-can-big"><div class="ps-can-label">Aktueller Füllstand</div><div class="ps-can-value">${esc(data.phCanisterFillL)} l</div><div class="ps-can-small">von ${esc(data.phCanisterSizeL)} l · ${esc(data.phCanisterPercent)} %</div></div>
-        <div class="ps-can-grid"><div class="ps-can-small">Größe<b>${esc(data.phCanisterSizeL)} l</b></div><div class="ps-can-small">Verbraucht<b>${esc(data.phCanisterConsumedL)} l</b></div><div class="ps-can-small">Letzte Dosis<b>${esc(data.phLastDoseMl)} ml</b></div></div>
-        <div class="ps-can-note">${esc(data.phCanisterStatusText)}<br>${esc(data.phCanisterLastCorrection)}</div>
-        <div class="ps-can-actions"><input type="number" step="0.01" min="0" placeholder="Füllstand l" id="psPhFill"><button class="ps-can-set" onclick="var e=document.getElementById('psPhFill');var v=parseFloat(String(e.value).replace(',','.'));if(!isNaN(v)){vis.conn.setState('poolsteuerung.0.control.phCanister.currentFillL',v);e.value='';}">Setzen</button></div>
-        <div class="ps-can-actions"><input type="number" step="1" min="1" placeholder="Manuelle Dosis ml" id="psPhDose"><button class="ps-can-dose" onclick="var e=document.getElementById('psPhDose');var v=parseFloat(String(e.value).replace(',','.'));if(!isNaN(v)&&v>0){vis.conn.setState('poolsteuerung.0.control.ph.manualDoseMl',v);e.value='';}">Dosieren</button></div>
-        <div class="ps-can-bottom"><button class="ps-can-new" onclick="vis.conn.setState('poolsteuerung.0.control.phCanister.newCanister',true);">Neuer Kanister</button><button class="ps-can-set" onclick="var v=prompt('Aktueller Füllstand in Liter', '${esc(data.phCanisterFillL)}');if(v!==null){v=parseFloat(String(v).replace(',','.'));if(!isNaN(v)){vis.conn.setState('poolsteuerung.0.control.phCanister.currentFillL',v);}}">Korrigieren</button></div>
-      </div>
-      <div class="ps-list" style="margin-top:10px">
-        <div class="ps-row"><div class="ps-k">Zeitplan</div><div class="ps-v">${data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV'}</div></div>
-        <div class="ps-row"><div class="ps-k">PV Schwelle</div><div class="ps-v">${esc(data.threshold)} W</div></div>
-        <div class="ps-row"><div class="ps-k">ORP Grenzen</div><div class="ps-v">${esc(data.orpOnThreshold)} / ${esc(data.orpOffThreshold)}</div></div>
-        <div class="ps-row"><div class="ps-k">pH Tag</div><div class="ps-v">${esc(data.phDailyCount)}</div></div>
-        <div class="ps-row"><div class="ps-k">Pumpe ml/min</div><div class="ps-v">${esc(data.phFlowMlMin)}</div></div>
-        <div class="ps-row"><div class="ps-k">ml je 0,1 / 10m³</div><div class="ps-v">${esc(data.phMlPer01Per10)}</div></div>
-        <div class="ps-row"><div class="ps-k">Poolvolumen</div><div class="ps-v">${esc(data.volume)} m³</div></div>
-      </div>
+    <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
+    <div class="ps-scale"><div class="ps-track"><div class="ps-target"></div><div class="ps-dot"></div></div><div class="ps-target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
+    <div class="ps-metrics">
+      <div class="ps-metric"><div class="ps-k">pH</div><div class="ps-v">${metricValue(data.ph, data.phTrend, ((data.phBadge && data.phBadge.cls) === 'ok' ? 'ok' : ((((data.phBadge && data.phBadge.cls) === 'warn') || ((data.phBadge && data.phBadge.cls) === 'bad')) ? 'bad' : '')))}</div><div class="ps-s">Soll ${esc(data.phSet)} · ${esc(data.phTargetRangeText)}</div><div class="ps-chip ${phClass}">${phClass === 'good' ? 'OK' : phClass === 'warn' ? 'Niedrig' : 'Hoch'}</div></div>
+      <div class="ps-metric"><div class="ps-k">ORP</div><div class="ps-v">${metricValue(data.orp, data.orpTrend, ((data.orpBadge && data.orpBadge.cls) === 'ok' ? 'ok' : ((((data.orpBadge && data.orpBadge.cls) === 'warn') || ((data.orpBadge && data.orpBadge.cls) === 'bad')) ? 'bad' : '')))}</div><div class="ps-s">EIN ≤ ${esc(data.orpOnThreshold)} / AUS > ${esc(data.orpOffThreshold)}</div><div class="ps-chip ${orpClass}">${orpClass === 'good' ? 'OK' : orpClass === 'warn' ? 'Niedrig' : 'Hoch'}</div></div>
+      <div class="ps-metric"><div class="ps-k">Außen</div><div class="ps-v">${metricValue(`${data.outsideTemp}°C`, data.outsideTempTrend, false)}</div></div>
+      <div class="ps-metric"><div class="ps-k">Solltemp</div><div class="ps-v">${esc(data.targetTemp)}°C</div></div>
     </div>
   </div>
-</div>`;
+  <div class="ps-card">
+    <div class="ps-block-title">Automatik</div>
+    <div class="ps-actions-grid">
+      ${autoBtn('Umwälzpumpe','circulation',!!data.autoCirculationControl)}
+      ${autoBtn('Chlor','chlor',!!data.autoChlorControl)}
+      ${autoBtn('pH','ph',!!data.autoPhControl)}
+      ${autoBtn('Wärmepumpe','heatpump',!!data.autoHeatpumpControl)}
+    </div>
+    <div class="ps-block-title">Energie & Steuerung</div>
+    <div class="ps-list">
+      <div class="ps-row"><div class="ps-k">PV-Leistung</div><div class="ps-v">${esc(data.pv)} W</div></div>
+      <div class="ps-row"><div class="ps-k">Netzeinspeisung</div><div class="ps-v">${esc(data.feedIn)} W</div></div>
+      <div class="ps-row"><div class="ps-k">Netzbezug</div><div class="ps-v">${esc(data.gridSupply)} W</div></div>
+      <div class="ps-row"><div class="ps-k">Batterie SoC</div><div class="ps-v">${esc(data.battery)} %</div></div>
+      <div class="ps-row"><div class="ps-k">WP Freigabe</div>${decisionValue(data.heatDecision)}</div>
+      <div class="ps-row"><div class="ps-k">Chlor Freigabe</div>${decisionValue(data.chlorDecision)}</div>
+      <div class="ps-row"><div class="ps-k">Zeitplan</div>${decisionValue(data.pumpDecision)}</div>
+    </div>
+  </div>
+  <div class="ps-card">
+    <div class="ps-block-title">Aktoren & Status</div>
+    <div class="ps-statuswrap">
+      ${deviceBtn('Umwälzpumpe','circulation',!!data.pumpOn, data.pumpSyncCls, data.pumpSyncLabel)}
+      ${deviceBtn('Chlorinator','chlorinator',!!data.chlorOn, data.chlorSyncCls, data.chlorSyncLabel)}
+      ${deviceBtn('pH-Dosierpumpe','phPump',!!data.phPumpOn, data.phPumpSyncCls, data.phPumpSyncLabel)}
+      ${deviceBtn('Wärmepumpe','heatpump',!!data.heatpumpOn, data.heatpumpSyncCls, data.heatpumpSyncLabel)}
+    </div>
+    <div class="ps-list">
+      <div class="ps-row"><div class="ps-k">pH zum Soll</div><div class="ps-v">${esc(data.phCorrectionText)}</div></div>
+      <div class="ps-row"><div class="ps-k">pH Zielbereich</div><div class="ps-v">${esc(data.phTargetRangeText)}</div></div>
+      <div class="ps-row"><div class="ps-k">pH Tag</div><div class="ps-v">${esc(data.phDailyCount)}</div></div>
+      <div class="ps-row"><div class="ps-k">Letzte pH-Dosis</div><div class="ps-v">${esc(data.phLastDoseInfo)}</div></div>
+      <div class="ps-row"><div class="ps-k">Nächste Schaltungen</div><div class="ps-v">${esc(data.nextActionsText)}</div></div>
+      <div class="ps-row"><div class="ps-k">PV Schwelle</div><div class="ps-v">${esc(data.threshold)} W</div></div>
+      <div class="ps-row"><div class="ps-k">WP Lüfter</div><div class="ps-v">${esc(String(data.heatpumpFanPercent ?? '--'))}</div></div>
+      <div class="ps-row"><div class="ps-k">WP Modus</div><div class="ps-v">${esc(data.heatpumpMode || '--')}</div></div>
+    </div>
+  </div>
+</div></div>
+<script>
+(function(){
+  window.poolSetState = async function(id,val){
+    try{ if(window.vis&&window.vis.conn&&typeof window.vis.conn.setState==='function'){ window.vis.conn.setState(id,val); return true; } }catch(e){}
+    try{ if(window.parent&&window.parent.vis&&window.parent.vis.conn&&typeof window.parent.vis.conn.setState==='function'){ window.parent.vis.conn.setState(id,val); return true; } }catch(e){}
+    try{ if(window.top&&window.top.vis&&window.top.vis.conn&&typeof window.top.vis.conn.setState==='function'){ window.top.vis.conn.setState(id,val); return true; } }catch(e){}
+    return false;
+  };
+  window.poolToggleControl = async function(key,current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.auto.'+key, !current); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolToggleStandby = async function(current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.standby', !current); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolToggleState = async function(key,current){
+    const ns=${JSON.stringify(data.namespace)};
+    let ctrl='';
+    if(key==='circulation') ctrl='.control.device.circulation';
+    else if(key==='chlorinator') ctrl='.control.device.chlorinator';
+    else if(key==='phPump') ctrl='.control.device.phPump';
+    else if(key==='heatpump') ctrl='.control.device.heatpump';
+    if(!ctrl){ alert('Kein Control-Key hinterlegt'); return; }
+    const ok=await window.poolSetState(ns+ctrl, !current);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+})();
+</script>`;
   }
 
   buildPhoneWidget(data) {
     const poolTempNum = parseNum(data.poolTemp);
     const tempScaleMin = 15;
     const tempScaleMax = 32;
-    const tempPct = Number.isFinite(poolTempNum)
-      ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100))
-      : 0;
+    const tempPct = Number.isFinite(poolTempNum) ? Math.max(0, Math.min(100, ((poolTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
     const targetTempNum = parseNum(data.targetTemp);
-    const targetPct = Number.isFinite(targetTempNum)
-      ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100))
-      : 0;
-
-    const autoBox = (name, state) => {
-      const cls = state === 'AKTIV' ? 'on-state' : state === 'STANDBY' ? 'standby-state' : 'off-state';
-      return `<div class="ps-sb ${cls}"><div class="ps-sn">${esc(name)}</div><div class="ps-sh">${esc(state)}</div></div>`;
-    };
-
-    const statusBox = (name, hint, on) => `<div class="ps-sb ${on ? 'on-state' : 'off-state'}"><div class="ps-sn">${esc(name)}</div><div class="ps-sh">${esc(hint)} · ${on ? 'EIN' : 'AUS'}</div></div>`;
-    const quick = (l, v) => `<div class="ps-q"><div class="ps-ql">${esc(l)}</div><div class="ps-qv">${esc(v)}</div></div>`;
-
+    const targetPct = Number.isFinite(targetTempNum) ? Math.max(0, Math.min(100, ((targetTempNum - tempScaleMin) / (tempScaleMax - tempScaleMin)) * 100)) : 0;
+    const autoBtn = (label, key, active) => `<button class="ps-btn js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'AKTIV' : 'AUS'}</span></button>`;
+    const deviceBtn = (label, key, active, syncCls = 'warn', syncLabel = '?') => `<button class="ps-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="ps-sync ${esc(syncCls)}">${esc(syncLabel)}</span><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'EIN' : 'AUS'}</span></button>`;
+    const quick = (l, v, trend = '', barHtml = '') => `<div class="ps-q"><div class="ps-ql">${esc(l)}</div><div class="ps-qvr"><div class="ps-qv">${esc(v)}</div>${trend ? `<div class="ps-qtrend ${trendClass(trend)}">${esc(trend)}</div>` : ''}</div>${barHtml || ''}</div>`;
+    const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
+    const metricValue = (value, trend = '→', stateCls = '') => `<span class="ps-mmain ${stateCls}">${esc(value)}</span><span class="ps-trend ${trendClass(trend)} ${stateCls}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>`;
+    const batteryPct = Math.max(0, Math.min(100, parseNum(data.battery)));
+    const batteryBar = `<div class="ps-bbar"><div class="ps-bfill" style="width:${batteryPct}%"></div></div>`;
     return `<!-- phone-render:${esc(data.updated)} -->
 <style>
-.ps-wrap{background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,#10203a,#08111f);padding:4px;display:grid;gap:6px;font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
-.ps-card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:8px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
+.ps-wrap{width:100%;max-width:510px;height:1090px;max-height:1090px;overflow:hidden;margin:0 auto;display:grid;gap:4px;padding:4px;background:radial-gradient(circle at top left, rgba(89,188,255,.18), transparent 28%),linear-gradient(180deg,#10203a,#08111f);font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif}
+.ps-card{background:linear-gradient(180deg,#ffffff 0%,#eef5ff 100%);border:1px solid rgba(15,23,42,.08);border-radius:15px;padding:6px;box-shadow:0 8px 18px rgba(0,0,0,.15)}
 .ps-hero{background:radial-gradient(circle at top right, rgba(85,200,255,.26), transparent 26%),linear-gradient(180deg,#1b3763 0%,#0f2343 100%);color:#fff;border-color:rgba(255,255,255,.10)}
-.ps-header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}.ps-title{font-size:16px;font-weight:900}.ps-sub{font-size:10px;color:#d2dded;text-align:right}.ps-mode{display:inline-flex;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#67cfff,#6f7bff);font-size:9px;font-weight:900;color:#fff;margin-bottom:4px}
-.ps-tempRow{display:flex;align-items:flex-end;gap:5px;margin:6px 0 5px}.ps-temp{font-size:46px;font-weight:900;line-height:.9}.ps-unit{font-size:18px;padding-bottom:6px;color:#d5e5f6}
-.ps-scale{margin:3px 0 7px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-target{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#ffffff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%);box-shadow:0 0 0 1px rgba(255,255,255,.15)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #11305b;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;font-size:10px;color:#d2dded;margin-top:4px}
-.ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
-.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:13px;padding:7px}.ps-ml{font-size:11px;color:#d9e5f5}.ps-mv{font-size:14px;font-weight:900;color:#fff}.ps-ms{font-size:10px;color:#c4d4e8;margin-top:3px}
-.ps-section{font-size:13px;font-weight:900;color:#0f172a;margin-bottom:4px}
-.ps-sb,.ps-q{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.ps-ql,.ps-sh{font-size:11px;color:#64748b}.ps-ql{font-weight:700;margin-bottom:4px}
-.ps-sb{min-height:46px;display:flex;flex-direction:column;justify-content:center;padding:6px 7px}
-.ps-sb.on-state{background:linear-gradient(180deg,#f7fff8,#eefcf1)}
-.ps-sb.off-state{background:linear-gradient(180deg,#fff8f7,#fff0ee)}
-.ps-sb.standby-state{background:linear-gradient(180deg,#f6f8fb,#eef2f7)}
-.ps-sn{font-size:12.5px;font-weight:900;line-height:1.05}
-.ps-sb.on-state .ps-sn{color:#179a3b}
-.ps-sb.off-state .ps-sn{color:#d6493b}
-.ps-sb.standby-state .ps-sn{color:#64748b}
-.ps-sh{margin-top:3px}
-.ps-qv{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
-.ps-log{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.ps-log.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.ps-log.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.ps-log.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.ps-logt{font-size:12px;font-weight:700;line-height:1.3;color:#0f172a;word-break:break-word}.ps-logm{margin-top:4px;font-size:10px;color:#64748b}
-.ps-can{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:8px}.ps-can-head{display:flex;justify-content:space-between;font-size:13px;font-weight:900}.ps-can-ok{font-size:11px;color:#16a34a}.ps-can-ok.warn{color:#b45309}.ps-can-ok.critical{color:#b91c1c}.ps-can-bar{height:9px;border-radius:999px;background:#d9dde5;overflow:hidden;margin:7px 0}.ps-can-fill{height:100%;background:#33a852;border-radius:999px}.ps-can-fill.warn{background:#f0ad00}.ps-can-fill.critical{background:#e64a45}.ps-can-big{font-size:24px;font-weight:900}.ps-can-small{font-size:11px;color:#64748b}.ps-can-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:7px 0}.ps-can-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px;margin-top:6px}.ps-can-actions input{min-width:0;border:1px solid #cbd5e1;border-radius:10px;padding:8px}.ps-can-actions button,.ps-can-bottom button{border:0;border-radius:10px;padding:8px 9px;font-weight:900;color:#fff}.ps-can-set{background:#4361ee}.ps-can-dose{background:#f97316}.ps-can-bottom{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}.ps-can-new{background:#31a950}
+.ps-header{display:flex;justify-content:space-between;gap:6px;align-items:flex-start}.ps-title{font-size:15px;font-weight:900}.ps-ver{font-size:9px;font-weight:800;color:#b9d7ff;margin-left:6px}.ps-sub{font-size:9px;color:#d2dded;text-align:right}.ps-mode{display:inline-flex;align-items:center;justify-content:center;padding:3px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(180deg,#334f84,#1b3158);font-weight:800;font-size:10px;color:#fff;cursor:pointer}
+.ps-tempRow{display:flex;align-items:flex-end;gap:5px;margin:4px 0 4px}.ps-temp{font-size:42px;font-weight:900;line-height:.9}.ps-unit{font-size:16px;padding-bottom:4px;color:#d5e5f6}
+.ps-scale{margin:2px 0 5px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-target{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#fff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}.ps-target-label{position:relative;height:12px;font-size:9px;color:#d2dded}.ps-target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}
+.ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.ps-phGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.ps-ml{font-size:10px;color:#d9e5f5}.ps-mv{font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center}.ps-ms{display:none}.ps-mmain.ok{color:#67dd7c}.ps-mmain.bad{color:#ff7a6a}.ps-trend{font-size:18px;font-weight:900;color:#c9d7ee;line-height:1;display:inline-flex;min-width:18px;justify-content:center;margin-left:10px}.ps-trend.up{color:#ffb36b}.ps-trend.down{color:#7dd3fc}.ps-trend.flat{color:#c9d7ee}.ps-trend.ok{color:#67dd7c}.ps-trend.bad{color:#ff7a6a}.ps-section{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px}
+.ps-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:7px 9px;border-radius:13px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}.ps-btn:disabled{opacity:.5;cursor:default}.ps-btn-name{font-size:12px;font-weight:800}.ps-btn-state{font-size:9px;font-weight:800}.ps-btn.is-on .ps-btn-name,.ps-btn.is-on .ps-btn-state{color:#67dd7c}.ps-btn.is-off .ps-btn-name,.ps-btn.is-off .ps-btn-state{color:#ff8d7b}
+.ps-q{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.ps-ql{font-size:9px;color:#64748b;font-weight:700;margin-bottom:3px}.ps-qv{font-size:12px;font-weight:900;color:#0f172a;line-height:1.08}
+.manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:7px 9px;border-radius:999px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}.manual-btn span{font-size:13px}.manual-btn small{font-size:10px;color:#dbeafe}.manual-dose-control{display:grid;grid-template-columns:1fr;gap:5px;grid-column:1 / -1;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.manual-dose-field label{display:block;font-size:9px;color:#64748b;font-weight:800;margin-bottom:3px}.manual-dose-input{width:100%;height:34px;border-radius:10px;border:1px solid rgba(15,23,42,.14);background:#f8fafc;color:#0f172a;font-size:16px;font-weight:900;text-align:center;padding:4px 8px}.ps-can{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:8px;grid-column:1 / -1}.ps-can-top{display:flex;justify-content:space-between;font-weight:900}.ps-can-bar{height:9px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin:6px 0}.ps-can-fill{height:100%;background:#22c55e}.ps-can-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.ps-can-k{font-size:9px;color:#64748b}.ps-can-v{font-size:12px;font-weight:900;color:#0f172a}.ps-can-input{height:32px;border-radius:9px;border:1px solid #cbd5e1;padding:4px 8px}.ps-can-btn{border:none;border-radius:9px;background:#3b5bff;color:#fff;font-weight:900}.ps-can-actions{display:grid;grid-template-columns:1fr 70px;gap:5px;margin-top:6px}.ps-can-actions.two{grid-template-columns:1fr 1fr}.ps-can-btn.green{background:#25a84a}.ps-can-btn.gray{background:#475569}
 </style>
 <div class="ps-wrap">
   <div class="ps-card ps-hero">
-    <div class="ps-header"><div class="ps-title">Pool Manager</div><div class="ps-sub"><div class="ps-mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>v${esc(data.adapterVersion)}<br>v${esc(data.adapterVersion)}<br>Aktualisiert<br>${esc(data.updated)}</div></div>
+    <div class="ps-header"><div class="ps-title">Pool Manager <span class="ps-ver">${esc(data.adapterVersion)}</span></div><div class="ps-sub"><button class="ps-mode js-standby-btn" data-current="${data.standbyControl ? '1' : '0'}">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</button><br>Aktualisiert<br>${esc(data.updated)}</div></div>
     <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
-    <div class="ps-scale"><div class="ps-track"><div class="ps-target" title="Soll ${esc(data.targetTemp)} °C"></div><div class="ps-dot"></div></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
+    <div class="ps-scale"><div class="ps-track"><div class="ps-target"></div><div class="ps-dot"></div></div><div class="ps-target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="ps-metrics">
-      <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${esc(data.ph)}</div><div class="ps-ms">Soll ${esc(data.phSet)}</div></div>
-      <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${esc(data.orp)}</div><div class="ps-ms">Soll ${esc(data.orpSet)}</div></div>
-      <div class="ps-metric"><div class="ps-ml">Außen</div><div class="ps-mv">${esc(data.outsideTemp)}°C</div><div class="ps-ms">Außen</div></div>
-      <div class="ps-metric"><div class="ps-ml">Soll</div><div class="ps-mv">${esc(data.targetTemp)}°C</div><div class="ps-ms">Soll</div></div>
+      <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${metricValue(data.ph, data.phTrend, ((data.phBadge && data.phBadge.cls) === 'ok' ? 'ok' : ((((data.phBadge && data.phBadge.cls) === 'warn') || ((data.phBadge && data.phBadge.cls) === 'bad')) ? 'bad' : '')))}</div></div>
+      <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${metricValue(data.orp, data.orpTrend, ((data.orpBadge && data.orpBadge.cls) === 'ok' ? 'ok' : ((((data.orpBadge && data.orpBadge.cls) === 'warn') || ((data.orpBadge && data.orpBadge.cls) === 'bad')) ? 'bad' : '')))}</div></div>
+      <div class="ps-metric"><div class="ps-ml">Außen</div><div class="ps-mv">${metricValue(`${data.outsideTemp}°C`, data.outsideTempTrend, false)}</div></div>
+      <div class="ps-metric"><div class="ps-ml">Soll</div><div class="ps-mv">${esc(data.targetTemp)}°C</div></div>
     </div>
   </div>
-
-  <div class="ps-card"><div class="ps-section">Automatik</div><div class="ps-statusGrid">
-    ${autoBox('Umwälzpumpe', data.autoCirculation)}
-    ${autoBox('Chlor', data.autoChlor)}
-    ${autoBox('pH', data.autoPh)}
-    ${autoBox('Wärmepumpe', data.autoHeatpump)}
+  <div class="ps-card"><div class="ps-section">Automatik</div><div class="ps-auto">
+    ${autoBtn('Umwälzpumpe','circulation',!!data.autoCirculationControl)}
+    ${autoBtn('Chlor','chlor',!!data.autoChlorControl)}
+    ${autoBtn('pH','ph',!!data.autoPhControl)}
+    ${autoBtn('Wärmepumpe','heatpump',!!data.autoHeatpumpControl)}
   </div></div>
-
   <div class="ps-card"><div class="ps-section">Aktoren & Status</div><div class="ps-statusGrid">
-    ${statusBox('Umwälzpumpe','IST-Zustand',data.pumpOn)}
-    ${statusBox('Chlorinator','ORP-Regelung',data.chlorOn)}
-    ${statusBox('pH-Dosierpumpe','Prüfzeiten',data.phPumpOn)}
-    ${statusBox('Wärmepumpe','PV-Freigabe',data.heatpumpOn)}
+    ${deviceBtn('Umwälzpumpe','circulation',!!data.pumpOn, data.pumpSyncCls, data.pumpSyncLabel)}
+    ${deviceBtn('Chlorinator','chlorinator',!!data.chlorOn, data.chlorSyncCls, data.chlorSyncLabel)}
+    ${deviceBtn('pH-Dosierpumpe','phPump',!!data.phPumpOn, data.phPumpSyncCls, data.phPumpSyncLabel)}
+    ${deviceBtn('Wärmepumpe','heatpump',!!data.heatpumpOn, data.heatpumpSyncCls, data.heatpumpSyncLabel)}
   </div></div>
-
   <div class="ps-card"><div class="ps-section">Energie & Steuerung</div><div class="ps-quickGrid">
-    ${quick('PV-Leistung', `${data.pv} W`)}
-    ${quick('Einspeisung', `${data.feedIn} W`)}
-    ${quick('Batterie', `${data.battery} %`)}
-    ${quick('WP Freigabe', data.heatReason)}
+    ${quick('PV-Leistung', `${data.pv} W`, data.pvTrend || '→')}
+    ${quick('Einspeisung', `${data.feedIn} W`, data.feedInTrend || '→')}
+    ${quick('Batterie', `${data.battery} %`, '', batteryBar)}
+    ${quick('WP Freigabe', data.heatDecision)}
     ${quick('Chlor Freigabe', data.chlorDecision)}
-    ${quick('pH Prüfung', data.phDecision)}
   </div></div>
-  <div class="ps-card"><div class="ps-section">pH Info</div><div class="ps-quickGrid">
+  <div class="ps-card"><div class="ps-section">pH Info</div><div class="ps-quickGrid ps-phGrid">
     ${quick('Berechnet', `${data.phCalculatedDoseSec} s / ${data.phCalculatedDoseMl} ml`)}
-    ${quick('Letzte Dosis', `${data.phLastDoseDurationSec} s / ${data.phLastDoseMl} ml`)}
+    ${quick('Letzte Dosis', data.phLastDoseInfo)}
     ${quick('Heute dosiert', `${data.phDailyCount}x`)}
     ${quick('Nächste Prüfung', data.phNextCheck)}
-  </div><div class="ps-log info-${esc(data.phInfoLevel)}"><div class="ps-ql">Letzte Meldung</div><div class="ps-logt">${esc(data.phInfoText)}</div><div class="ps-logm">Letzte Dosierung: ${esc(data.phLastDoseAt)}</div></div></div>
-  <div class="ps-card"><div class="ps-section">pH-Minus Kanister</div><div class="ps-can">
-    <div class="ps-can-head"><span>Aktueller Füllstand</span><span class="ps-can-ok ${data.phCanisterCritical ? 'critical' : data.phCanisterWarning ? 'warn' : ''}">${data.phCanisterCritical ? 'KRITISCH' : data.phCanisterWarning ? 'WARNUNG' : 'OK'}</span></div>
-    <div class="ps-can-bar"><div class="ps-can-fill ${data.phCanisterCritical ? 'critical' : data.phCanisterWarning ? 'warn' : ''}" style="width:${Math.max(0, Math.min(100, parseNum(data.phCanisterPercent)))}%"></div></div>
-    <div class="ps-can-big">${esc(data.phCanisterFillL)} l</div><div class="ps-can-small">von ${esc(data.phCanisterSizeL)} l · ${esc(data.phCanisterPercent)} %</div>
-    <div class="ps-can-grid"><div class="ps-can-small">Größe<br><b>${esc(data.phCanisterSizeL)} l</b></div><div class="ps-can-small">Verbraucht<br><b>${esc(data.phCanisterConsumedL)} l</b></div><div class="ps-can-small">Letzte Dosis<br><b>${esc(data.phLastDoseMl)} ml</b></div></div>
-    <div class="ps-can-small">${esc(data.phCanisterStatusText)}<br>${esc(data.phCanisterLastCorrection)}</div>
-    <div class="ps-can-actions"><input type="number" step="0.01" min="0" placeholder="Füllstand l" id="psPhFillPhone"><button class="ps-can-set" onclick="var e=document.getElementById('psPhFillPhone');var v=parseFloat(String(e.value).replace(',','.'));if(!isNaN(v)){vis.conn.setState('poolsteuerung.0.control.phCanister.currentFillL',v);e.value='';}">Setzen</button></div>
-    <div class="ps-can-actions"><input type="number" step="1" min="1" placeholder="Manuelle Dosis ml" id="psPhDosePhone"><button class="ps-can-dose" onclick="var e=document.getElementById('psPhDosePhone');var v=parseFloat(String(e.value).replace(',','.'));if(!isNaN(v)&&v>0){vis.conn.setState('poolsteuerung.0.control.ph.manualDoseMl',v);e.value='';}">Dosieren</button></div>
-    <div class="ps-can-bottom"><button class="ps-can-new" onclick="vis.conn.setState('poolsteuerung.0.control.phCanister.newCanister',true);">Neuer Kanister</button><button class="ps-can-set" onclick="var v=prompt('Aktueller Füllstand in Liter', '${esc(data.phCanisterFillL)}');if(v!==null){v=parseFloat(String(v).replace(',','.'));if(!isNaN(v)){vis.conn.setState('poolsteuerung.0.control.phCanister.currentFillL',v);}}">Korrigieren</button></div>
+    ${quick('Granulat manuell', data.manualGranulateText)}
+    <div class="ps-can">
+      <div class="ps-can-top"><span>pH-Minus Kanister</span><span>${esc(data.phCanister.levelL)} l / ${esc(data.phCanister.percent)} %</span></div>
+      <div class="ps-can-bar"><div class="ps-can-fill" style="width:${Math.max(0, Math.min(100, parseNum(data.phCanister.percent)))}%"></div></div>
+      <div class="ps-can-row"><div><div class="ps-can-k">Größe</div><div class="ps-can-v">${esc(data.phCanister.sizeL)} l</div></div><div><div class="ps-can-k">Verbraucht</div><div class="ps-can-v">${esc(data.phCanister.consumedL)} l</div></div><div><div class="ps-can-k">Letzte Dosis</div><div class="ps-can-v">${esc(data.phCanister.lastDoseMl)} ml</div></div></div>
+      <div class="ps-can-actions"><input class="ps-can-input js-phcan-level" type="number" min="0" step="0.01" placeholder="Füllstand l"><button class="ps-can-btn" onclick="poolPhSetCanisterLevel()">Setzen</button></div>
+      <div class="ps-can-actions two"><button class="ps-can-btn green" onclick="poolPhNewCanister()">Neuer Kanister</button><button class="ps-can-btn gray" onclick="var e=document.querySelector('.js-phcan-level'); if(e) e.value='${esc(data.phCanister.sizeL)}';">Größe</button></div>
+    </div>
+    <div class="manual-dose-control">
+      <div class="manual-dose-field"><label>PH Manuell Sekunden</label><input class="manual-dose-input js-manual-dose-sec" type="number" min="1" max="600" step="1" value="${esc(data.manualDoseButtonSec || 30)}"></div>
+      <button class="manual-btn js-manual-dose-btn" data-sec="${Number(data.manualDoseButtonSec || 30) || 30}"><span>PH Manuell</span><small>Start Dosierung</small></button>
+    </div>
   </div></div>
-</div>`;
+</div>
+<script>
+(function(){
+  window.poolSetState = async function(id,val){
+    try{ if(window.vis&&window.vis.conn&&typeof window.vis.conn.setState==='function'){ window.vis.conn.setState(id,val); return true; } }catch(e){}
+    try{ if(window.parent&&window.parent.vis&&window.parent.vis.conn&&typeof window.parent.vis.conn.setState==='function'){ window.parent.vis.conn.setState(id,val); return true; } }catch(e){}
+    try{ if(window.top&&window.top.vis&&window.top.vis.conn&&typeof window.top.vis.conn.setState==='function'){ window.top.vis.conn.setState(id,val); return true; } }catch(e){}
+    return false;
+  };
+  window.poolToggleControl = async function(key,current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.auto.'+key, !current); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolToggleStandby = async function(current){ const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns+'.control.standby', !current); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolToggleState = async function(key,current){
+    const ns=${JSON.stringify(data.namespace)};
+    let ctrl='';
+    if(key==='circulation') ctrl='.control.device.circulation';
+    else if(key==='chlorinator') ctrl='.control.device.chlorinator';
+    else if(key==='phPump') ctrl='.control.device.phPump';
+    else if(key==='heatpump') ctrl='.control.device.heatpump';
+    if(!ctrl){ alert('Kein Control-Key hinterlegt'); return; }
+    const ok=await window.poolSetState(ns+ctrl, !current);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+  window.poolPhManualDose = async function(sec){ const ns=${JSON.stringify(data.namespace)}; await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30); const ok=await window.poolSetState(ns + '.control.ph.manualStart', true); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolPhSetCanisterLevel = async function(){ const ns=${JSON.stringify(data.namespace)}; const el=document.querySelector('.js-phcan-level'); const v=el ? Number(String(el.value).replace(',', '.')) : NaN; if(!Number.isFinite(v)){alert('Bitte Füllstand in Liter eingeben');return;} const ok=await window.poolSetState(ns + '.control.ph.canister.setLevelL', Math.round(v*100)/100); if(!ok) alert('VIS setState nicht verfügbar'); };
+  window.poolPhNewCanister = async function(){ if(!confirm('Neuen pH-Minus-Kanister setzen?')) return; const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns + '.control.ph.canister.newCanister', true); if(!ok) alert('VIS setState nicht verfügbar'); };
+  const bindOne = (selector, handler) => {
+    document.querySelectorAll(selector).forEach(el => {
+      const run = (ev) => { try{ if(ev){ ev.preventDefault(); ev.stopPropagation(); } }catch(e){} handler(el); return false; };
+      try{ el.addEventListener('touchend', run, {passive:false}); }catch(e){}
+      try{ el.addEventListener('click', run, false); }catch(e){}
+      try{ el.style.cursor = 'pointer'; }catch(e){}
+    });
+  };
+  bindOne('.js-manual-dose-btn', el => {
+    const wrap = el.closest('.manual-dose-control');
+    const input = wrap ? wrap.querySelector('.js-manual-dose-sec') : null;
+    const sec = Math.max(1, Number((input && input.value) || el.dataset.sec || 30) || 30);
+    if (input) input.value = String(sec);
+    window.poolPhManualDose(sec);
+  });
+  document.querySelectorAll('.js-manual-dose-sec').forEach(input => {
+    const save = async () => {
+      const ns=${JSON.stringify(data.namespace)};
+      const sec=Math.max(1, Number(input.value || 30) || 30);
+      input.value=String(sec);
+      await window.poolSetState(ns + '.control.ph.manualDoseSec', sec);
+    };
+    input.addEventListener('change', save);
+    input.addEventListener('blur', save);
+    input.addEventListener('click', ev => ev.stopPropagation());
+    input.addEventListener('touchend', ev => ev.stopPropagation(), {passive:false});
+  });
+})();
+</script>`;
+  }
+
+  async renderVis(force = false) {
+    if (this.isShuttingDown) return;
+    if (this.renderActive) {
+      this.renderAgainRequested = true;
+      this.visTrace('renderVis übersprungen', 'bereits aktiv -> erneuter Render vorgemerkt');
+      return;
+    }
+    this.renderActive = true;
+    try {
+      await this._renderVisInternal(force);
+    } finally {
+      this.renderActive = false;
+      if (this.renderAgainRequested && !this.isShuttingDown) {
+        this.renderAgainRequested = false;
+        const handle = this.trackTimeout(setTimeout(async () => {
+          this.pendingTimeouts.delete(handle);
+          try { await this.renderVis(true); } catch (e) { this.log.error('VIS Nach-Render Fehler: ' + (e && e.stack ? e.stack : e)); }
+        }, 500));
+      }
+    }
+  }
+
+  async _renderVisInternal(force = false) {
+    if (this.isShuttingDown) return;
+    const visIds = ['vis.htmlTablet', 'vis.htmlPhone', 'vis.widgetTablet', 'vis.widgetPhone'];
+    const renderStartTs = Date.now();
+    try {
+      this.visTrace('renderVis START', `force=${!!force}`);
+      await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
+      await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
+      await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
+      await this.ensureState('vis.widgetPhone', 'string', 'html', '', false);
+      this.visTrace('renderVis States sichergestellt');
+
+      let hasEmptyVisState = false;
+      for (const id of visIds) {
+        try {
+          const st = await this.getStateAsync(id);
+          if (!st || typeof st.val !== 'string' || st.val.trim().length < 50) {
+            hasEmptyVisState = true;
+            break;
+          }
+        } catch {
+          hasEmptyVisState = true;
+          break;
+        }
+      }
+
+      this.visTrace('renderVisFull wird aufgerufen', `forceFull=${!!(force || hasEmptyVisState)} empty=${hasEmptyVisState}`);
+      await this.renderVisFull(force || hasEmptyVisState);
+      this.visTrace('renderVisFull zurückgekehrt');
+
+      for (const id of visIds) {
+        const st = await this.getStateAsync(id);
+        if (!st || typeof st.val !== 'string' || st.val.trim().length < 50) {
+          throw new Error(`VIS-State ${id} ist nach renderVisFull weiterhin leer`);
+        }
+      }
+      this.visTrace('renderVis OK', `${Date.now() - renderStartTs}ms`);
+    } catch (e) {
+      const msg = e && e.stack ? e.stack : String(e && e.message ? e.message : e);
+      this.log.error('VIS Render Abbruch: ' + msg);
+      this.visTrace('renderVis ERROR', msg.slice(0, 500));
+      await this.renderVisFallback(msg);
+    }
+  }
+
+  async renderVisFallback(errorText = '') {
+    this.visTrace('renderVisFallback START');
+    const updated = new Date().toLocaleString('de-DE');
+    const safeError = esc(String(errorText || 'unbekannter Fehler')).slice(0, 4000);
+    const read = async (label, id, unit = '') => {
+      let val = '--';
+      try {
+        const s = id ? await this.getForeignStateAsync(id) : null;
+        if (s && s.val !== undefined && s.val !== null && String(s.val) !== '') val = String(s.val);
+      } catch {}
+      return `<div class="kv"><span>${esc(label)}</span><b>${esc(val)}${unit}</b></div>`;
+    };
+    const rows = [
+      await read('Wasser', this.config.waterTempStateId, ' °C'),
+      await read('pH', this.config.phStateId, ''),
+      await read('ORP', this.config.orpStateId, ' mV'),
+      await read('PV', this.config.pvPowerStateId, ' W'),
+      await read('Einspeisung', this.config.gridFeedInStateId, ' W')
+    ].join('');
+    const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+      body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.19</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+    await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
+    await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
+    await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
+    await this.ensureState('vis.widgetPhone', 'string', 'html', '', false);
+    await this.setStateAsync('vis.htmlTablet', html, true);
+    await this.setStateAsync('vis.htmlPhone', html, true);
+    await this.setStateAsync('vis.widgetTablet', html, true);
+    await this.setStateAsync('vis.widgetPhone', html, true);
+    try { await this.setStateAsync('status.debug.lastVisUpdate', `Fallback ${updated}`, true); } catch {}
+    try { await this.setStateAsync('status.debug.lastStartupError', `VIS Render Abbruch: ${String(errorText || '').slice(0, 500)}`, true); } catch {}
+    this.visTrace('renderVisFallback OK', `htmlLen=${html.length}`);
   }
 
 
+  getPhCanisterConfig() {
+    const sizeL = Math.max(0.01, parseNum(this.config.phCanisterSizeL || 10) || 10);
+    const warnL = Math.max(0, parseNum(this.config.phCanisterWarnL || 2) || 2);
+    const criticalL = Math.max(0, parseNum(this.config.phCanisterCriticalL || 1) || 1);
+    return { sizeL, warnL, criticalL };
+  }
 
+  async ensurePhCanisterStates() {
+    const cfg = this.getPhCanisterConfig();
+    await this.ensureState('status.phCanister.sizeL', 'number', 'value', cfg.sizeL, true);
+    await this.ensureState('status.phCanister.levelL', 'number', 'value', cfg.sizeL, true);
+    await this.ensureState('status.phCanister.consumedL', 'number', 'value', 0, false);
+    await this.ensureState('status.phCanister.percent', 'number', 'value', 100, false);
+    await this.ensureState('status.phCanister.lastCorrectionTs', 'number', 'value.time', 0, false);
+    await this.ensureState('status.phCanister.lastDoseMl', 'number', 'value', 0, false);
+    await this.ensureState('status.phCanister.statusText', 'string', 'text', '', false);
+    await this.ensureState('control.ph.canister.setLevelL', 'number', 'value', 0, true);
+    await this.ensureState('control.ph.canister.newCanister', 'boolean', 'button', false, true);
+    await this.recalculatePhCanister(false);
+  }
 
+  async recalculatePhCanister(touchCorrection = false) {
+    const cfg = this.getPhCanisterConfig();
+    await this.ensureState('status.phCanister.sizeL', 'number', 'value', cfg.sizeL, true);
+    const levelState = await this.getStateAsync('status.phCanister.levelL');
+    let level = Number(levelState && levelState.val);
+    if (!Number.isFinite(level)) level = cfg.sizeL;
+    level = Math.max(0, Math.min(cfg.sizeL, Math.round(level * 100) / 100));
+    const consumed = Math.max(0, Math.round((cfg.sizeL - level) * 100) / 100);
+    const percent = cfg.sizeL > 0 ? Math.round((level / cfg.sizeL) * 1000) / 10 : 0;
+    let txt = `pH-Minus: ${level.toFixed(2)} l Rest (${percent.toFixed(1)} %)`;
+    if (level <= cfg.criticalL) txt += ' - KRITISCH';
+    else if (level <= cfg.warnL) txt += ' - Nachbestellen';
+    else txt += ' - OK';
+    await this.setStateIfChanged('status.phCanister.sizeL', cfg.sizeL, true);
+    await this.setStateIfChanged('status.phCanister.levelL', level, true);
+    await this.setStateIfChanged('status.phCanister.consumedL', consumed, true);
+    await this.setStateIfChanged('status.phCanister.percent', percent, true);
+    await this.setStateIfChanged('status.phCanister.statusText', txt, true);
+    if (touchCorrection) await this.setStateIfChanged('status.phCanister.lastCorrectionTs', Date.now(), true);
+  }
 
-  async renderVis() {
+  async setPhCanisterLevel(levelL, touchCorrection = true) {
+    const cfg = this.getPhCanisterConfig();
+    let level = Number(levelL);
+    if (!Number.isFinite(level)) return false;
+    level = Math.max(0, Math.min(cfg.sizeL, Math.round(level * 100) / 100));
+    await this.ensurePhCanisterStates();
+    await this.setStateIfChanged('status.phCanister.levelL', level, true);
+    await this.recalculatePhCanister(touchCorrection);
+    return true;
+  }
+
+  async addPhCanisterConsumptionMl(ml) {
+    const amountMl = Number(ml);
+    if (!Number.isFinite(amountMl) || amountMl <= 0) return;
+    await this.ensurePhCanisterStates();
+    const levelState = await this.getStateAsync('status.phCanister.levelL');
+    const cfg = this.getPhCanisterConfig();
+    let level = Number(levelState && levelState.val);
+    if (!Number.isFinite(level)) level = cfg.sizeL;
+    const newLevel = Math.max(0, Math.round((level - (amountMl / 1000)) * 100) / 100);
+    await this.setStateIfChanged('status.phCanister.levelL', newLevel, true);
+    await this.setStateIfChanged('status.phCanister.lastDoseMl', Math.round(amountMl), true);
+    await this.recalculatePhCanister(false);
+  }
+
+  async resetPhCanister() {
+    const cfg = this.getPhCanisterConfig();
+    await this.setPhCanisterLevel(cfg.sizeL, true);
+    await this.setStateIfChanged('control.ph.canister.setLevelL', cfg.sizeL, true);
+  }
+
+  async renderVisFull(force = false) {
+    this.visTrace('renderVisFull START', `force=${!!force}`);
     const ph = this.fmt(await this.getNumber(this.config.phStateId, 2), 2);
     const orp = this.fmt(await this.getNumber(this.config.orpStateId, 0), 0);
     const poolTemp = this.fmt(await this.getNumber(this.config.waterTempStateId, 1), 1);
@@ -1089,12 +1877,54 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const feedIn = this.fmt(await this.getNumber(this.config.gridFeedInStateId, 0), 0, '0');
     const gridSupply = this.fmt(await this.getNumber(this.config.gridSupplyStateId, 0), 0, '0');
     const battery = this.fmt(await this.getNumber(this.config.batterySocStateId, 0), 0, '0');
-    const targetTemp = this.fmt(parseNum(this.config.heatpumpTargetTemp), 1, '24.0');
+    const wallboxChargingStatusRaw = await this.getText(this.config.wallboxChargingStatusStateId, '--');
+    const wallboxPlugStatusRaw = await this.getText(this.config.wallboxPlugStatusStateId, '--');
+    const wallboxSocNum = await this.getNumber(this.config.wallboxSocStateId, NaN);
+    const wallboxTargetSocNum = await this.getNumber(this.config.wallboxTargetSocStateId, NaN);
+    const wallboxTimeFullNum = await this.getNumber(this.config.wallboxTimeToFullStateId, NaN);
+    const wallboxRangeKmNum = await this.getNumber(this.config.wallboxRangeKmStateId, NaN);
+    const wallboxPowerKwNum = await this.getNumber(this.config.wallboxPowerKwStateId, NaN);
+    const pumpStateSnap = await this.getStateSnapshot(this.config.circulationPumpSocketStateId);
+    const chlorStateSnap = await this.getStateSnapshot(this.config.chlorinatorSocketStateId);
+    const phPumpStateSnap = await this.getStateSnapshot(this.config.phPumpSocketStateId);
+    const heatpumpStateSnap = await this.getStateSnapshot(this.config.heatpumpPowerStateId);
+    const pumpSync = await this.getVerifiedDeviceSyncInfo(this.config.circulationPumpSocketStateId, pumpStateSnap, 180);
+    const chlorSync = await this.getVerifiedDeviceSyncInfo(this.config.chlorinatorSocketStateId, chlorStateSnap, 180);
+    const phPumpSync = await this.getVerifiedDeviceSyncInfo(this.config.phPumpSocketStateId, phPumpStateSnap, 180);
+    const heatpumpSync = await this.getVerifiedDeviceSyncInfo(this.config.heatpumpPowerStateId, heatpumpStateSnap, 180);
+    this.visTrace('renderVisFull Basiswerte gelesen', `pH=${ph} ORP=${orp} Temp=${poolTemp}`);
+    const wallboxChargingRawText = String(wallboxChargingStatusRaw || '').trim().toLowerCase();
+    const wallboxPlugRawText = String(wallboxPlugStatusRaw || '').trim().toLowerCase();
+    const wallboxIsConnected = ['connected', 'verbunden'].includes(wallboxPlugRawText);
+    const wallboxPowerForStatus = (wallboxIsConnected && Number.isFinite(wallboxPowerKwNum) && wallboxPowerKwNum >= 0.3) ? wallboxPowerKwNum : 0;
+    const wallboxCharging = ['charging','laden','lädt','charge_state_charging_hv_battery'].includes(wallboxChargingRawText) || wallboxPowerForStatus >= 0.3;
+    const wallboxChargingStatus = wallboxIsConnected ? (wallboxCharging ? 'LÄDT' : (wallboxChargingRawText === 'idle' ? 'BEREIT' : String(wallboxChargingStatusRaw || '--'))) : 'GETRENNT';
+    const wallboxPlugStatus = wallboxIsConnected ? 'Verbunden' : (wallboxPlugRawText === 'disconnected' ? 'Getrennt' : String(wallboxPlugStatusRaw || '--'));
+    const wallboxSoc = this.fmt(wallboxSocNum, 0, '--');
+    const wallboxTargetSoc = this.fmt(wallboxTargetSocNum, 0, '--');
+    const wallboxRangeKm = this.fmt(wallboxRangeKmNum, 0, '--');
+    const wallboxPowerKw = this.fmt(wallboxPowerForStatus, 1, '--');
+    const wallboxTimeToFull = wallboxCharging ? this.formatDurationHours(wallboxTimeFullNum, '--') : '--';
+    const wallboxDatasetCreatedOn = '--';
+    const wallboxTibberLastSeen = await this.getFormattedDateTimeFromState('vw-connect.0.WVGZZZE23TE055069.statustibber.rawData.status.lastSeen', '--');
+    const targetTempNumFromState = this.config.heatpumpSetTempStateId
+      ? await this.getNumber(this.config.heatpumpSetTempStateId, NaN)
+      : NaN;
+    const targetTemp = this.fmt(Number.isFinite(targetTempNumFromState) ? targetTempNumFromState : parseNum(this.config.heatpumpTargetTemp), 1, '24.0');
+    const poolTempStateSnap = this.config.waterTempStateId ? await this.getStateSnapshot(this.config.waterTempStateId) : null;
+    const poolTempUpdatedAt = (() => {
+      const ts = Number((poolTempStateSnap && (poolTempStateSnap.lc || poolTempStateSnap.ts)) || 0);
+      return ts ? new Date(ts).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
+    })();
     const heatReason = await this.getText('poolsteuerung.0.status.heatpump.lastReason', '--');
-    const autoCirculation = await this.getText('poolsteuerung.0.status.auto.circulation', '--');
-    const autoChlor = await this.getText('poolsteuerung.0.status.auto.chlor', '--');
-    const autoPh = await this.getText('poolsteuerung.0.status.auto.ph', '--');
-    const autoHeatpump = await this.getText('poolsteuerung.0.status.auto.heatpump', '--');
+    const autoCirculationState = await this.getControlBool('control.auto.circulation', this.config.enableCirculationControl !== false);
+    const autoChlorState = await this.getControlBool('control.auto.chlor', this.config.enableChlorControl !== false);
+    const autoPhState = await this.getControlBool('control.auto.ph', this.config.enablePhControl !== false);
+    const autoHeatpumpState = await this.getControlBool('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
+    const autoCirculation = autoCirculationState ? 'AKTIV' : 'AUS';
+    const autoChlor = autoChlorState ? 'AKTIV' : 'AUS';
+    const autoPh = autoPhState ? 'AKTIV' : 'AUS';
+    const autoHeatpump = autoHeatpumpState ? 'AKTIV' : 'AUS';
     const standbyMode = await this.getControlBool('control.standby', this.config.standbyModeEnabled === true);
     const modeActive = standbyMode ? 'standby' : 'normal';
     const standbyNext = standbyMode ? this.getNextStandbyRun(new Date()) : null;
@@ -1113,8 +1943,36 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const phFlowMlMin = this.fmt(phFlowMlMinNum, 0, '--');
     const phCalculatedDoseMl = Number.isFinite(phFlowMlMinNum) ? this.fmt((parseNum(phCalculatedDoseSec) || 0) * phFlowMlMinNum / 60, 0, '0') : '--';
     const phLastDoseMl = Number.isFinite(phFlowMlMinNum) ? this.fmt((parseNum(phLastDoseDurationSec) || 0) * phFlowMlMinNum / 60, 0, '0') : '--';
+    const phLastDoseInfo = phLastDoseTsRaw ? `${phLastDoseDurationSec} s / ${phLastDoseMl} ml · ${phLastDoseAt}` : 'noch keine';
+    await this.ensurePhCanisterStates();
+    const phCanCfg = this.getPhCanisterConfig();
+    const phCanLevelNum = await this.getNumber(`${this.namespace}.status.phCanister.levelL`, phCanCfg.sizeL);
+    const phCanConsumedNum = await this.getNumber(`${this.namespace}.status.phCanister.consumedL`, Math.max(0, phCanCfg.sizeL - phCanLevelNum));
+    const phCanPercentNum = await this.getNumber(`${this.namespace}.status.phCanister.percent`, phCanCfg.sizeL > 0 ? (phCanLevelNum / phCanCfg.sizeL * 100) : 0);
+    const phCanLastCorrTs = await this.getNumber(`${this.namespace}.status.phCanister.lastCorrectionTs`, 0);
+    const phCanLastDoseMlNum = await this.getNumber(`${this.namespace}.status.phCanister.lastDoseMl`, 0);
+    const phCanister = {
+      sizeL: this.fmt(phCanCfg.sizeL, 2, '10.00'),
+      levelL: this.fmt(phCanLevelNum, 2, '0.00'),
+      consumedL: this.fmt(phCanConsumedNum, 2, '0.00'),
+      percent: this.fmt(phCanPercentNum, 1, '0.0'),
+      lastCorrection: phCanLastCorrTs ? new Date(phCanLastCorrTs).toLocaleString('de-DE') : '-',
+      lastDoseMl: this.fmt(phCanLastDoseMlNum, 0, '0'),
+      ok: phCanLevelNum > phCanCfg.warnL,
+      warn: phCanLevelNum <= phCanCfg.warnL && phCanLevelNum > phCanCfg.criticalL,
+      critical: phCanLevelNum <= phCanCfg.criticalL
+    };
     const phCurrentNum = parseNum(ph);
     const phTargetNum = parseNum(this.config.phSetpoint);
+    const phCorrectionNeeded = Number.isFinite(phCurrentNum) && Number.isFinite(phTargetNum) && phCurrentNum > phTargetNum;
+    const phCorrectionDoseSecNum = phCorrectionNeeded ? this.calcPhDoseDurationSec(phCurrentNum, phTargetNum, 0) : 0;
+    const phCorrectionDoseMlNum = phCorrectionDoseSecNum > 0 && Number.isFinite(phFlowMlMinNum) ? (phCorrectionDoseSecNum * phFlowMlMinNum / 60) : 0;
+    const phCorrectionText = phCorrectionDoseSecNum > 0 ? `${this.fmt(phCorrectionDoseMlNum, 0, '0')} ml / ${phCorrectionDoseSecNum} s` : 'im Zielbereich';
+    const phTargetRangeText = Number.isFinite(phCurrentNum)
+      ? (phCurrentNum >= 7.2 && phCurrentNum <= 7.4
+          ? 'optimal 7,2–7,4'
+          : (phCurrentNum >= 7.0 && phCurrentNum <= 7.4 ? 'sehr gut 7,0–7,4' : (phCurrentNum > 7.4 ? 'zu hoch' : 'zu niedrig')))
+      : '--';
     const manualGranulateGNum = Number.isFinite(phCurrentNum) && Number.isFinite(phTargetNum) && phCurrentNum > phTargetNum
       ? Math.round(((phCurrentNum - phTargetNum) / 0.1) * (this.calcVolume() / 10) * 100)
       : 0;
@@ -1128,26 +1986,22 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         : 'info';
     const phMlPer01Per10 = this.fmt(parseNum(this.config.phDoseMlPer01Per10m3), 0, '--');
     const volume = this.fmt(this.calcVolume(), 2, '--');
-    await this.updatePhCanisterStatus();
-    const phCanisterSizeL = this.fmt(await this.getNumber('status.phCanister.sizeL', 2), 2, '10.00');
-    const phCanisterFillL = this.fmt(await this.getNumber('status.phCanister.currentFillL', 2), 2, '10.00');
-    const phCanisterConsumedL = this.fmt(await this.getNumber('status.phCanister.consumedL', 2), 2, '0.00');
-    const phCanisterPercent = this.fmt(await this.getNumber('status.phCanister.fillPercent', 1), 1, '100.0');
-    const phCanisterStatusText = await this.getText('status.phCanister.statusText', 'pH-Minus OK');
-    const phCanisterWarning = await this.getBool('status.phCanister.warning');
-    const phCanisterCritical = await this.getBool('status.phCanister.critical');
-    const phCanisterLastCorrection = await this.getText('status.phCanister.lastCorrection', '-');
+    this.visTrace('renderVisFull Statuswerte gelesen', `mode=${modeActive} phDecision=${String(phDecision).slice(0,80)}`);
 
-    const circulationEnabled = !standbyMode && this.config.enableCirculationControl !== false;
-    const phEnabledMaster = !standbyMode && this.config.enablePhControl !== false;
-    const heatEnabledMaster = !standbyMode && this.config.enableHeatpumpControl !== false;
-    const chlorEnabledMaster = !standbyMode && this.config.enableChlorControl !== false;
+    const circulationEnabled = !standbyMode && await this.getControlBool('control.auto.circulation', this.config.enableCirculationControl !== false);
+    const phEnabledMaster = !standbyMode && await this.getControlBool('control.auto.ph', this.config.enablePhControl !== false);
+    const heatEnabledMaster = !standbyMode && await this.getControlBool('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
+    const chlorEnabledMaster = !standbyMode && await this.getControlBool('control.auto.chlor', this.config.enableChlorControl !== false);
 
     const pumpOn = await this.getBool(this.config.circulationPumpSocketStateId);
     const pumpScheduleActive = standbyMode ? this.isStandbyPumpActive(new Date()) : (typeof this.isPumpScheduleActive === 'function' ? this.isPumpScheduleActive(new Date()) : false);
     const chlorOnRaw = await this.getBool(this.config.chlorinatorSocketStateId);
-    const phPumpOn = await this.getBool(this.config.phPumpSocketStateId);
+    let phPumpOn = await this.getBool(this.config.phPumpSocketStateId);
     const threshold = parseNum(this.config.heatEnableFeedInThresholdW || 1000);
+    if (!phEnabledMaster && !pumpOn && phPumpOn) {
+      try { await this.setSwitchStateCompat(this.config.phPumpSocketStateId, false); } catch (e) { this.log.warn('pH-Pumpe konnte nicht wegen Pumpenstop ausgeschaltet werden: ' + e); }
+      phPumpOn = false;
+    }
 
     const orpOnThreshold = parseNum(this.config.orpOnThreshold || 725);
     const orpOffThreshold = parseNum(this.config.orpOffThreshold || 750);
@@ -1159,14 +2013,19 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       chlorDecision = 'Standby aktiv';
     } else if (!chlorEnabledMaster) {
       chlorDesired = chlorOnRaw;
-      chlorDecision = 'Steuerung deaktiviert';
+      chlorDecision = `Steuerung deaktiviert${chlorOnRaw ? ' · manuell EIN' : ' · manuell AUS'}`;
     }
     const orpNum = parseNum(orp);
     const chlorDelaySec = Math.max(0, parseNum(this.config.chlorPumpStartDelaySec || 0));
     const pumpOnForSec = this.getPumpOnForSec();
 
     if (!chlorEnabledMaster) {
-      chlorDecision = 'Steuerung deaktiviert';
+      if (!pumpOn && chlorOnRaw) {
+        chlorDesired = false;
+        chlorDecision = 'Manuell blockiert: Pumpe AUS';
+      } else {
+        chlorDecision = chlorOnRaw ? 'Manuell EIN (Auto AUS)' : 'Steuerung deaktiviert · manuell AUS';
+      }
     } else if (!pumpOn) {
       chlorDesired = false;
       chlorDecision = 'Pumpe AUS';
@@ -1188,35 +2047,127 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
     if (this.config.chlorinatorSocketStateId && chlorDesired !== chlorOnRaw) {
       try {
-        await this.setSwitchStateCompat(this.config.chlorinatorSocketStateId, chlorDesired);
+        await (chlorDesired ? this.forceSwitchOnCompat(this.config.chlorinatorSocketStateId) : this.forceSwitchOffCompat(this.config.chlorinatorSocketStateId));
       } catch (e) {
         this.log.warn('Chlorinator konnte nicht gesetzt werden: ' + e);
       }
     }
 
-    const chlorOn = pumpOn ? chlorDesired : false;
+    const chlorOn = chlorEnabledMaster ? (pumpOn ? chlorDesired : false) : chlorOnRaw;
     let heatDecision = '';
     const circulationHeartbeatOkDisplay = await this.getHeartbeatOk('status.checks.circulationPump');
-    if (!pumpOn) {
-      heatDecision = 'Umwälzpumpe AUS';
-    } else if (!circulationHeartbeatOkDisplay) {
-      heatDecision = 'Umwälzpumpe nicht erreichbar';
-    } else if (parseNum(feedIn) < threshold) {
-      heatDecision = `PV zu gering (${feedIn}W < ${threshold}W)`;
-    } else if (parseNum(poolTemp) >= parseNum(targetTemp)) {
-      heatDecision = 'Solltemperatur erreicht';
-    } else {
-      heatDecision = `PV OK (${feedIn}W > ${threshold}W)`;
+    const heatpumpOnRaw = await this.getBool(this.config.heatpumpPowerStateId);
+    const heatLock = this.getHeatpumpLockState();
+    if (heatLock.state === null) {
+      heatLock.state = heatpumpOnRaw;
+      heatLock.lastOnTs = 0;
+      heatLock.lastOffTs = 0;
+      heatLock.ignoreStartup = true;
     }
 
-    const heatpumpOn = await this.getBool(this.config.heatpumpPowerStateId);
+    let heatDesired = heatpumpOnRaw;
+    let allowHeatpumpWrite = true;
+
+    if (standbyMode) {
+      heatDesired = false;
+      heatDecision = 'Standby aktiv';
+    } else if (!heatEnabledMaster) {
+      allowHeatpumpWrite = false;
+      if (!pumpOn && heatpumpOnRaw) {
+        heatDesired = false;
+        heatDecision = 'Sicherheits-AUS: Umwälzpumpe AUS';
+        allowHeatpumpWrite = true;
+      } else {
+        heatDesired = heatpumpOnRaw;
+        heatDecision = heatpumpOnRaw ? 'Manuell EIN (Auto AUS)' : 'Steuerung deaktiviert · manuell AUS';
+      }
+    } else if (!pumpOn) {
+      heatDesired = false;
+      heatDecision = 'Umwälzpumpe AUS';
+    } else if (!circulationHeartbeatOkDisplay) {
+      heatDesired = false;
+      heatDecision = 'Umwälzpumpe nicht erreichbar';
+    } else {
+      const hyst = this.applyHeatpumpHysteresis(heatpumpOnRaw, '', poolTemp, targetTemp, feedIn, threshold);
+      heatDesired = hyst.desiredOn;
+      heatDecision = hyst.reason;
+    }
+
+    if (allowHeatpumpWrite && this.config.heatpumpPowerStateId && heatDesired !== heatpumpOnRaw) {
+      try {
+        await (heatDesired ? this.forceSwitchOnCompat(this.config.heatpumpPowerStateId) : this.forceSwitchOffCompat(this.config.heatpumpPowerStateId));
+      } catch (e) {
+        this.log.warn('Wärmepumpe konnte nicht gesetzt werden: ' + e);
+      }
+    }
+
+    if (allowHeatpumpWrite && heatDesired !== heatLock.state) {
+      heatLock.state = heatDesired;
+      heatLock.ignoreStartup = false;
+      if (heatDesired) {
+        heatLock.lastOnTs = Date.now();
+        heatLock.lastOffTs = 0;
+      } else {
+        heatLock.lastOffTs = Date.now();
+        heatLock.lastOnTs = 0;
+      }
+    }
+
+    const heatpumpOn = allowHeatpumpWrite ? heatDesired : heatpumpOnRaw;
+
+    this.visTrace('renderVisFull History-Trends START');
+    const trendFallback = { phTrend: '→', orpTrend: '→', poolTempTrend: '→', outsideTempTrend: '→', pvTrend: '→', feedInTrend: '→' };
+    let historyTrends = trendFallback;
+    try {
+      historyTrends = await Promise.race([
+        this.getHistoryTrends(),
+        new Promise(resolve => setTimeout(() => resolve({ ...trendFallback, __timeout: true }), 1800))
+      ]);
+      if (historyTrends && historyTrends.__timeout) {
+        this.visTrace('renderVisFull History-Trends TIMEOUT', 'verwende Pfeile-Fallback');
+      } else {
+        this.visTrace('renderVisFull History-Trends OK');
+      }
+    } catch (e) {
+      this.visTrace('renderVisFull History-Trends ERROR', String(e && e.message ? e.message : e).slice(0, 300));
+      historyTrends = trendFallback;
+    }
+    const phTrend = historyTrends.phTrend || '→';
+    const orpTrend = historyTrends.orpTrend || '→';
+    const poolTempTrend = historyTrends.poolTempTrend || '→';
+    const outsideTempTrend = historyTrends.outsideTempTrend || '→';
+    const pvTrend = historyTrends.pvTrend || '→';
+    const feedInTrend = historyTrends.feedInTrend || '→';
+
+    const phNumStable = parseNum(ph);
+    const orpNumStable = parseNum(orp);
+    const phInRange = Number.isFinite(phNumStable) && phNumStable >= 7.1 && phNumStable <= 7.25;
+    const orpInRange = Number.isFinite(orpNumStable) && orpNumStable >= parseNum(orpOnThreshold) && orpNumStable <= parseNum(orpOffThreshold);
+
+    const heatpumpAuxIds = this.getDerivedHeatpumpAuxStateIds();
+    const heatpumpFanPercent = await this.getText(heatpumpAuxIds.speedId, '--');
+    const heatpumpMode = this.formatHeatpumpMode(await this.getText(heatpumpAuxIds.modeId, '--'));
+    const nextActions = this.getNextDashboardActions(new Date(), nextPhCheck);
+    const nextActionsText = nextActions.length
+      ? nextActions.map(a => `${a.label}: ${a.time}`).join('\n')
+      : '--';
+
+    this.visTrace('renderVisFull Entscheidungen berechnet', `pump=${pumpOn} chlor=${chlorOn} heat=${heatpumpOn}`);
 
     const stableData = {
       ph, orp, poolTemp, outsideTemp, pv, feedIn, gridSupply, battery, targetTemp, heatReason, volume, modeActive,
       autoCirculation, autoChlor, autoPh, autoHeatpump,
       phSet: this.fmt(parseNum(this.config.phSetpoint), 2, '--'),
+      phTrend,
+      orpTrend,
+      poolTempTrend,
+      outsideTempTrend,
+      pvTrend,
+      feedInTrend,
+      phInRange,
+      orpInRange,
       phTimes: standbyMode ? '-' : (this.config.phCheckTimes || '-'),
-      standbyNext: standbyNext ? standbyNext.toLocaleString('de-DE') : '-',
+      standbyNext: standbyNext ? `${standbyNext.toLocaleDateString('de-DE')}, ${String(standbyNext.getHours()).padStart(2,'0')}:${String(standbyNext.getMinutes()).padStart(2,'0')}` : '-',
       pumpDecision,
       phDecision,
       phDailyCount,
@@ -1225,21 +2176,19 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       phCalculatedDoseMl,
       phLastDoseAt,
       phLastDoseMl,
+      phLastDoseInfo,
+      phCanister,
+      nextActionsText,
       manualGranulateG,
       manualGranulateText,
-      phCanisterSizeL,
-      phCanisterFillL,
-      phCanisterConsumedL,
-      phCanisterPercent,
-      phCanisterStatusText,
-      phCanisterWarning,
-      phCanisterCritical,
-      phCanisterLastCorrection,
       phInfoText,
       phInfoLevel,
       phNextCheck,
       phFlowMlMin,
       phMlPer01Per10,
+      phCorrectionNeeded,
+      phCorrectionText,
+      phTargetRangeText,
       orpSet: this.fmt(parseNum(this.config.orpSetpoint), 0, '--'),
       threshold: this.fmt(threshold, 0, '1000'),
       orpOnThreshold: this.fmt(orpOnThreshold, 0, '725'),
@@ -1255,65 +2204,140 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       feedInRounded: Math.round(parseNum(feedIn) / 100) * 100,
       gridSupplyRounded: Math.round(parseNum(gridSupply) / 100) * 100,
       batteryRounded: Math.round(parseNum(battery)),
-      adapterVersion: '0.3.18'
+      wallboxCharging,
+      wallboxChargingStatus,
+      wallboxPlugStatus,
+      wallboxSoc,
+      wallboxTargetSoc,
+      wallboxRangeKm,
+      wallboxPowerKw,
+      wallboxTimeToFull,
+      namespace: this.namespace,
+      standbyControl: standbyMode,
+      autoCirculationControl: await this.getControlBool('control.auto.circulation', circulationEnabled),
+      autoChlorControl: await this.getControlBool('control.auto.chlor', chlorEnabledMaster),
+      autoPhControl: await this.getControlBool('control.auto.ph', phEnabledMaster),
+      autoHeatpumpControl: await this.getControlBool('control.auto.heatpump', heatEnabledMaster),
+      circulationPumpStateId: this.config.circulationPumpSocketStateId || '',
+      chlorinatorStateId: this.config.chlorinatorSocketStateId || '',
+      phPumpStateId: this.config.phPumpSocketStateId || '',
+      heatpumpStateId: this.config.heatpumpPowerStateId || '',
+      heatpumpSetTempStateId: this.config.heatpumpSetTempStateId || '',
+      heatpumpFanPercent,
+      heatpumpMode,
+      pumpSyncCls: pumpSync.cls,
+      pumpSyncLabel: pumpSync.label,
+      chlorSyncCls: chlorSync.cls,
+      chlorSyncLabel: chlorSync.label,
+      phPumpSyncCls: phPumpSync.cls,
+      phPumpSyncLabel: phPumpSync.label,
+      heatpumpSyncCls: heatpumpSync.cls,
+      heatpumpSyncLabel: heatpumpSync.label,
+      phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
+      manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
+      adapterVersion: 'v0.3.19'
     };
+
+    await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
+    await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
+    await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
+    await this.ensureState('vis.widgetPhone', 'string', 'html', '', false);
+
+    const visStateIds = ['vis.htmlTablet', 'vis.htmlPhone', 'vis.widgetTablet', 'vis.widgetPhone'];
+    let visStatesFilled = true;
+    for (const id of visStateIds) {
+      const s = await this.getStateAsync(id);
+      if (!s || typeof s.val !== 'string' || s.val.length < 50) {
+        visStatesFilled = false;
+        break;
+      }
+    }
 
     const now = Date.now();
     const signature = JSON.stringify(stableData);
 
-    if (signature === this.lastRenderSignature && now - this.lastRenderAt < 60000) {
+    if (!force && visStatesFilled && signature === this.lastRenderSignature && now - this.lastRenderAt < 300000) {
+      this.visTrace('renderVisFull SKIP', 'Signatur unverändert und VIS-States gefüllt');
       return;
     }
 
     this.lastRenderSignature = signature;
     this.lastRenderAt = now;
 
+    const renderStamp = new Date();
+    const updatedText = `${renderStamp.toLocaleDateString('de-DE')}, ${String(renderStamp.getHours()).padStart(2,'0')}:${String(renderStamp.getMinutes()).padStart(2,'0')}`;
     const data = {
-      updated: new Date().toLocaleString('de-DE'),
+      updated: updatedText,
       ...stableData,
     };
 
+    this.visTrace('renderVisFull HTML wird gebaut');
     const tablet = this.buildTabletHtml(data);
     const phone = this.buildPhoneHtml(data);
     const tabletWidget = this.buildTabletWidget(data);
     const phoneWidget = this.buildPhoneWidget(data);
+    this.visTrace('renderVisFull HTML gebaut', `tablet=${tablet.length} phone=${phone.length} widgetTablet=${tabletWidget.length} widgetPhone=${phoneWidget.length}`);
 
-    await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
-    await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
-    await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
-    await this.ensureState('vis.widgetPhone', 'string', 'html', '', false);
+    this.visTrace('renderVisFull schreibe VIS-States');
     await this.setStateAsync('vis.htmlTablet', tablet, true);
     await this.setStateAsync('vis.htmlPhone', phone, true);
-    if (tabletWidget !== this.lastTabletWidget) {
-      await this.setStateAsync('vis.widgetTablet', tabletWidget, true);
-      this.lastTabletWidget = tabletWidget;
-    }
-    if (phoneWidget !== this.lastPhoneWidget) {
-      await this.setStateAsync('vis.widgetPhone', phoneWidget, true);
-      this.lastPhoneWidget = phoneWidget;
-    }
+    await this.setStateAsync('vis.widgetTablet', tabletWidget, true);
+    await this.setStateAsync('vis.widgetPhone', phoneWidget, true);
+    this.visTrace('renderVisFull VIS-States geschrieben');
+
+    this.lastTabletHtml = tablet;
+    this.lastPhoneHtml = phone;
+    this.lastTabletWidget = tabletWidget;
+    this.lastPhoneWidget = phoneWidget;
     await this.ensureState('status.debug.lastVisUpdate', 'string', 'text', '', false);
-    await this.setStateAsync('status.debug.lastVisUpdate', data.updated, true);
+    await this.setStateIfChanged('status.debug.lastVisUpdate', data.updated, true);
     await this.ensureState('status.debug.lastDecision', 'string', 'text', '', false);
     await this.setStateAsync('status.debug.lastDecision', `WP: ${data.heatpumpOn ? 'EIN' : 'AUS'} | ${data.heatDecision} || Chlor: ${data.chlorOn ? 'EIN' : 'AUS'} | ${data.chlorDecision}`, true);
+    this.visTrace('renderVisFull OK');
 
   }
 
   queueRender() {
-    if (this.renderQueued) return;
+    if (this.renderQueued || this.isShuttingDown) return;
     this.renderQueued = true;
-    setTimeout(async () => {
+    const handle = this.trackTimeout(setTimeout(async () => {
+      this.pendingTimeouts.delete(handle);
       this.renderQueued = false;
+      if (this.isShuttingDown) return;
+      try {
+        await this.setStateIfChanged('control.device.circulation', await this.getBool(this.config.circulationPumpSocketStateId), true);
+        await this.setStateIfChanged('control.device.chlorinator', await this.getBool(this.config.chlorinatorSocketStateId), true);
+        await this.setStateIfChanged('control.device.phPump', await this.getBool(this.config.phPumpSocketStateId), true);
+        await this.setStateIfChanged('control.device.heatpump', await this.getBool(this.config.heatpumpPowerStateId), true);
+        await this.updateComputedStates();
+        await this.syncControlStates();
+        await this.syncDeviceControlStates();
+        await this.renderVis();
+      } catch (e) {
+        if (!this.isDbClosedError(e)) this.log.warn('VIS Render Fehler: ' + (e && e.stack ? e.stack : e));
+      }
+    }, 1800));
+  }
+
+  queueDelayedRefresh(delayMs = 1800) {
+    if (this.isShuttingDown) return;
+    const handle = this.trackTimeout(setTimeout(async () => {
+      this.pendingTimeouts.delete(handle);
+      if (this.isShuttingDown) return;
       try {
         await this.updateComputedStates();
         if (typeof this.applyControlLogic === 'function') {
           await this.applyControlLogic();
         }
+        await this.syncControlStates();
+        await this.syncDeviceControlStates();
+        this.lastRenderSignature = '';
+        this.lastRenderAt = 0;
         await this.renderVis();
       } catch (e) {
-        this.log.warn('VIS Render Fehler: ' + (e && e.stack ? e.stack : e));
+        if (!this.isDbClosedError(e)) this.log.warn('VIS Delayed Refresh Fehler: ' + (e && e.stack ? e.stack : e));
       }
-    }, 400);
+    }, delayMs));
   }
 
 
@@ -1352,6 +2376,36 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     if (typeof value === 'number') return value !== 0;
     const s = String(value ?? '').trim().toLowerCase();
     return ['true', '1', 'on', 'ein', 'yes', 'ja'].includes(s);
+  }
+
+  getHeatpumpLockState() {
+    if (!this.heatpumpLock) {
+      this.heatpumpLock = { state: null, lastOnTs: 0, lastOffTs: 0 };
+    }
+    return this.heatpumpLock;
+  }
+
+  applyHeatpumpHysteresis(currentOn, reason, poolTemp, targetTemp, feedIn, threshold) {
+    const pvOnThreshold = parseNum(this.config.heatpumpPvOnThresholdW || parseNum(threshold) || 1000);
+    const pvOffThreshold = parseNum(this.config.heatpumpPvOffThresholdW || 800);
+    const feedNum = parseNum(feedIn);
+
+    if (!Number.isFinite(feedNum)) {
+      return { desiredOn: false, reason: 'Netzeinspeisung ungültig' };
+    }
+
+    if (currentOn === true) {
+      if (feedNum < pvOffThreshold) {
+        return { desiredOn: false, reason: `PV AUS-Hysterese (${feedNum}W < ${pvOffThreshold}W)` };
+      }
+      return { desiredOn: true, reason: `PV halten (${feedNum}W >= ${pvOffThreshold}W)` };
+    }
+
+    if (feedNum >= pvOnThreshold) {
+      return { desiredOn: true, reason: `PV EIN-Hysterese (${feedNum}W >= ${pvOnThreshold}W)` };
+    }
+
+    return { desiredOn: false, reason: `PV zu gering (${feedNum}W < ${pvOnThreshold}W)` };
   }
 
   valuesEqual(a, b) {
@@ -1427,137 +2481,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     }
   }
 
-
-  round2(value) {
-    return Math.round((Number(value) || 0) * 100) / 100;
-  }
-
-  getPhCanisterSizeL() {
-    const size = parseNum(this.config.phCanisterSizeL || 10);
-    return Number.isFinite(size) && size > 0 ? size : 10;
-  }
-
-  async ensurePhCanisterStates() {
-    const size = this.getPhCanisterSizeL();
-    await this.ensureState('control.phCanister.currentFillL', 'number', 'value.volume', size, true);
-    await this.ensureState('control.phCanister.newCanister', 'boolean', 'button', false, true);
-    await this.ensureState('control.ph.manualDoseMl', 'number', 'value', 0, true);
-    await this.ensureState('status.phCanister.sizeL', 'number', 'value.volume', size, false);
-    await this.ensureState('status.phCanister.currentFillL', 'number', 'value.volume', size, false);
-    await this.ensureState('status.phCanister.consumedL', 'number', 'value.volume', 0, false);
-    await this.ensureState('status.phCanister.fillPercent', 'number', 'value', 100, false);
-    await this.ensureState('status.phCanister.warning', 'boolean', 'indicator', false, false);
-    await this.ensureState('status.phCanister.critical', 'boolean', 'indicator', false, false);
-    await this.ensureState('status.phCanister.lastCorrection', 'string', 'text', '', false);
-    await this.ensureState('status.phCanister.lastReset', 'string', 'text', '', false);
-    await this.ensureState('status.phCanister.statusText', 'string', 'text', '', false);
-  }
-
-  async syncPhCanisterFromConfig() {
-    await this.ensurePhCanisterStates();
-    const size = this.getPhCanisterSizeL();
-    await this.setStateIfChanged('status.phCanister.sizeL', this.round2(size), true);
-
-    if (this.config.phCanisterNewOnSave === true) {
-      await this.resetPhCanister('Admin: neuer Kanister beim Speichern');
-      return;
-    }
-
-    const configuredFillRaw = this.config.phCanisterCurrentFillL;
-    if (configuredFillRaw !== undefined && configuredFillRaw !== null && String(configuredFillRaw).trim() !== '') {
-      const configuredFill = parseNum(configuredFillRaw);
-      if (Number.isFinite(configuredFill) && configuredFill >= 0 && configuredFill <= size) {
-        const current = await this.getStateAsync('control.phCanister.currentFillL');
-        const curVal = Number(current && current.val);
-        if (!Number.isFinite(curVal) || Math.abs(curVal - configuredFill) > 0.004) {
-          await this.correctPhCanisterFill(configuredFill, 'Admin PH-Reiter');
-        }
-      }
-    }
-    await this.updatePhCanisterStatus();
-  }
-
-  async updatePhCanisterStatus() {
-    await this.ensurePhCanisterStates();
-    const size = this.getPhCanisterSizeL();
-    const warnL = Math.max(0, parseNum(this.config.phCanisterWarnL || 2));
-    const criticalL = Math.max(0, parseNum(this.config.phCanisterCriticalL || 1));
-    const fillState = await this.getStateAsync('control.phCanister.currentFillL');
-    let fill = Number(fillState && fillState.val);
-    if (!Number.isFinite(fill)) fill = size;
-    fill = Math.max(0, Math.min(size, this.round2(fill)));
-    const consumed = this.round2(size - fill);
-    const percent = size > 0 ? this.round2((fill / size) * 100) : 0;
-    const warning = fill <= warnL;
-    const critical = fill <= criticalL;
-    const text = critical
-      ? `pH-Minus kritisch: ${fill.toFixed(2)} l Rest (${percent.toFixed(1)} %)`
-      : warning
-        ? `pH-Minus niedrig: ${fill.toFixed(2)} l Rest (${percent.toFixed(1)} %)`
-        : `pH-Minus OK: ${fill.toFixed(2)} l Rest (${percent.toFixed(1)} %)`;
-
-    await this.setStateIfChanged('control.phCanister.currentFillL', fill, true);
-    await this.setStateIfChanged('status.phCanister.sizeL', this.round2(size), true);
-    await this.setStateIfChanged('status.phCanister.currentFillL', fill, true);
-    await this.setStateIfChanged('status.phCanister.consumedL', consumed, true);
-    await this.setStateIfChanged('status.phCanister.fillPercent', percent, true);
-    await this.setStateIfChanged('status.phCanister.warning', warning, true);
-    await this.setStateIfChanged('status.phCanister.critical', critical, true);
-    await this.setStateIfChanged('status.phCanister.statusText', text, true);
-  }
-
-  async correctPhCanisterFill(fillL, source = 'manuelle Korrektur') {
-    await this.ensurePhCanisterStates();
-    const size = this.getPhCanisterSizeL();
-    let fill = parseNum(fillL);
-    if (!Number.isFinite(fill)) return false;
-    fill = Math.max(0, Math.min(size, this.round2(fill)));
-    await this.setStateAsync('control.phCanister.currentFillL', fill, true);
-    await this.setStateAsync('status.phCanister.lastCorrection', `${new Date().toLocaleString('de-DE')} - ${source}: ${fill.toFixed(2)} l`, true);
-    await this.updatePhCanisterStatus();
-    return true;
-  }
-
-  async resetPhCanister(source = 'Neuer Kanister') {
-    const size = this.getPhCanisterSizeL();
-    await this.correctPhCanisterFill(size, source);
-    await this.setStateAsync('status.phCanister.lastReset', `${new Date().toLocaleString('de-DE')} - ${source}`, true);
-    await this.setStateAsync('control.phCanister.newCanister', false, true);
-  }
-
-  async addPhCanisterConsumptionMl(ml, source = 'Dosierung') {
-    await this.ensurePhCanisterStates();
-    const mlNum = parseNum(ml);
-    if (!Number.isFinite(mlNum) || mlNum <= 0) return;
-    const cur = await this.getStateAsync('control.phCanister.currentFillL');
-    const size = this.getPhCanisterSizeL();
-    const fill = Number.isFinite(Number(cur && cur.val)) ? Number(cur.val) : size;
-    const next = Math.max(0, this.round2(fill - (mlNum / 1000)));
-    await this.setStateAsync('control.phCanister.currentFillL', next, true);
-    await this.setStateAsync('status.phCanister.lastCorrection', `${new Date().toLocaleString('de-DE')} - ${source}: -${Math.round(mlNum)} ml`, true);
-    await this.updatePhCanisterStatus();
-  }
-
-  async addPhCanisterConsumptionBySec(seconds, source = 'pH-Dosierung') {
-    const flow = Math.max(1, parseNum(this.config.phPumpFlowMlPerMin || 60));
-    const sec = Math.max(0, parseNum(seconds));
-    const ml = (sec * flow) / 60;
-    await this.addPhCanisterConsumptionMl(ml, source);
-  }
-
-  async handleManualPhDoseMl(value) {
-    const ml = parseNum(value);
-    await this.setStateAsync('control.ph.manualDoseMl', 0, true);
-    if (!Number.isFinite(ml) || ml <= 0) return false;
-    const flow = Math.max(1, parseNum(this.config.phPumpFlowMlPerMin || 60));
-    const sec = Math.max(1, Math.round((ml / flow) * 60));
-    const ok = await this.runDosePumpOnce(sec, { checkTime: 'manuell', phValue: 'manuell', manualDoseMl: ml });
-    if (ok) {
-      await this.setStateAsync('status.debug.lastPhStartInfo', `[PH] Manuelle Dosierung gestartet: ${Math.round(ml)} ml (${sec}s)`, true);
-    }
-    return ok;
-  }
-
   async subscribeConfiguredStates() {
     const ruleIds = this.getDependencyRules().map(rule => rule.compareStateId).filter(Boolean);
     this.ruleCompareIds = [...new Set(ruleIds)];
@@ -1586,6 +2509,34 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     }
   }
 
+  async handleManualPhPumpStateChange(id, state) {
+    if (!this.config.phPumpSocketStateId || id !== this.config.phPumpSocketStateId || !state) return;
+
+    const current = !!state.val;
+    const prev = !!this.lastPhPumpOn;
+    const ts = Number(state.lc || state.ts || Date.now()) || Date.now();
+    this.lastPhPumpOn = current;
+
+    if (current && !prev) {
+      if (!this.phManagedActive) {
+        this.phManualStartedAt = ts;
+      }
+      return;
+    }
+
+    if (!current && prev) {
+      if (!this.phManagedActive && this.phManualStartedAt) {
+        const durationSec = Math.max(1, Math.round((ts - this.phManualStartedAt) / 1000));
+        await this.setPhDoseHistory(this.phManualStartedAt, durationSec);
+        const newCount = await this.incrementTodayDoseCount(new Date(ts));
+        const msg = `[PH] Manuell dosiert | Laufzeit=${durationSec}s | Tag ${newCount}`;
+        await this.setStateAsync('status.debug.lastPhStartInfo', msg, true);
+        if (this.config.debugMode) this.log.info(msg);
+      }
+      this.phManualStartedAt = 0;
+    }
+  }
+
 
   parseHHMM(value) {
     const m = String(value || '').trim().match(/^(\d{1,2}):(\d{2})$/);
@@ -1606,6 +2557,123 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     start.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
     const end = new Date(start.getTime() + this.getStandbyDurationSec() * 1000);
     return { start, end };
+  }
+
+  matchesPumpScheduleDay(ruleDays, now = new Date()) {
+    const day = now.getDay(); // 0=So,1=Mo,...6=Sa
+    const days = String(ruleDays || '').trim().toLowerCase();
+    if (!days || days === 'daily') return true;
+    if (days === 'mon_fri') return day >= 1 && day <= 5;
+    if (days === 'sat_sun') return day === 0 || day === 6;
+    if (days === 'mon') return day === 1;
+    if (days === 'tue') return day === 2;
+    if (days === 'wed') return day === 3;
+    if (days === 'thu') return day === 4;
+    if (days === 'fri') return day === 5;
+    if (days === 'sat') return day === 6;
+    if (days === 'sun') return day === 0;
+    return false;
+  }
+
+  getCirculationWindowsForDate(now = new Date()) {
+    const tableRules = Array.isArray(this.config.pumpSchedules) ? this.config.pumpSchedules : [];
+    const fromTable = tableRules
+      .filter(rule => !!rule && rule.enabled !== false)
+      .filter(rule => this.matchesPumpScheduleDay(rule.days, now))
+      .map(rule => [rule.start, rule.end])
+      .filter(([start, end]) => String(start || '').trim() && String(end || '').trim());
+
+    if (fromTable.length) return fromTable;
+
+    return [
+      [this.config.pumpWindow1Start, this.config.pumpWindow1End],
+      [this.config.pumpWindow2Start, this.config.pumpWindow2End],
+    ];
+  }
+
+  isWithinCirculationSchedule(now = new Date()) {
+    return this.getCirculationWindowsForDate(now).some(([start, end]) => inWindow(now, start, end));
+  }
+
+  getCirculationScheduleLabel(now = new Date()) {
+    const tableRules = Array.isArray(this.config.pumpSchedules) ? this.config.pumpSchedules : [];
+    const matching = tableRules
+      .filter(rule => !!rule && rule.enabled !== false)
+      .filter(rule => this.matchesPumpScheduleDay(rule.days, now));
+
+    if (matching.length) {
+      const days = String(matching[0].days || '').trim().toLowerCase();
+      const map = {
+        daily: 'Täglich',
+        mon_fri: 'Mo-Fr',
+        sat_sun: 'Sa-So',
+        mon: 'Mo',
+        tue: 'Di',
+        wed: 'Mi',
+        thu: 'Do',
+        fri: 'Fr',
+        sat: 'Sa',
+        sun: 'So',
+      };
+      return map[days] || 'Zeitplan';
+    }
+
+    return 'Standard';
+  }
+
+  formatActionTime(d) {
+    if (!(d instanceof Date) || Number.isNaN(d.getTime())) return '--';
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} Uhr`;
+  }
+
+  getCirculationScheduleRulesForDate(dayDate = new Date()) {
+    const tableRules = Array.isArray(this.config.pumpSchedules) ? this.config.pumpSchedules : [];
+    const fromTable = tableRules
+      .filter(rule => !!rule && rule.enabled !== false)
+      .filter(rule => this.matchesPumpScheduleDay(rule.days, dayDate))
+      .map(rule => ({ start: rule.start, end: rule.end }))
+      .filter(rule => String(rule.start || '').trim() && String(rule.end || '').trim());
+
+    if (fromTable.length) return fromTable;
+
+    return [
+      { start: this.config.pumpWindow1Start, end: this.config.pumpWindow1End },
+      { start: this.config.pumpWindow2Start, end: this.config.pumpWindow2End },
+    ].filter(rule => String(rule.start || '').trim() && String(rule.end || '').trim());
+  }
+
+  getNextCirculationScheduleActions(now = new Date(), limit = 4) {
+    const actions = [];
+    for (let offset = 0; offset < 8; offset++) {
+      const day = new Date(now);
+      day.setDate(now.getDate() + offset);
+      day.setHours(0, 0, 0, 0);
+      const rules = this.getCirculationScheduleRulesForDate(day);
+      for (const rule of rules) {
+        const startMin = this.parseHHMM(rule.start);
+        const endMin = this.parseHHMM(rule.end);
+        if (startMin === null || endMin === null || startMin === endMin) continue;
+        const start = new Date(day);
+        start.setMinutes(startMin, 0, 0);
+        const end = new Date(day);
+        end.setMinutes(endMin, 0, 0);
+        if (endMin < startMin) end.setDate(end.getDate() + 1);
+        if (start > now) actions.push({ when: start, label: 'Umwälzpumpe ein' });
+        if (end > now) actions.push({ when: end, label: 'Umwälzpumpe aus' });
+      }
+    }
+    actions.sort((a, b) => a.when - b.when);
+    return actions.slice(0, limit);
+  }
+
+  getNextDashboardActions(now = new Date(), nextPhCheck = null) {
+    const actions = [];
+    if (nextPhCheck instanceof Date && !Number.isNaN(nextPhCheck.getTime()) && nextPhCheck > now) {
+      actions.push({ when: nextPhCheck, label: 'pH Dose' });
+    }
+    actions.push(...this.getNextCirculationScheduleActions(now, 4));
+    actions.sort((a, b) => a.when - b.when);
+    return actions.slice(0, 2).map(a => ({ ...a, time: this.formatActionTime(a.when) }));
   }
 
   isStandbyPumpActive(now = new Date()) {
@@ -1636,8 +2704,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   }
 
   isPumpScheduleActive(now = new Date()) {
-    return this.isWindowActive(this.config.pumpWindow1Start, this.config.pumpWindow1End, now) ||
-           this.isWindowActive(this.config.pumpWindow2Start, this.config.pumpWindow2End, now);
+    // Wichtig: Die neue UI schreibt in pumpSchedules (Tabelle).
+    // Legacy-Felder pumpWindow1/2 werden nur noch als Fallback verwendet.
+    return this.isWithinCirculationSchedule(now);
   }
 
   isPhCheckDue(now = new Date()) {
@@ -1709,8 +2778,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     await this.ensureState('status.debug.lastPhStartInfo', 'string', 'text', '', false);
 
     const circulationOn = circulationId ? await this.getBool(circulationId) : false;
-    const circulationHeartbeatOk = await this.getHeartbeatOk('status.checks.circulationPump');
-    const phPumpHeartbeatOk = await this.getHeartbeatOk('status.checks.phPump');
+    const isManualStart = context && context.manual === true;
+    const circulationHeartbeatOk = isManualStart ? true : await this.getHeartbeatOk('status.checks.circulationPump');
+    const phPumpHeartbeatOk = isManualStart ? true : await this.getHeartbeatOk('status.checks.phPump');
     if (!circulationOn) {
       await this.setPhStopAtTs(0, 'Start abgebrochen: Umwälzpumpe AUS');
       if (this.config.debugMode) this.log.info('[PH] Dosierung nicht gestartet: Umwälzpumpe AUS');
@@ -1731,6 +2801,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     this.phDoseStopAtTsMemory = stopAtTs;
 
     if (this.config.simulateMode) {
+      this.phManagedActive = true;
       await this.setPhStopAtTs(stopAtTs, 'Start Simulationsmodus');
       await this.setPhDoseHistory(Date.now(), sec);
       const msg = `[PH] würde dosieren | Prüfzeit ${context.checkTime || '-'} | pH=${context.phValue ?? '-'} | Laufzeit=${sec}s | Stop um ${new Date(stopAtTs).toLocaleTimeString('de-DE')}`;
@@ -1739,15 +2810,16 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       return true;
     }
 
+    this.phManagedActive = true;
     const onOk = await this.forceSwitchOnCompat(pumpId);
     if (!onOk) {
+      this.phManagedActive = false;
       this.log.warn('[PH] Dosierpumpe ließ sich nicht sicher einschalten');
       return false;
     }
 
     await this.setPhStopAtTs(stopAtTs, 'PH-Start erfolgreich');
     await this.setPhDoseHistory(Date.now(), sec);
-    await this.addPhCanisterConsumptionBySec(sec, context.manualDoseMl ? 'manuelle pH-Dosierung' : 'pH-Dosierung');
 
 
     const msg = `[PH] Dosierpumpe EIN | Prüfzeit ${context.checkTime || '-'} | pH=${context.phValue ?? '-'} | Laufzeit=${sec}s | Stop um ${new Date(stopAtTs).toLocaleTimeString('de-DE')}`;
@@ -1757,11 +2829,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.sendAlert('ph_dose_started', 'info', `Poolsteuerung: pH-Dosierung gestartet | pH ${context.phValue ?? '-'} | Laufzeit ${sec}s`);
     }
 
-    const stopLater = async () => { await this.enforcePhStopIfDue(); };
-    setTimeout(stopLater, sec * 1000);
-    setTimeout(stopLater, sec * 1000 + 1500);
-    setTimeout(stopLater, sec * 1000 + 4000);
-    setTimeout(stopLater, sec * 1000 + 8000);
+    const stopLater = async () => { if (!this.isShuttingDown) await this.enforcePhStopIfDue(); };
+    this.trackTimeout(setTimeout(stopLater, sec * 1000));
+    this.trackTimeout(setTimeout(stopLater, sec * 1000 + 1500));
+    this.trackTimeout(setTimeout(stopLater, sec * 1000 + 4000));
+    this.trackTimeout(setTimeout(stopLater, sec * 1000 + 8000));
 
     return true;
   }
@@ -1775,12 +2847,16 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const heatEnabledMaster = !standbyMode && await this.getControlBool('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
     const chlorEnabledMaster = !standbyMode && await this.getControlBool('control.auto.chlor', this.config.enableChlorControl !== false);
     const pumpTarget = standbyMode ? this.isStandbyPumpActive(now) : (circulationEnabled ? this.isPumpScheduleActive(now) : false);
+    if (this.config.debugMode) {
+      try {
+        const label = standbyMode ? 'Standby' : this.getCirculationScheduleLabel(now);
+        const windows = this.getCirculationWindowsForDate(now).map(([a,b]) => `${a}-${b}`).join(', ');
+        this.log.info(`[PUMPE] Zeitplanprüfung | aktiv=${pumpTarget ? 'ja' : 'nein'} | auto=${circulationEnabled ? 'ja' : 'nein'} | plan=${label} | fenster=${windows || '-'}`);
+      } catch {}
+    }
     const pumpState = await this.getStateSnapshot(pumpId);
     const pumpCurrent = !!(pumpState && pumpState.val);
     this.updateCirculationPumpRuntime(pumpCurrent, pumpState && (pumpState.lc || pumpState.ts));
-
-    await this.ensureState('status.debug.lastPumpScheduleActive', 'boolean', 'indicator', false, false);
-    await this.ensureState('status.debug.lastPumpLoggedDecision', 'string', 'text', '', false);
     const lastScheduleActive = this.lastPumpScheduleActiveMemory === null ? pumpTarget : this.lastPumpScheduleActiveMemory;
     const scheduleEdge = pumpTarget !== lastScheduleActive;
     const nowMs = now.getTime();
@@ -1788,11 +2864,12 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     let pumpDecision = standbyMode ? (pumpTarget ? `Standby-Kurzlauf aktiv (${this.getStandbyDurationSec()}s)` : 'Standby aktiv') : (!circulationEnabled ? 'Steuerung deaktiviert' : (pumpTarget ? 'Zeitfenster aktiv' : 'Kein aktives Zeitfenster'));
 
     if (standbyMode) {
+      await this.forceDependentDevicesOff('Standby aktiv');
       if (this.config.simulateMode) {
         pumpDecision = pumpTarget ? `würde EIN (Standby ${this.getStandbyDurationSec()}s, Simulationsmodus)` : 'Standby aktiv (Simulationsmodus)';
       } else if (pumpId && pumpCurrent !== pumpTarget) {
         try {
-          await this.setSwitchStateCompat(pumpId, pumpTarget);
+          await (pumpTarget ? this.forceSwitchOnCompat(pumpId) : this.forceSwitchOffCompat(pumpId));
           this.suppressOwnPumpLogUntil = Date.now() + 5000;
           pumpDecision = pumpTarget ? `EIN via Standby-Kurzlauf (${this.getStandbyDurationSec()}s)` : 'AUS nach Standby-Kurzlauf';
           this.log.info(pumpTarget
@@ -1809,38 +2886,40 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         pumpDecision = `würde ${pumpTarget ? 'EIN' : 'AUS'} (Zeitfensterwechsel, Simulationsmodus)`;
       } else if (pumpId) {
         try {
-          await this.setSwitchStateCompat(pumpId, pumpTarget);
+          await (pumpTarget ? this.forceSwitchOnCompat(pumpId) : this.forceSwitchOffCompat(pumpId));
           this.suppressOwnPumpLogUntil = Date.now() + 5000;
           pumpDecision = `${pumpTarget ? 'EIN' : 'AUS'} via Zeitfensterwechsel`;
         } catch (e) {
           pumpDecision = `Schaltfehler: ${e.message || e}`;
         }
       }
+    } else if (!pumpCurrent && pumpTarget) {
+      if (this.config.simulateMode) {
+        pumpDecision = 'würde EIN (Auto innerhalb aktivem Zeitfenster, Simulationsmodus)';
+      } else if (pumpId) {
+        try {
+          await this.forceSwitchOnCompat(pumpId);
+          this.suppressOwnPumpLogUntil = Date.now() + 5000;
+          pumpDecision = 'EIN via Auto innerhalb aktivem Zeitfenster';
+        } catch (e) {
+          pumpDecision = `Schaltfehler: ${e.message || e}`;
+        }
+      }
     } else if (pumpCurrent && !pumpTarget) {
-      pumpDecision = 'Manueller Override aktiv';
+      pumpDecision = circulationEnabled ? 'EIN außerhalb Zeitfenster' : 'Manueller Override aktiv';
     } else if (pumpCurrent && pumpTarget) {
       pumpDecision = 'EIN (Zeitfenster aktiv)';
-    } else if (!pumpCurrent && pumpTarget) {
-      pumpDecision = 'Manuell AUS trotz Zeitfenster';
     } else {
       pumpDecision = 'AUS (kein Zeitfenster)';
     }
 
     this.lastPumpScheduleActiveMemory = pumpTarget;
     await this.setStateAsync('status.debug.lastPumpScheduleActive', pumpTarget, true);
-    await this.ensureState('status.mode.active', 'string', 'text', 'normal', false);
     await this.setStateAsync('status.mode.active', standbyMode ? 'standby' : 'normal', true);
-    await this.ensureState('status.auto.circulation', 'string', 'text', '', false);
-    await this.ensureState('status.auto.chlor', 'string', 'text', '', false);
-    await this.ensureState('status.auto.ph', 'string', 'text', '', false);
-    await this.ensureState('status.auto.heatpump', 'string', 'text', '', false);
     await this.setStateAsync('status.auto.circulation', standbyMode ? 'STANDBY' : (circulationEnabled ? 'AKTIV' : 'AUS'), true);
     await this.setStateAsync('status.auto.chlor', standbyMode ? 'STANDBY' : (chlorEnabledMaster ? 'AKTIV' : 'AUS'), true);
     await this.setStateAsync('status.auto.ph', standbyMode ? 'STANDBY' : (phEnabledMaster ? 'AKTIV' : 'AUS'), true);
     await this.setStateAsync('status.auto.heatpump', standbyMode ? 'STANDBY' : (heatEnabledMaster ? 'AKTIV' : 'AUS'), true);
-    await this.ensureState('status.standby.nextRun', 'string', 'text', '', false);
-    await this.ensureState('status.standby.lastRun', 'number', 'value.time', 0, false);
-    await this.ensureState('status.standby.lastDurationSec', 'number', 'value.interval', 0, false);
     if (standbyMode) {
       const standbyNext = this.getNextStandbyRun(now);
       await this.setStateAsync('status.standby.nextRun', standbyNext ? standbyNext.toLocaleString('de-DE') : 'ungültige Uhrzeit', true);
@@ -1897,8 +2976,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         this.log.warn('Chlorinator konnte nicht gesetzt werden: ' + (e.message || e));
       }
     }
-
-    await this.ensureState('status.debug.lastChlorDecision', 'string', 'text', '', false);
     await this.setStateAsync('status.debug.lastChlorDecision', chlorDecision, true);
 
     const heatpumpId = this.config.heatpumpPowerStateId;
@@ -1922,18 +2999,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     } else if (!circulationHeartbeatOk) {
       shouldHeat = false;
       heatReason = 'Umwälzpumpe nicht erreichbar';
-    } else if (feedIn === null || !Number.isFinite(feedIn)) {
-      shouldHeat = false;
-      heatReason = 'Netzeinspeisung ungültig';
-    } else if (poolTemp !== null && Number.isFinite(poolTemp) && Number.isFinite(targetTemp) && poolTemp >= targetTemp) {
-      shouldHeat = false;
-      heatReason = `Solltemp erreicht (${poolTemp}°C >= ${targetTemp}°C)`;
-    } else if (feedIn < heatThreshold) {
-      shouldHeat = false;
-      heatReason = `PV zu gering (${feedIn}W < ${heatThreshold}W)`;
     } else {
-      shouldHeat = true;
-      heatReason = `PV OK (${feedIn}W >= ${heatThreshold}W)`;
+      const hyst = this.applyHeatpumpHysteresis(currentHeat, '', poolTemp, targetTemp, feedIn, heatThreshold);
+      shouldHeat = hyst.desiredOn;
+      heatReason = hyst.reason;
     }
 
     if (!this.config.simulateMode && heatpumpId && shouldHeat !== currentHeat) {
@@ -1944,8 +3013,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         this.log.warn('Wärmepumpe konnte nicht gesetzt werden: ' + (e.message || e));
       }
     }
-
-    await this.ensureState('status.heatpump.lastReason', 'string', 'text', '', false);
     await this.setStateAsync('status.heatpump.lastReason', heatReason, true);
 
     if (standbyMode) {
@@ -2039,9 +3106,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         phDecision = 'Dosierung fehlgeschlagen';
       }
     }
-
-    await this.ensureState('status.debug.lastPumpDecision', 'string', 'text', '', false);
-    await this.ensureState('status.debug.lastPhDecision', 'string', 'text', '', false);
     await this.setStateAsync('status.debug.lastPumpDecision', pumpDecision, true);
     const lastPumpLoggedDecisionState = await this.getStateAsync('status.debug.lastPumpLoggedDecision');
     const lastPumpLoggedDecision = lastPumpLoggedDecisionState && lastPumpLoggedDecisionState.val ? String(lastPumpLoggedDecisionState.val) : '';
@@ -2098,6 +3162,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     await this.ensureState('status.phDose.lastDoseDurationSec', 'number', 'value.interval', 0, false);
     await this.setStateIfChanged('status.phDose.lastDoseTs', tsNum, true);
     await this.setStateIfChanged('status.phDose.lastDoseDurationSec', durNum, true);
+    const flow = parseNum(this.config.phPumpFlowMlPerMin);
+    if (Number.isFinite(flow) && flow > 0 && durNum > 0) {
+      await this.addPhCanisterConsumptionMl((durNum * flow) / 60);
+    }
   }
 
   async getEffectivePhStopAtTs(phPumpCurrent = false) {
@@ -2147,6 +3215,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           await this.setPhStopAtTs(0, `PH-AUS bestätigt wegen ${stopReason}`);
           this.phDoseStopAtTsMemory = 0;
           this.lastWrittenPhStopAtTs = 0;
+          this.phManagedActive = false;
           this.log.info(`[PH] Dosierpumpe AUS | Grund ${stopReason}`);
           if ((stopReason === 'Umwälzpumpe AUS' || stopReason === 'Umwälzpumpe nicht erreichbar' || stopReason === 'pH-Dosierpumpe nicht erreichbar') && this.config.alertOnPhDoseAborted) {
             await this.sendAlert('ph_dose_aborted', 'warn', `Poolsteuerung: pH-Dosierung abgebrochen, Grund: ${stopReason}.`);
@@ -2274,58 +3343,250 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     return !!state.val;
   }
 
+  getTrendSymbol(current, prev, epsilon = 0) {
+    const c = parseNum(current);
+    const p = parseNum(prev);
+    if (!Number.isFinite(c) || !Number.isFinite(p)) return '→';
+    if (c > p + epsilon) return '↑';
+    if (c < p - epsilon) return '↓';
+    return '→';
+  }
+
+  avgFromHistoryValues(values) {
+    const nums = (Array.isArray(values) ? values : [])
+      .map(v => parseNum(v && v.val !== undefined ? v.val : v))
+      .filter(v => Number.isFinite(v));
+    if (!nums.length) return null;
+    return nums.reduce((a, b) => a + b, 0) / nums.length;
+  }
+
+  async fetchHistoryValues(stateId, startTs, endTs) {
+    const instance = String(this.config.trendHistoryInstance || 'history.0').trim() || 'history.0';
+    if (!stateId || !instance) return [];
+    try {
+      const res = await this.sendToAsync(instance, 'getHistory', {
+        id: stateId,
+        options: {
+          start: startTs,
+          end: endTs,
+          aggregate: 'none',
+          count: 500,
+          ignoreNull: true
+        }
+      });
+      if (Array.isArray(res)) return res;
+      if (res && Array.isArray(res.result)) return res.result;
+      return [];
+    } catch (e) {
+      if (this.config.debugMode) this.log.debug(`[TREND] History für ${stateId} fehlgeschlagen: ${e.message || e}`);
+      return [];
+    }
+  }
+
+  async getHistoryTrendArrow(stateId, tolerance, nowTs = Date.now()) {
+    const windowMin = Math.max(10, Number(this.config.trendWindowMin) || 60);
+    const smoothMin = Math.max(1, Number(this.config.trendSmoothMin) || 5);
+    const endRecent = nowTs;
+    const startRecent = endRecent - smoothMin * 60000;
+    const endPast = nowTs - (windowMin - smoothMin) * 60000;
+    const startPast = nowTs - windowMin * 60000;
+
+    const [recentValues, pastValues] = await Promise.all([
+      this.fetchHistoryValues(stateId, startRecent, endRecent),
+      this.fetchHistoryValues(stateId, startPast, endPast)
+    ]);
+
+    const recentAvg = this.avgFromHistoryValues(recentValues);
+    const pastAvg = this.avgFromHistoryValues(pastValues);
+
+    if (!Number.isFinite(recentAvg) || !Number.isFinite(pastAvg)) return '→';
+    const delta = recentAvg - pastAvg;
+    const eps = Number(tolerance) || 0;
+    if (delta > eps) return '↑';
+    if (delta < -eps) return '↓';
+    return '→';
+  }
+
+  async getHistoryTrends() {
+    const now = Date.now();
+    if (this.trendCache && this.trendCache.data && (now - this.trendCache.ts) < 120000) {
+      return this.trendCache.data;
+    }
+    const trends = {
+      phTrend: '→',
+      orpTrend: '→',
+      poolTempTrend: '→',
+      outsideTempTrend: '→',
+      pvTrend: '→',
+      feedInTrend: '→'
+    };
+    const tolPh = parseNum(this.config.trendTolerancePh || 0.03) || 0.03;
+    const tolOrp = parseNum(this.config.trendToleranceOrp || 15) || 15;
+    const tolTemp = parseNum(this.config.trendToleranceTemp || 0.3) || 0.3;
+
+    try {
+      trends.phTrend = await this.getHistoryTrendArrow(this.config.phStateId, tolPh, now);
+      trends.orpTrend = await this.getHistoryTrendArrow(this.config.orpStateId, tolOrp, now);
+      trends.poolTempTrend = await this.getHistoryTrendArrow(this.config.waterTempStateId, tolTemp, now);
+      trends.outsideTempTrend = await this.getHistoryTrendArrow(this.config.outsideTempStateId, tolTemp, now);
+      trends.pvTrend = await this.getHistoryTrendArrow(this.config.pvPowerStateId, 150, now);
+      trends.feedInTrend = await this.getHistoryTrendArrow(this.config.gridFeedInStateId, 100, now);
+    } catch (e) {
+      if (this.config.debugMode) this.log.debug('[TREND] Berechnung fehlgeschlagen: ' + (e.message || e));
+    }
+
+    this.trendCache = { ts: now, data: trends };
+    return trends;
+  }
+
+  async enforceManualPrerequisite(deviceName, turningOn) {
+    if (!turningOn) return true;
+    const pumpOn = await this.getBool(this.config.circulationPumpSocketStateId);
+    if (pumpOn) return true;
+    const msg = `${deviceName} manuell blockiert: Umwälzpumpe läuft nicht`;
+    try { await this.setStateAsync('status.debug.lastStartupError', msg, true); } catch {}
+    this.log.info(msg);
+    return false;
+  }
+
+  async forceDependentDevicesOff(reason = '') {
+    const suffix = reason ? ` (${reason})` : '';
+    try {
+      if (this.config.chlorinatorSocketStateId && await this.getBool(this.config.chlorinatorSocketStateId)) {
+        await this.forceSwitchOffCompat(this.config.chlorinatorSocketStateId);
+      }
+    } catch (e) {
+      this.log.warn('Chlorinator AUS fehlgeschlagen' + suffix + ': ' + (e.message || e));
+    }
+    try {
+      if (this.config.phPumpSocketStateId && await this.getBool(this.config.phPumpSocketStateId)) {
+        await this.forceSwitchOffCompat(this.config.phPumpSocketStateId);
+      }
+    } catch (e) {
+      this.log.warn('pH-Pumpe AUS fehlgeschlagen' + suffix + ': ' + (e.message || e));
+    }
+    try {
+      if (this.config.heatpumpPowerStateId && await this.getBool(this.config.heatpumpPowerStateId)) {
+        await this.forceSwitchOffCompat(this.config.heatpumpPowerStateId);
+      }
+    } catch (e) {
+      this.log.warn('Wärmepumpe AUS fehlgeschlagen' + suffix + ': ' + (e.message || e));
+    }
+    await this.setStateIfChanged('control.device.chlorinator', false, true);
+    await this.setStateIfChanged('control.device.phPump', false, true);
+    await this.setStateIfChanged('control.device.heatpump', false, true);
+  }
+
+  async resetManualBlockers(reason = '') {
+    const suffix = reason ? ` (${reason})` : '';
+    try { await this.setStateIfChanged('control.device.circulation', false, true); } catch (e) { this.log.warn('Reset control.device.circulation fehlgeschlagen' + suffix + ': ' + (e.message || e)); }
+    try { await this.setStateIfChanged('control.device.chlorinator', false, true); } catch (e) { this.log.warn('Reset control.device.chlorinator fehlgeschlagen' + suffix + ': ' + (e.message || e)); }
+    try { await this.setStateIfChanged('control.device.phPump', false, true); } catch (e) { this.log.warn('Reset control.device.phPump fehlgeschlagen' + suffix + ': ' + (e.message || e)); }
+    try { await this.setStateIfChanged('control.device.heatpump', false, true); } catch (e) { this.log.warn('Reset control.device.heatpump fehlgeschlagen' + suffix + ': ' + (e.message || e)); }
+    try { await this.setStateIfChanged('control.ph.manualStart', false, true); } catch {}
+  }
+
+  async syncDeviceControlStates() {
+    try { await this.setStateIfChanged('control.device.circulation', await this.getBool(this.config.circulationPumpSocketStateId), true); } catch {}
+    try { await this.setStateIfChanged('control.device.chlorinator', await this.getBool(this.config.chlorinatorSocketStateId), true); } catch {}
+    try { await this.setStateIfChanged('control.device.phPump', await this.getBool(this.config.phPumpSocketStateId), true); } catch {}
+    try { await this.setStateIfChanged('control.device.heatpump', await this.getBool(this.config.heatpumpPowerStateId), true); } catch {}
+  }
+
 
   async syncControlStates() {
     const standby = await this.getControlBool('control.standby', this.config.standbyModeEnabled === true);
-    if (!standby) return;
-    const autoIds = [
-      'control.auto.circulation',
-      'control.auto.chlor',
-      'control.auto.ph',
-      'control.auto.heatpump'
-    ];
-    for (const id of autoIds) {
-      try {
-        await this.setStateIfChanged(id, false, true);
-      } catch (e) {
-        this.log.warn(`Control-State ${id} konnte nicht synchronisiert werden: ${e.message || e}`);
+    if (standby) {
+      const autoIds = [
+        'control.auto.circulation',
+        'control.auto.chlor',
+        'control.auto.ph',
+        'control.auto.heatpump'
+      ];
+      for (const id of autoIds) {
+        try {
+          await this.setStateIfChanged(id, false, true);
+        } catch (e) {
+          this.log.warn(`Control-State ${id} konnte nicht synchronisiert werden: ${e.message || e}`);
+        }
       }
     }
+    try { await this.setStateAsync('status.auto.circulation', (await this.getControlBool('control.auto.circulation', this.config.enableCirculationControl !== false)) ? 'AKTIV' : 'AUS', true); } catch {}
+    try { await this.setStateAsync('status.auto.chlor', (await this.getControlBool('control.auto.chlor', this.config.enableChlorControl !== false)) ? 'AKTIV' : 'AUS', true); } catch {}
+    try { await this.setStateAsync('status.auto.ph', (await this.getControlBool('control.auto.ph', this.config.enablePhControl !== false)) ? 'AKTIV' : 'AUS', true); } catch {}
+    try { await this.setStateAsync('status.auto.heatpump', (await this.getControlBool('control.auto.heatpump', this.config.enableHeatpumpControl !== false)) ? 'AKTIV' : 'AUS', true); } catch {}
   }
 
   async onReady() {
     try {
+      this.log.info('[VIS] v0.3.19 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
+      await this.ensureState('status.debug.lastVisTrace', 'string', 'text', '', false);
+      this.visTrace('onReady States Basis OK');
       await this.ensureAlertStates();
       await this.ensureControlState('control.standby', this.config.standbyModeEnabled === true);
       await this.ensureControlState('control.auto.circulation', this.config.enableCirculationControl !== false);
       await this.ensureControlState('control.auto.chlor', this.config.enableChlorControl !== false);
       await this.ensureControlState('control.auto.ph', this.config.enablePhControl !== false);
       await this.ensureControlState('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
-      await this.syncControlStates();
-      await this.syncPhCanisterFromConfig();
+      await this.ensureState('control.ph.manualDoseSec', 'number', 'value.interval', getManualPhDoseDefaultSec(this.config), true);
+      const configuredManualDoseSec = getConfiguredManualPhDoseSec(this.config);
+      const manualDoseSecStartupState = await this.getStateAsync('control.ph.manualDoseSec');
+      if (configuredManualDoseSec !== null) {
+        await this.setStateIfChanged('control.ph.manualDoseSec', configuredManualDoseSec, true);
+      } else if (!manualDoseSecStartupState || manualDoseSecStartupState.val === null || manualDoseSecStartupState.val === undefined || manualDoseSecStartupState.val === '') {
+        await this.setStateIfChanged('control.ph.manualDoseSec', 30, true);
+      }
+      await this.ensureState('control.ph.manualStart', 'boolean', 'button', false, true);
+      await this.ensureState('control.ph.manualTrigger', 'number', 'value.time', 0, true);
+      await this.ensurePhCanisterStates();
+      await this.ensureState('control.device.circulation', 'boolean', 'switch', false, true);
+      await this.ensureState('control.device.chlorinator', 'boolean', 'switch', false, true);
+      await this.ensureState('control.device.phPump', 'boolean', 'switch', false, true);
+      await this.ensureState('control.device.heatpump', 'boolean', 'switch', false, true);
+      await this.ensureState('control.heatpump.setTemp', 'number', 'level.temperature', 0, true);
+      await this.ensureState('control.heatpump.resetLock', 'boolean', 'button', false, true);
+      await this.resetManualBlockers('Adapterstart');
+      this.clearPendingRenderTimeouts('Adapterstart');
+      this.resetHeatpumpLocks('Adapterstart');
+      await this.forceDependentDevicesOff('Adapterstart Recovery');
+      this.visTrace('onReady Recovery OK');
       await this.setStateAsync('info.connection', true, true);
       await this.subscribeConfiguredStates();
       try { this.subscribeStates('control.*'); } catch {}
+      try { this.subscribeStates('control.device.*'); } catch {}
+      try { this.subscribeStates('control.heatpump.*'); } catch {}
+      try { this.subscribeStates('control.ph.*'); } catch {}
+      this.beginControlTransition(4000);
+      await this.applyControlLogic();
+      await this.syncControlStates();
+      await this.syncDeviceControlStates();
       if (this.config.circulationPumpSocketStateId) {
         const initialPumpState = await this.getStateSnapshot(this.config.circulationPumpSocketStateId);
         this.updateCirculationPumpRuntime(!!(initialPumpState && initialPumpState.val), initialPumpState && (initialPumpState.lc || initialPumpState.ts));
       }
-      await this.updateComputedStates();
-      await this.runHeartbeatChecks();
-      if (typeof this.applyControlLogic === 'function') {
-        await this.applyControlLogic();
+      if (this.config.phPumpSocketStateId) {
+        const initialPhPumpState = await this.getStateSnapshot(this.config.phPumpSocketStateId);
+        this.lastPhPumpOn = !!(initialPhPumpState && initialPhPumpState.val);
+        this.phManualStartedAt = this.lastPhPumpOn ? Number((initialPhPumpState && (initialPhPumpState.lc || initialPhPumpState.ts)) || Date.now()) : 0;
       }
+      this.visTrace('onReady updateComputedStates START');
+      await this.updateComputedStates();
+      this.visTrace('onReady runHeartbeatChecks START');
+      await this.runHeartbeatChecks();
+      this.visTrace('onReady applyDependencyRules START');
       await this.applyDependencyRules();
-      await this.renderVis();
+      this.visTrace('onReady renderVis START');
+      await this.renderVis(true);
+      this.visTrace('onReady renderVis OK');
       await this.logStartupSummary();
       const pollMin = Math.max(1, Number(this.config.pollIntervalMin) || 1);
       if (this.phStopWatcher) clearInterval(this.phStopWatcher);
     this.phStopWatcher = setInterval(async () => {
       await this.enforcePhStopIfDue();
-      if (this.config.standbyModeEnabled === true && typeof this.applyControlLogic === 'function') {
+      if (this.config.standbyModeEnabled === true && typeof this.applyControlLogic === 'function' && !this.isControlTransitionActive()) {
         await this.applyControlLogic();
       }
     }, 1000);
@@ -2335,6 +3596,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           await this.setStateAsync('status.debug.lastCycle', new Date().toISOString(), true);
           await this.updateComputedStates();
           await this.runHeartbeatChecks();
+          await this.refreshZigbeeReadbacks(false);
           if (typeof this.applyControlLogic === 'function') {
             await this.applyControlLogic();
           }
@@ -2348,7 +3610,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           }
         }
       }, pollMin * 60000);
-      this.debug(`VIS-HTML aktiv: poolsteuerung.0.vis.htmlTablet / htmlPhone, Poll=${pollMin}min`);
+      this.debug(`VIS-HTML aktiv: poolsteuerung.0.vis.htmlTablet / htmlPhone (Start-Render erzwungen), Poll=${pollMin}min`);
     } catch (e) {
       this.log.error(`Startfehler: ${e && e.stack ? e.stack : e}`);
       try { await this.setStateAsync('status.debug.lastStartupError', String(e && e.message ? e.message : e), true); } catch {}
@@ -2359,30 +3621,219 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   async onStateChange(id, state) {
     if (!state) return;
     if (id && id.startsWith(`${this.namespace}.control.`)) {
+      if (state.ack === true) {
+        return;
+      }
       try {
-        if (id === `${this.namespace}.control.standby` && !!state.val === true) {
-          await this.setStateIfChanged('control.auto.circulation', false, false);
-          await this.setStateIfChanged('control.auto.chlor', false, false);
-          await this.setStateIfChanged('control.auto.ph', false, false);
-          await this.setStateIfChanged('control.auto.heatpump', false, false);
-        }
-        if (id === `${this.namespace}.control.phCanister.currentFillL` && state.ack === false) {
-          await this.correctPhCanisterFill(state.val, 'VIS/Admin manuell');
-          await this.renderVis();
+        const standbyActiveNow = await this.getControlBool('control.standby', this.config.standbyModeEnabled === true);
+
+        if (id === `${this.namespace}.control.standby`) {
+          this.beginControlTransition(10000);
+          await this.resetManualBlockers('Standby gewechselt');
+          this.clearPendingRenderTimeouts('Standby gewechselt');
+          this.resetHeatpumpLocks('Standby gewechselt');
+          if (!!state.val === true) {
+            await this.setStateIfChanged('control.auto.circulation', false, false);
+            await this.setStateIfChanged('control.auto.chlor', false, false);
+            await this.setStateIfChanged('control.auto.ph', false, false);
+            await this.setStateIfChanged('control.auto.heatpump', false, false);
+            await this.forceDependentDevicesOff('Standby aktiv');
+            try {
+              if (this.config.circulationPumpSocketStateId) {
+                await this.forceSwitchOffCompat(this.config.circulationPumpSocketStateId);
+                await this.setStateIfChanged('control.device.circulation', false, true);
+              }
+            } catch {}
+          }
+          await this.forceImmediateRender();
+          this.queueDelayedRefresh(1800);
           return;
         }
-        if (id === `${this.namespace}.control.phCanister.newCanister` && state.ack === false && state.val === true) {
-          await this.resetPhCanister('VIS/Admin neuer Kanister');
-          await this.renderVis();
+
+        const autoIds = [
+          `${this.namespace}.control.auto.circulation`,
+          `${this.namespace}.control.auto.chlor`,
+          `${this.namespace}.control.auto.ph`,
+          `${this.namespace}.control.auto.heatpump`
+        ];
+        if (autoIds.includes(id)) {
+          this.beginControlTransition(3500);
+          const key = id.replace(`${this.namespace}.control.auto.`, '');
+          if (!!state.val === true) {
+            if (standbyActiveNow) {
+              await this.setStateIfChanged('control.standby', false, false);
+            }
+            await this.resetManualBlockers(`Auto ${key} EIN`);
+          } else {
+            if (key === 'chlor') await this.setStateIfChanged('control.device.chlorinator', false, true);
+            if (key === 'ph') await this.setStateIfChanged('control.device.phPump', false, true);
+            if (key === 'heatpump') await this.setStateIfChanged('control.device.heatpump', false, true);
+          }
+          await this.refreshZigbeeReadbacks(true);
+          await this.forceImmediateRender();
+          this.queueDelayedRefresh(1800);
           return;
         }
-        if (id === `${this.namespace}.control.ph.manualDoseMl` && state.ack === false) {
-          await this.handleManualPhDoseMl(state.val);
+
+        if (id === `${this.namespace}.control.heatpump.resetLock` && !!state.val === true) {
+          this.beginControlTransition(10000);
+          this.clearPendingRenderTimeouts('WP Reset');
+          this.resetHeatpumpLocks('manueller Reset');
+          await this.setStateIfChanged('control.heatpump.resetLock', false, false);
+          await this.refreshZigbeeReadbacks(true);
+          await this.forceImmediateRender();
+          this.queueDelayedRefresh(1800);
+          return;
+        }
+
+        if (id === `${this.namespace}.control.ph.canister.setLevelL`) {
+          await this.setPhCanisterLevel(Number(state.val), true);
+          await this.forceImmediateRender();
+          return;
+        }
+
+        if (id === `${this.namespace}.control.ph.canister.newCanister` && !!state.val === true) {
+          await this.resetPhCanister();
+          await this.setStateIfChanged('control.ph.canister.newCanister', false, false);
+          await this.forceImmediateRender();
+          return;
+        }
+
+        if ((id === `${this.namespace}.control.ph.manualStart` && !!state.val === true) || (id === `${this.namespace}.control.ph.manualTrigger` && Number(state.val) > 0)) {
+          this.beginControlTransition(3500);
+          const nowTs = Date.now();
+          this.lastManualPhTriggerTs = this.lastManualPhTriggerTs || 0;
+          if (nowTs - this.lastManualPhTriggerTs < 1500) {
+            await this.setStateIfChanged('control.ph.manualStart', false, false);
+            await this.setStateIfChanged('control.ph.manualTrigger', 0, false);
+            return;
+          }
+          if (this.phManagedActive) {
+            if (this.config.debugMode) this.log.info('[PH] Manueller Start ignoriert: Dosierung läuft bereits');
+            await this.setStateIfChanged('control.ph.manualStart', false, false);
+            await this.setStateIfChanged('control.ph.manualTrigger', 0, false);
+            return;
+          }
+          this.lastManualPhTriggerTs = nowTs;
+          const manualSecState = await this.getStateAsync('control.ph.manualDoseSec');
+          const manualSec = Math.max(1, Number(manualSecState && manualSecState.val) || 30);
+          const ok = await this.runDosePumpOnce(manualSec, { checkTime: 'MANUELL', phValue: 'manuell', manual: true });
+          if (ok) {
+            await this.incrementTodayDoseCount(new Date());
+          }
+          await this.setStateIfChanged('control.ph.manualStart', false, false);
+          await this.setStateIfChanged('control.ph.manualTrigger', 0, false);
           await this.applyControlLogic();
+          await this.refreshZigbeeReadbacks(true);
+          await this.forceImmediateRender();
+          this.queueDelayedRefresh(1800);
+          return;
+        }
+
+        if (id === `${this.namespace}.control.device.circulation`) {
+          this.beginControlTransition(3500);
+          if (standbyActiveNow) {
+            await this.resetManualBlockers('Standby blockiert manuell');
+          } else {
+            await this.setStateIfChanged('control.auto.circulation', false, false);
+            const ok = !!state.val ? await this.forceSwitchOnCompat(this.config.circulationPumpSocketStateId) : await this.forceSwitchOffCompat(this.config.circulationPumpSocketStateId);
+            await this.setStateIfChanged('control.device.circulation', !!ok && !!state.val, true);
+            if (!state.val) {
+              await this.forceDependentDevicesOff('Umwälzpumpe AUS');
+            }
+          }
+          await this.refreshZigbeeReadbacks(true);
+          await this.forceImmediateRender();
+          this.queueDelayedRefresh(1800);
+          return;
+        }
+
+        if (id === `${this.namespace}.control.device.chlorinator`) {
+          this.beginControlTransition(3500);
+          if (standbyActiveNow) {
+            await this.resetManualBlockers('Standby blockiert manuell');
+          } else {
+            await this.setStateIfChanged('control.auto.chlor', false, false);
+            const allowed = await this.enforceManualPrerequisite('Chlorinator', !!state.val);
+            if (!allowed) {
+              await this.setStateIfChanged('control.device.chlorinator', false, true);
+            } else {
+              const ok = !!state.val ? await this.forceSwitchOnCompat(this.config.chlorinatorSocketStateId) : await this.forceSwitchOffCompat(this.config.chlorinatorSocketStateId);
+              await this.setStateIfChanged('control.device.chlorinator', !!state.val, true);
+            }
+          }
+          await this.applyControlLogic();
+          await this.syncControlStates();
+          await this.syncDeviceControlStates();
+          this.queueDelayedRefresh(1200);
           await this.renderVis();
           return;
         }
+
+        if (id === `${this.namespace}.control.device.phPump`) {
+          this.beginControlTransition(3500);
+          if (standbyActiveNow) {
+            await this.resetManualBlockers('Standby blockiert manuell');
+          } else {
+            await this.setStateIfChanged('control.auto.ph', false, false);
+            const allowed = await this.enforceManualPrerequisite('pH-Dosierpumpe', !!state.val);
+            if (!allowed) {
+              await this.setStateIfChanged('control.device.phPump', false, true);
+            } else {
+              const ok = !!state.val ? await this.forceSwitchOnCompat(this.config.phPumpSocketStateId) : await this.forceSwitchOffCompat(this.config.phPumpSocketStateId);
+              await this.setStateIfChanged('control.device.phPump', !!state.val, true);
+            }
+          }
+          await this.applyControlLogic();
+          await this.syncControlStates();
+          await this.syncDeviceControlStates();
+          this.queueDelayedRefresh(1200);
+          await this.renderVis();
+          return;
+        }
+
+        if (id === `${this.namespace}.control.device.heatpump`) {
+          this.beginControlTransition(3500);
+          if (standbyActiveNow) {
+            await this.resetManualBlockers('Standby blockiert manuell');
+          } else {
+            await this.setStateIfChanged('control.auto.heatpump', false, false);
+            const allowed = await this.enforceManualPrerequisite('Wärmepumpe', !!state.val);
+            if (!allowed) {
+              await this.setStateIfChanged('control.device.heatpump', false, true);
+            } else {
+              const ok = !!state.val ? await this.forceSwitchOnCompat(this.config.heatpumpPowerStateId) : await this.forceSwitchOffCompat(this.config.heatpumpPowerStateId);
+              await this.setStateIfChanged('control.device.heatpump', !!state.val, true);
+            }
+          }
+          await this.applyControlLogic();
+          await this.syncControlStates();
+          await this.syncDeviceControlStates();
+          this.queueDelayedRefresh(1200);
+          await this.renderVis();
+          return;
+        }
+
+        if (id === `${this.namespace}.control.heatpump.setTemp`) {
+          this.beginControlTransition(3500);
+          const hpOn = await this.getBool(this.config.heatpumpPowerStateId);
+          if (!hpOn) {
+            await this.setStateAsync('status.debug.lastStartupError', 'Solltemperatur nur bei laufender Wärmepumpe änderbar', true);
+          } else if (this.config.heatpumpSetTempStateId) {
+            const setVal = Math.max(10, Math.min(40, Number(state.val) || 0));
+            await this.setForeignStateAsync(this.config.heatpumpSetTempStateId, setVal, false);
+          }
+          await this.applyControlLogic();
+          await this.syncControlStates();
+          await this.syncDeviceControlStates();
+          this.queueDelayedRefresh(1200);
+          await this.renderVis();
+          return;
+        }
+
         await this.applyControlLogic();
+        await this.syncControlStates();
+        await this.syncDeviceControlStates();
         await this.renderVis();
       } catch (e) {
         this.log.warn(`Control-State konnte nicht angewendet werden: ${e.message || e}`);
@@ -2392,16 +3843,41 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     if (this.ruleCompareIds && this.ruleCompareIds.includes(id)) {
       await this.applyDependencyRules(id);
     }
+    await this.handleManualPhPumpStateChange(id, state);
     if (this.monitoredIds.includes(id)) {
       this.debug(`State geändert: ${id}`);
       this.queueRender();
+      const delayedRefreshIds = [
+        this.config.circulationPumpSocketStateId,
+        this.config.chlorinatorSocketStateId,
+        this.config.phPumpSocketStateId,
+        this.config.heatpumpPowerStateId
+      ].filter(Boolean);
+      if (delayedRefreshIds.includes(id)) {
+        const boolVal = await this.getBool(id);
+        if (id === this.config.circulationPumpSocketStateId) await this.setStateIfChanged('control.device.circulation', boolVal, true);
+        if (id === this.config.chlorinatorSocketStateId) await this.setStateIfChanged('control.device.chlorinator', boolVal, true);
+        if (id === this.config.phPumpSocketStateId) await this.setStateIfChanged('control.device.phPump', boolVal, true);
+        if (id === this.config.heatpumpPowerStateId) await this.setStateIfChanged('control.device.heatpump', boolVal, true);
+        if (!this.isControlTransitionActive()) {
+          await this.applyControlLogic();
+          await this.syncControlStates();
+          await this.syncDeviceControlStates();
+        }
+        this.queueDelayedRefresh(this.isControlTransitionActive() ? 2600 : 1800);
+      }
     }
   }
 
   async onUnload(callback) {
     try {
+      this.isShuttingDown = true;
       if (this.timer) clearInterval(this.timer);
-      await this.setStateAsync('info.connection', false, true);
+      for (const h of Array.from(this.pendingTimeouts)) {
+        try { clearTimeout(h); } catch {}
+      }
+      this.pendingTimeouts.clear();
+      try { await this.setStateAsync('info.connection', false, true); } catch {}
       callback();
     } catch {
       callback();

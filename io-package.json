@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.3.18",
+    "version": "0.3.19",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -11,7 +11,7 @@
     "adminUI": {
       "config": "json"
     },
-    "installedFrom": "radebold/iobroker.poolsteuerung#9b99f551cc913f345d33310e70b127dfbe04c999"
+    "installedFrom": "radebold/iobroker.poolsteuerung#v0.3.19"
   },
   "native": {
     "phSetpoint": 7.2,
@@ -70,10 +70,24 @@
     "standbyRunTime": "12:00",
     "standbyPumpDurationSec": 30,
     "dependencyRules": [],
+    "pumpWeekdayWindow1Start": "",
+    "pumpWeekdayWindow1End": "",
+    "pumpWeekdayWindow2Start": "",
+    "pumpWeekdayWindow2End": "",
+    "pumpSaturdayWindow1Start": "",
+    "pumpSaturdayWindow1End": "",
+    "pumpSaturdayWindow2Start": "",
+    "pumpSaturdayWindow2End": "",
+    "pumpSundayWindow1Start": "",
+    "pumpSundayWindow1End": "",
+    "pumpSundayWindow2Start": "",
+    "pumpSundayWindow2End": "",
+    "pumpSaturdayCustomEnabled": false,
+    "pumpSundayCustomEnabled": false,
+    "pumpSchedules": [],
+    "phManualDoseSec": "",
     "phCanisterSizeL": 10,
-    "phCanisterCurrentFillL": 10,
     "phCanisterWarnL": 2,
-    "phCanisterCriticalL": 1,
-    "phCanisterNewOnSave": false
+    "phCanisterCriticalL": 1
   }
 }
