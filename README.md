@@ -1,6 +1,6 @@
 # ioBroker Poolsteuerung
 
-Version: `0.3.15-hotfix24`
+Version: `0.3.16`
 
 ## VIS HTML
 
@@ -81,3 +81,10 @@ Im Adapter-Admin unter `PH` gibt es neue Felder:
 - Keine kompakte Verschiebung der pH-Kanisterkarte.
 - Füllstand bleibt mit 2 Nachkommastellen/0,01-l-Schritten erhalten.
 
+
+
+## 0.3.16
+
+- Layout auf Stand hotfix25/26 zurückgesetzt.
+- Füllstand pH-Minus weiterhin mit 2 Nachkommastellen.
+- Version als saubere SemVer-Version erhöht, damit ioBroker/GitHub das Update eindeutig erkennt.
