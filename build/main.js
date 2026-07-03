@@ -538,6 +538,12 @@ body{
 .mini.highlight{background:linear-gradient(180deg,rgba(255,190,76,.11),rgba(255,255,255,.04))}
 .mini-label{font-size:12px;color:#c8d7eb;font-weight:800;margin-bottom:6px}
 .mini-value{font-size:14px;font-weight:900;line-height:1.1}
+.canister-card{margin-bottom:10px;background:linear-gradient(180deg,#fff,#f8fafc);color:#0f172a}
+.can-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.can-title{font-size:15px;font-weight:900;color:#0f172a}
+.can-ok{font-size:12px;font-weight:900;color:#16a34a}.can-ok.warn{color:#b45309}.can-ok.critical{color:#b91c1c}
+.can-bar{height:10px;border-radius:999px;background:#e5e7eb;overflow:hidden;margin-bottom:8px}.can-fill{height:100%;border-radius:999px;background:#33a852}.can-fill.warn{background:#f0ad00}.can-fill.critical{background:#e64a45}
+.can-big{background:#f8fafc;border:1px solid rgba(15,23,42,.10);border-radius:12px;padding:9px;margin-bottom:8px}.can-label{font-size:11px;color:#64748b;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.can-value{font-size:25px;font-weight:900;line-height:1.05}.can-small{font-size:11px;color:#64748b}.can-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:7px}.can-grid b{display:block;font-size:14px;color:#0f172a;margin-top:2px}.can-note{font-size:11px;color:#334155;line-height:1.25}.can-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;margin-top:8px}.can-actions input{min-width:0;border:1px solid #cbd5e1;border-radius:10px;padding:8px;font-size:13px}.can-actions button,.can-bottom button{border:0;border-radius:10px;padding:8px 10px;font-weight:900;color:white;cursor:pointer}.can-set{background:#4361ee}.can-dose{background:#f97316}.can-bottom{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}.can-new{background:#31a950}
 @media (max-width:1100px){
   .layout{display:block}
   .col-left,.col-mid,.col-right{width:auto}
@@ -602,6 +608,16 @@ body{
         ${status('pH-Dosierpumpe', 'Prüfzeiten', data.phPumpOn)}
         ${status('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
       </div>
+    </div>
+    <div class="card canister-card">
+      <div class="can-head"><div class="can-title">pH-Minus Kanister</div><div class="can-ok ${data.phCanisterCritical ? 'critical' : data.phCanisterWarning ? 'warn' : ''}">${data.phCanisterCritical ? 'KRITISCH' : data.phCanisterWarning ? 'WARNUNG' : 'OK'}</div></div>
+      <div class="can-bar"><div class="can-fill ${data.phCanisterCritical ? 'critical' : data.phCanisterWarning ? 'warn' : ''}" style="width:${Math.max(0, Math.min(100, parseNum(data.phCanisterPercent)))}%"></div></div>
+      <div class="can-big"><div class="can-label">Aktueller Füllstand</div><div class="can-value">${esc(data.phCanisterFillL)} l</div><div class="can-small">von ${esc(data.phCanisterSizeL)} l · ${esc(data.phCanisterPercent)} %</div></div>
+      <div class="can-grid"><div class="can-small">Größe<b>${esc(data.phCanisterSizeL)} l</b></div><div class="can-small">Verbraucht<b>${esc(data.phCanisterConsumedL)} l</b></div><div class="can-small">Letzte Dosis<b>${esc(data.phLastDoseMl)} ml</b></div></div>
+      <div class="can-note">${esc(data.phCanisterStatusText)}<br>${esc(data.phCanisterLastCorrection)}</div>
+      <div class="can-actions"><input type="number" step="0.01" min="0" placeholder="Füllstand l" id="phFillDesktop"><button class="can-set" onclick="var e=document.getElementById('phFillDesktop');var v=parseFloat(String(e.value).replace(',','.'));if(!isNaN(v)){vis.conn.setState('poolsteuerung.0.control.phCanister.currentFillL',v);e.value='';}">Setzen</button></div>
+      <div class="can-actions"><input type="number" step="1" min="1" placeholder="Manuelle Dosis ml" id="phDoseDesktop"><button class="can-dose" onclick="var e=document.getElementById('phDoseDesktop');var v=parseFloat(String(e.value).replace(',','.'));if(!isNaN(v)&&v>0){vis.conn.setState('poolsteuerung.0.control.ph.manualDoseMl',v);e.value='';}">Dosieren</button></div>
+      <div class="can-bottom"><button class="can-new" onclick="vis.conn.setState('poolsteuerung.0.control.phCanister.newCanister',true);">Neuer Kanister</button><button class="can-set" onclick="var v=prompt('Aktueller Füllstand in Liter', '${esc(data.phCanisterFillL)}');if(v!==null){v=parseFloat(String(v).replace(',','.'));if(!isNaN(v)){vis.conn.setState('poolsteuerung.0.control.phCanister.currentFillL',v);}}">Korrigieren</button></div>
     </div>
     <div class="card">
       <div class="section extra">Zusatzwerte</div>
@@ -689,6 +705,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .status-box.is-off .status-name{color:#d6493b}
 .status-box.is-standby .status-name{color:#64748b}
 .status-hint{margin-top:3px}
+.can-card{background:#fff}.can-head{display:flex;justify-content:space-between;align-items:center}.can-ok{font-size:12px;font-weight:900;color:#16a34a}.can-ok.warn{color:#b45309}.can-ok.critical{color:#b91c1c}.can-bar{height:10px;border-radius:999px;background:#e5e7eb;overflow:hidden;margin:7px 0}.can-fill{height:100%;background:#33a852}.can-fill.warn{background:#f0ad00}.can-fill.critical{background:#e64a45}.can-big{font-size:26px;font-weight:900;color:#0f172a}.can-small{font-size:11px;color:#64748b}.can-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:8px 0}.can-actions{display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:8px}.can-actions input{min-width:0;border:1px solid #cbd5e1;border-radius:10px;padding:9px;font-size:14px}.can-actions button,.can-bottom button{border:0;border-radius:10px;padding:9px 10px;font-weight:900;color:#fff}.can-set{background:#4361ee}.can-dose{background:#f97316}.can-new{background:#31a950}.can-bottom{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
 </style></head><body><div class="wrap">
   <div class="card hero">
     <div class="header">
@@ -752,6 +769,18 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       <div class="log-text">${esc(data.phInfoText)}</div>
       <div class="log-meta">Letzte Dosierung: ${esc(data.phLastDoseAt)}</div>
     </div>
+  </div>
+
+  <div class="card can-card">
+    <div class="section-title">pH-Minus Kanister</div>
+    <div class="can-head"><span>Aktueller Füllstand</span><span class="can-ok ${data.phCanisterCritical ? 'critical' : data.phCanisterWarning ? 'warn' : ''}">${data.phCanisterCritical ? 'KRITISCH' : data.phCanisterWarning ? 'WARNUNG' : 'OK'}</span></div>
+    <div class="can-bar"><div class="can-fill ${data.phCanisterCritical ? 'critical' : data.phCanisterWarning ? 'warn' : ''}" style="width:${Math.max(0, Math.min(100, parseNum(data.phCanisterPercent)))}%"></div></div>
+    <div class="can-big">${esc(data.phCanisterFillL)} l</div><div class="can-small">von ${esc(data.phCanisterSizeL)} l · ${esc(data.phCanisterPercent)} %</div>
+    <div class="can-grid"><div class="can-small">Größe<br><b>${esc(data.phCanisterSizeL)} l</b></div><div class="can-small">Verbraucht<br><b>${esc(data.phCanisterConsumedL)} l</b></div><div class="can-small">Letzte Dosis<br><b>${esc(data.phLastDoseMl)} ml</b></div></div>
+    <div class="can-small">${esc(data.phCanisterStatusText)}<br>${esc(data.phCanisterLastCorrection)}</div>
+    <div class="can-actions"><input type="number" step="0.01" min="0" placeholder="Füllstand l" id="phFillPhone"><button class="can-set" onclick="var e=document.getElementById('phFillPhone');var v=parseFloat(String(e.value).replace(',','.'));if(!isNaN(v)){vis.conn.setState('poolsteuerung.0.control.phCanister.currentFillL',v);e.value='';}">Setzen</button></div>
+    <div class="can-actions"><input type="number" step="1" min="1" placeholder="Manuelle Dosis ml" id="phDosePhone"><button class="can-dose" onclick="var e=document.getElementById('phDosePhone');var v=parseFloat(String(e.value).replace(',','.'));if(!isNaN(v)&&v>0){vis.conn.setState('poolsteuerung.0.control.ph.manualDoseMl',v);e.value='';}">Dosieren</button></div>
+    <div class="can-bottom"><button class="can-new" onclick="vis.conn.setState('poolsteuerung.0.control.phCanister.newCanister',true);">Neuer Kanister</button><button class="can-set" onclick="var v=prompt('Aktueller Füllstand in Liter', '${esc(data.phCanisterFillL)}');if(v!==null){v=parseFloat(String(v).replace(',','.'));if(!isNaN(v)){vis.conn.setState('poolsteuerung.0.control.phCanister.currentFillL',v);}}">Korrigieren</button></div>
   </div>
 </div></body></html>`;
   }
@@ -1226,7 +1255,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       feedInRounded: Math.round(parseNum(feedIn) / 100) * 100,
       gridSupplyRounded: Math.round(parseNum(gridSupply) / 100) * 100,
       batteryRounded: Math.round(parseNum(battery)),
-      adapterVersion: '0.3.17'
+      adapterVersion: '0.3.18'
     };
 
     const now = Date.now();
