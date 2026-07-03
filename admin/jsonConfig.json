@@ -311,82 +311,27 @@
           "text": "pH-Minus Kanister",
           "size": 2
         },
-        "phCanisterCapacityL": {
+        "phCanisterSizeL": {
           "type": "number",
           "label": "Kanistergröße pH-Minus (Liter)",
           "newLine": true,
           "sm": 12,
           "md": 4,
           "lg": 4,
-          "help": "Standard: 10,00 Liter.",
+          "min": 0,
           "step": 0.01,
-          "min": 0
+          "help": "Standard: 10 Liter."
         },
-        "phCanisterWarnL": {
+        "phCanisterCurrentFillL": {
           "type": "number",
-          "label": "Nachbestellen ab Rest (Liter)",
+          "label": "Aktueller Füllstand pH-Minus (Liter)",
           "newLine": false,
           "sm": 12,
           "md": 4,
           "lg": 4,
-          "help": "Standard: 2 Liter.",
+          "min": 0,
           "step": 0.01,
-          "min": 0
-        },
-        "phCanisterCriticalL": {
-          "type": "number",
-          "label": "Kritisch ab Rest (Liter)",
-          "newLine": false,
-          "sm": 12,
-          "md": 4,
-          "lg": 4,
-          "help": "Standard: 1 Liter.",
-          "step": 0.01,
-          "min": 0
-        },
-        "phCanisterCurrentRestL": {
-          "type": "number",
-          "label": "Aktueller Füllstand pH-Minus (Liter, 2 Nachkommastellen)",
-          "newLine": true,
-          "sm": 12,
-          "md": 4,
-          "lg": 4,
-          "help": "Hier den am Kanister gemessenen aktuellen Füllstand eintragen, z. B. 8,30. Beim Speichern übernimmt der Adapter den Wert und berechnet Verbrauch und Prozent neu.",
-          "step": 0.01,
-          "min": 0
-        },
-        "phCanisterUsedL": {
-          "type": "number",
-          "label": "Verbraucht seit letztem Kanister (Liter, 2 Nachkommastellen)",
-          "newLine": false,
-          "sm": 12,
-          "md": 4,
-          "lg": 4,
-          "disabled": true,
-          "help": "Anzeige. Wird vom Adapter aus Dosierdauer und Fördermenge berechnet.",
-          "step": 0.01,
-          "min": 0
-        },
-        "phCanisterRestPercent": {
-          "type": "number",
-          "label": "Füllstand (%)",
-          "newLine": false,
-          "sm": 12,
-          "md": 4,
-          "lg": 4,
-          "disabled": true,
-          "help": "Anzeige. Wird vom Adapter berechnet.",
-          "step": 0.1,
-          "min": 0
-        },
-        "phCanisterLastCorrection": {
-          "type": "text",
-          "label": "Letzte Füllstand-Korrektur",
-          "newLine": true,
-          "sm": 12,
-          "md": 8,
-          "lg": 8,
-          "disabled": true
+          "help": "Hier den tatsächlich gemessenen Füllstand eintragen. Wird beim Speichern in die Laufzeitdaten übernommen."
         },
         "phCanisterNewOnSave": {
           "type": "checkbox",
@@ -395,7 +340,29 @@
           "sm": 12,
           "md": 4,
           "lg": 4,
-          "help": "Einmal aktivieren und speichern. Der Adapter setzt den Füllstand auf die Kanistergröße zurück und deaktiviert diese Option danach wieder."
+          "help": "Setzt den aktuellen Füllstand beim Speichern auf die Kanistergröße."
+        },
+        "phCanisterWarnL": {
+          "type": "number",
+          "label": "Nachbestellen ab Rest (Liter)",
+          "newLine": true,
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
+          "min": 0,
+          "step": 0.01,
+          "help": "Standard: 2 Liter."
+        },
+        "phCanisterCriticalL": {
+          "type": "number",
+          "label": "Kritisch ab Rest (Liter)",
+          "newLine": false,
+          "sm": 12,
+          "md": 6,
+          "lg": 6,
+          "min": 0,
+          "step": 0.01,
+          "help": "Standard: 1 Liter."
         },
         "phControlHeader": {
           "type": "header",

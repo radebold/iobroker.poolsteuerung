@@ -550,7 +550,7 @@ body{
         <div class="title">Pool Manager</div>
         <div class="meta">
           <div class="mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>
-          Aktualisiert<br>${esc(data.updated)}
+          v${esc(data.adapterVersion)}<br>Aktualisiert<br>${esc(data.updated)}
         </div>
       </div>
       <div class="temp-wrap">
@@ -603,8 +603,7 @@ body{
         ${status('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn)}
       </div>
     </div>
-    ${this.buildPhCanisterCard(data)}
-    <div class="card" style="margin-top:10px">
+    <div class="card">
       <div class="section extra">Zusatzwerte</div>
       <div class="mini-list">
         ${mini('Zeitplan', data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV', 'highlight')}
@@ -694,7 +693,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   <div class="card hero">
     <div class="header">
       <div class="title">Pool Manager</div>
-      <div class="meta"><div class="mode-pill">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div>
+      <div class="meta"><div class="mode-pill">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>v${esc(data.adapterVersion)}<br>Aktualisiert<br>${esc(data.updated)}</div>
     </div>
     <div class="temp-row"><div class="temp">${esc(data.poolTemp)}</div><div class="unit">°C</div></div>
     <div class="scale"><div class="track"><div class="target-mark" title="Soll ${esc(data.targetTemp)} °C"></div><div class="dot"></div></div><div class="scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
@@ -854,6 +853,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 }
 .ps-pill.on{background:#43c05b}
 .ps-pill.off{background:#e64a45}
+.ps-canister{margin-top:10px}.ps-bar{height:10px;border-radius:999px;background:#d9dde5;overflow:hidden;margin:7px 0 10px}.ps-barfill{height:100%;border-radius:999px;background:#33a852}.ps-barfill.warn{background:#f0ad00}.ps-barfill.critical{background:#e64a45}.ps-can-head{display:flex;justify-content:space-between;align-items:center;gap:8px}.ps-can-title{font-size:17px;font-weight:900;color:#0f172a}.ps-ok{font-size:12px;font-weight:900;color:#16a34a}.ps-ok.warn{color:#b45309}.ps-ok.critical{color:#b91c1c}.ps-can-big{background:#f8fafc;border:1px solid rgba(15,23,42,.10);border-radius:12px;padding:9px;margin-bottom:8px}.ps-can-label{font-size:11px;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.ps-can-value{font-size:25px;font-weight:900;color:#0f172a}.ps-can-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:7px}.ps-can-small{font-size:11px;color:#64748b}.ps-can-small b{display:block;font-size:14px;color:#0f172a;margin-top:2px}.ps-can-note{font-size:11px;color:#334155;line-height:1.25}.ps-can-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;margin-top:8px}.ps-can-actions input{min-width:0;border:1px solid #cbd5e1;border-radius:10px;padding:8px;font-size:13px}.ps-can-actions button,.ps-can-bottom button{border:0;border-radius:10px;padding:8px 10px;font-weight:900;color:white;cursor:pointer}.ps-can-set{background:#4361ee}.ps-can-bottom{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}.ps-can-new{background:#31a950}.ps-can-dose{background:#f97316}
 @media (max-width: 1050px){
   .ps-grid{grid-template-columns:1fr}
 }
@@ -865,7 +865,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         <div>
           <div class="ps-title">Pool Manager</div>
         </div>
-        <div class="ps-sub">Modus<br>${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}<br>Aktualisiert<br>${esc(data.updated)}</div>
+        <div class="ps-sub">v${esc(data.adapterVersion)}<br>Modus ${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}<br>v${esc(data.adapterVersion)}<br>Aktualisiert<br>${esc(data.updated)}</div>
       </div>
       <div class="ps-tempRow">
         <div class="ps-temp">${esc(data.poolTemp)}</div>
@@ -924,7 +924,16 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         ${item('pH-Dosierpumpe','Prüfzeiten',data.phPumpOn)}
         ${item('Wärmepumpe','PV-Freigabe',data.heatpumpOn)}
       </div>
-      <div style="margin-top:10px">${this.buildPhCanisterCard(data, true)}</div>
+      <div class="ps-canister">
+        <div class="ps-can-head"><div class="ps-can-title">pH-Minus Kanister</div><div class="ps-ok ${data.phCanisterCritical ? 'critical' : data.phCanisterWarning ? 'warn' : ''}">${data.phCanisterCritical ? 'KRITISCH' : data.phCanisterWarning ? 'WARNUNG' : 'OK'}</div></div>
+        <div class="ps-bar"><div class="ps-barfill ${data.phCanisterCritical ? 'critical' : data.phCanisterWarning ? 'warn' : ''}" style="width:${Math.max(0, Math.min(100, parseNum(data.phCanisterPercent)))}%"></div></div>
+        <div class="ps-can-big"><div class="ps-can-label">Aktueller Füllstand</div><div class="ps-can-value">${esc(data.phCanisterFillL)} l</div><div class="ps-can-small">von ${esc(data.phCanisterSizeL)} l · ${esc(data.phCanisterPercent)} %</div></div>
+        <div class="ps-can-grid"><div class="ps-can-small">Größe<b>${esc(data.phCanisterSizeL)} l</b></div><div class="ps-can-small">Verbraucht<b>${esc(data.phCanisterConsumedL)} l</b></div><div class="ps-can-small">Letzte Dosis<b>${esc(data.phLastDoseMl)} ml</b></div></div>
+        <div class="ps-can-note">${esc(data.phCanisterStatusText)}<br>${esc(data.phCanisterLastCorrection)}</div>
+        <div class="ps-can-actions"><input type="number" step="0.01" min="0" placeholder="Füllstand l" id="psPhFill"><button class="ps-can-set" onclick="var e=document.getElementById('psPhFill');var v=parseFloat(String(e.value).replace(',','.'));if(!isNaN(v)){vis.conn.setState('poolsteuerung.0.control.phCanister.currentFillL',v);e.value='';}">Setzen</button></div>
+        <div class="ps-can-actions"><input type="number" step="1" min="1" placeholder="Manuelle Dosis ml" id="psPhDose"><button class="ps-can-dose" onclick="var e=document.getElementById('psPhDose');var v=parseFloat(String(e.value).replace(',','.'));if(!isNaN(v)&&v>0){vis.conn.setState('poolsteuerung.0.control.ph.manualDoseMl',v);e.value='';}">Dosieren</button></div>
+        <div class="ps-can-bottom"><button class="ps-can-new" onclick="vis.conn.setState('poolsteuerung.0.control.phCanister.newCanister',true);">Neuer Kanister</button><button class="ps-can-set" onclick="var v=prompt('Aktueller Füllstand in Liter', '${esc(data.phCanisterFillL)}');if(v!==null){v=parseFloat(String(v).replace(',','.'));if(!isNaN(v)){vis.conn.setState('poolsteuerung.0.control.phCanister.currentFillL',v);}}">Korrigieren</button></div>
+      </div>
       <div class="ps-list" style="margin-top:10px">
         <div class="ps-row"><div class="ps-k">Zeitplan</div><div class="ps-v">${data.pumpScheduleActive ? 'AKTIV' : 'INAKTIV'}</div></div>
         <div class="ps-row"><div class="ps-k">PV Schwelle</div><div class="ps-v">${esc(data.threshold)} W</div></div>
@@ -982,10 +991,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-sh{margin-top:3px}
 .ps-qv{font-size:13px;font-weight:900;color:#0f172a;line-height:1.15}
 .ps-log{margin-top:6px;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:7px}.ps-log.info-ok{background:linear-gradient(180deg,#f7fff8,#eefcf1)}.ps-log.info-warn{background:linear-gradient(180deg,#fff8f7,#fff0ee)}.ps-log.info-info{background:linear-gradient(180deg,#f8fbff,#eef5ff)}.ps-logt{font-size:12px;font-weight:700;line-height:1.3;color:#0f172a;word-break:break-word}.ps-logm{margin-top:4px;font-size:10px;color:#64748b}
+.ps-can{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:13px;padding:8px}.ps-can-head{display:flex;justify-content:space-between;font-size:13px;font-weight:900}.ps-can-ok{font-size:11px;color:#16a34a}.ps-can-ok.warn{color:#b45309}.ps-can-ok.critical{color:#b91c1c}.ps-can-bar{height:9px;border-radius:999px;background:#d9dde5;overflow:hidden;margin:7px 0}.ps-can-fill{height:100%;background:#33a852;border-radius:999px}.ps-can-fill.warn{background:#f0ad00}.ps-can-fill.critical{background:#e64a45}.ps-can-big{font-size:24px;font-weight:900}.ps-can-small{font-size:11px;color:#64748b}.ps-can-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:7px 0}.ps-can-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px;margin-top:6px}.ps-can-actions input{min-width:0;border:1px solid #cbd5e1;border-radius:10px;padding:8px}.ps-can-actions button,.ps-can-bottom button{border:0;border-radius:10px;padding:8px 9px;font-weight:900;color:#fff}.ps-can-set{background:#4361ee}.ps-can-dose{background:#f97316}.ps-can-bottom{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}.ps-can-new{background:#31a950}
 </style>
 <div class="ps-wrap">
   <div class="ps-card ps-hero">
-    <div class="ps-header"><div class="ps-title">Pool Manager</div><div class="ps-sub"><div class="ps-mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div></div>
+    <div class="ps-header"><div class="ps-title">Pool Manager</div><div class="ps-sub"><div class="ps-mode">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>v${esc(data.adapterVersion)}<br>v${esc(data.adapterVersion)}<br>Aktualisiert<br>${esc(data.updated)}</div></div>
     <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
     <div class="ps-scale"><div class="ps-track"><div class="ps-target" title="Soll ${esc(data.targetTemp)} °C"></div><div class="ps-dot"></div></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="ps-metrics">
@@ -1018,284 +1028,28 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Chlor Freigabe', data.chlorDecision)}
     ${quick('pH Prüfung', data.phDecision)}
   </div></div>
-  ${this.buildPhCanisterCard(data, true)}
   <div class="ps-card"><div class="ps-section">pH Info</div><div class="ps-quickGrid">
     ${quick('Berechnet', `${data.phCalculatedDoseSec} s / ${data.phCalculatedDoseMl} ml`)}
     ${quick('Letzte Dosis', `${data.phLastDoseDurationSec} s / ${data.phLastDoseMl} ml`)}
     ${quick('Heute dosiert', `${data.phDailyCount}x`)}
     ${quick('Nächste Prüfung', data.phNextCheck)}
   </div><div class="ps-log info-${esc(data.phInfoLevel)}"><div class="ps-ql">Letzte Meldung</div><div class="ps-logt">${esc(data.phInfoText)}</div><div class="ps-logm">Letzte Dosierung: ${esc(data.phLastDoseAt)}</div></div></div>
+  <div class="ps-card"><div class="ps-section">pH-Minus Kanister</div><div class="ps-can">
+    <div class="ps-can-head"><span>Aktueller Füllstand</span><span class="ps-can-ok ${data.phCanisterCritical ? 'critical' : data.phCanisterWarning ? 'warn' : ''}">${data.phCanisterCritical ? 'KRITISCH' : data.phCanisterWarning ? 'WARNUNG' : 'OK'}</span></div>
+    <div class="ps-can-bar"><div class="ps-can-fill ${data.phCanisterCritical ? 'critical' : data.phCanisterWarning ? 'warn' : ''}" style="width:${Math.max(0, Math.min(100, parseNum(data.phCanisterPercent)))}%"></div></div>
+    <div class="ps-can-big">${esc(data.phCanisterFillL)} l</div><div class="ps-can-small">von ${esc(data.phCanisterSizeL)} l · ${esc(data.phCanisterPercent)} %</div>
+    <div class="ps-can-grid"><div class="ps-can-small">Größe<br><b>${esc(data.phCanisterSizeL)} l</b></div><div class="ps-can-small">Verbraucht<br><b>${esc(data.phCanisterConsumedL)} l</b></div><div class="ps-can-small">Letzte Dosis<br><b>${esc(data.phLastDoseMl)} ml</b></div></div>
+    <div class="ps-can-small">${esc(data.phCanisterStatusText)}<br>${esc(data.phCanisterLastCorrection)}</div>
+    <div class="ps-can-actions"><input type="number" step="0.01" min="0" placeholder="Füllstand l" id="psPhFillPhone"><button class="ps-can-set" onclick="var e=document.getElementById('psPhFillPhone');var v=parseFloat(String(e.value).replace(',','.'));if(!isNaN(v)){vis.conn.setState('poolsteuerung.0.control.phCanister.currentFillL',v);e.value='';}">Setzen</button></div>
+    <div class="ps-can-actions"><input type="number" step="1" min="1" placeholder="Manuelle Dosis ml" id="psPhDosePhone"><button class="ps-can-dose" onclick="var e=document.getElementById('psPhDosePhone');var v=parseFloat(String(e.value).replace(',','.'));if(!isNaN(v)&&v>0){vis.conn.setState('poolsteuerung.0.control.ph.manualDoseMl',v);e.value='';}">Dosieren</button></div>
+    <div class="ps-can-bottom"><button class="ps-can-new" onclick="vis.conn.setState('poolsteuerung.0.control.phCanister.newCanister',true);">Neuer Kanister</button><button class="ps-can-set" onclick="var v=prompt('Aktueller Füllstand in Liter', '${esc(data.phCanisterFillL)}');if(v!==null){v=parseFloat(String(v).replace(',','.'));if(!isNaN(v)){vis.conn.setState('poolsteuerung.0.control.phCanister.currentFillL',v);}}">Korrigieren</button></div>
+  </div></div>
 </div>`;
   }
 
 
 
 
-
-
-
-  async updateOwnNative(patch) {
-    try {
-      const objId = `system.adapter.${this.namespace}`;
-      const obj = await this.getForeignObjectAsync(objId);
-      if (!obj) return;
-      const nextNative = { ...(obj.native || {}), ...patch };
-      let changed = false;
-      for (const [k, v] of Object.entries(patch)) {
-        if ((obj.native || {})[k] !== v) { changed = true; break; }
-      }
-      if (changed) {
-        await this.extendForeignObjectAsync(objId, { native: nextNative });
-      }
-    } catch (e) {
-      this.log.debug(`Native-Spiegel konnte nicht aktualisiert werden: ${e.message || e}`);
-    }
-  }
-
-  async applyPhCanisterAdminConfigIfNeeded() {
-    await this.ensureState('status.phCanister.usedL', 'number', 'value.volume', 0, true);
-    const cfg = this.getPhCanisterConfig();
-    const capacityL = cfg.capacityL;
-
-    if (this.config.phCanisterNewOnSave === true) {
-      await this.setStateAsync('control.phCanister.capacityL', Number(capacityL.toFixed(2)), true);
-      await this.setStateAsync('status.phCanister.capacityL', Number(capacityL.toFixed(2)), true);
-      await this.setStateAsync('status.phCanister.usedL', 0, true);
-      await this.setStateAsync('control.phCanister.measuredRestL', Number(capacityL.toFixed(2)), true);
-      await this.setStateAsync('status.phCanister.lastReset', `${new Date().toLocaleString('de-DE')} - Neuer Kanister über Admin`, true);
-      this.phCanisterAdminAppliedRest = Number(capacityL.toFixed(2));
-      await this.updateOwnNative({
-        phCanisterNewOnSave: false,
-        phCanisterCurrentRestL: Number(capacityL.toFixed(2)),
-        phCanisterUsedL: 0,
-        phCanisterRestPercent: 100,
-        phCanisterLastCorrection: `${new Date().toLocaleString('de-DE')} - Neuer Kanister über Admin`,
-        phCanisterAdminRestLastApplied: Number(capacityL.toFixed(2))
-      });
-      return;
-    }
-
-    const restFromAdmin = parseNum(this.config.phCanisterCurrentRestL);
-    const lastApplied = parseNum(this.config.phCanisterAdminRestLastApplied);
-    const runtimeKey = Number(restFromAdmin.toFixed(2));
-    if (this.phCanisterAdminAppliedRest === runtimeKey) return;
-    if (Number.isFinite(restFromAdmin) && restFromAdmin >= 0 && restFromAdmin <= capacityL && Math.abs(restFromAdmin - lastApplied) >= 0.001) {
-      this.phCanisterAdminAppliedRest = runtimeKey;
-      const usedL = Number((capacityL - restFromAdmin).toFixed(3));
-      const txt = `${new Date().toLocaleString('de-DE')} - Rest über Admin auf ${restFromAdmin.toFixed(2)} l gesetzt`;
-      await this.setStateAsync('control.phCanister.capacityL', Number(capacityL.toFixed(2)), true);
-      await this.setStateAsync('status.phCanister.capacityL', Number(capacityL.toFixed(2)), true);
-      await this.setStateAsync('status.phCanister.usedL', usedL, true);
-      await this.setStateAsync('control.phCanister.measuredRestL', Number(restFromAdmin.toFixed(2)), true);
-      await this.setStateAsync('status.phCanister.lastCorrection', txt, true);
-      await this.updateOwnNative({
-        phCanisterCurrentRestL: Number(restFromAdmin.toFixed(2)),
-        phCanisterUsedL: Number(usedL.toFixed(2)),
-        phCanisterRestPercent: Number(((restFromAdmin / capacityL) * 100).toFixed(1)),
-        phCanisterLastCorrection: txt,
-        phCanisterAdminRestLastApplied: Number(restFromAdmin.toFixed(2))
-      });
-    }
-  }
-
-  getPhCanisterConfig() {
-    const capacityL = Math.max(0.1, parseNum(this.config.phCanisterCapacityL || 10));
-    const warnL = Math.max(0, parseNum(this.config.phCanisterWarnL || 2));
-    const criticalL = Math.max(0, parseNum(this.config.phCanisterCriticalL || 1));
-    return { capacityL, warnL, criticalL };
-  }
-
-  async ensurePhCanisterStates() {
-    const cfg = this.getPhCanisterConfig();
-    await this.ensureState('status.phCanister.capacityL', 'number', 'value.volume', cfg.capacityL, true);
-    await this.ensureState('status.phCanister.usedL', 'number', 'value.volume', 0, true);
-    await this.ensureState('status.phCanister.restL', 'number', 'value.volume', cfg.capacityL, false);
-    await this.ensureState('status.phCanister.restPercent', 'number', 'value', 100, false);
-    await this.ensureState('status.phCanister.lastDoseMl', 'number', 'value', 0, false);
-    await this.ensureState('status.phCanister.lastDoseTs', 'number', 'value.time', 0, false);
-    await this.ensureState('status.phCanister.lastCorrection', 'string', 'text', '', false);
-    await this.ensureState('status.phCanister.lastReset', 'string', 'text', '', false);
-    await this.ensureState('status.phCanister.warning', 'boolean', 'indicator', false, false);
-    await this.ensureState('status.phCanister.critical', 'boolean', 'indicator', false, false);
-    await this.ensureState('status.phCanister.orderRecommended', 'boolean', 'indicator', false, false);
-    await this.ensureState('status.phCanister.statusText', 'string', 'text', '', false);
-    await this.ensureState('control.phCanister.measuredRestL', 'number', 'value.volume', 0, true);
-    await this.ensureState('control.phCanister.applyCorrection', 'boolean', 'button', false, true);
-    await this.ensureState('control.phCanister.newCanister', 'boolean', 'button', false, true);
-    await this.ensureState('control.phCanister.capacityL', 'number', 'value.volume', cfg.capacityL, true);
-
-    const capCtrl = await this.getStateAsync('control.phCanister.capacityL');
-    if (!capCtrl || !Number(capCtrl.val)) {
-      await this.setStateAsync('control.phCanister.capacityL', cfg.capacityL, true);
-    }
-    const capStatus = await this.getStateAsync('status.phCanister.capacityL');
-    if (!capStatus || !Number(capStatus.val)) {
-      await this.setStateAsync('status.phCanister.capacityL', cfg.capacityL, true);
-    }
-    await this.applyPhCanisterAdminConfigIfNeeded();
-    await this.recalcPhCanister();
-  }
-
-  async getPhCanisterCapacityL() {
-    const ctrl = await this.getStateAsync('control.phCanister.capacityL');
-    const status = await this.getStateAsync('status.phCanister.capacityL');
-    const cfg = this.getPhCanisterConfig();
-    return Math.max(0.1, parseNum((ctrl && ctrl.val) || (status && status.val) || cfg.capacityL));
-  }
-
-  async recalcPhCanister() {
-    await this.ensureState('status.phCanister.capacityL', 'number', 'value.volume', this.getPhCanisterConfig().capacityL, true);
-    await this.ensureState('status.phCanister.usedL', 'number', 'value.volume', 0, true);
-    const cfg = this.getPhCanisterConfig();
-    const capacityL = await this.getPhCanisterCapacityL();
-    let usedL = parseNum((await this.getStateAsync('status.phCanister.usedL'))?.val);
-    if (!Number.isFinite(usedL) || usedL < 0) usedL = 0;
-    if (usedL > capacityL) usedL = capacityL;
-
-    const restL = Number((capacityL - usedL).toFixed(3));
-    const restPercent = Number(((restL / capacityL) * 100).toFixed(1));
-    const warning = restL <= cfg.warnL;
-    const critical = restL <= cfg.criticalL;
-    const text = critical
-      ? `pH-Minus kritisch: ${restL.toFixed(2)} l Rest (${restPercent.toFixed(1)} %)`
-      : warning
-        ? `pH-Minus nachbestellen: ${restL.toFixed(2)} l Rest (${restPercent.toFixed(1)} %)`
-        : `pH-Minus OK: ${restL.toFixed(2)} l Rest (${restPercent.toFixed(1)} %)`;
-
-    await this.setStateIfChanged('status.phCanister.capacityL', Number(capacityL.toFixed(2)), true);
-    await this.setStateIfChanged('status.phCanister.usedL', Number(usedL.toFixed(3)), true);
-    await this.setStateIfChanged('status.phCanister.restL', restL, true);
-    await this.setStateIfChanged('status.phCanister.restPercent', restPercent, true);
-    await this.setStateIfChanged('status.phCanister.warning', warning, true);
-    await this.setStateIfChanged('status.phCanister.critical', critical, true);
-    await this.setStateIfChanged('status.phCanister.orderRecommended', warning, true);
-    await this.setStateIfChanged('status.phCanister.statusText', text, true);
-    const lastCorrection = (await this.getStateAsync('status.phCanister.lastCorrection'))?.val || this.config.phCanisterLastCorrection || '-';
-    await this.updateOwnNative({
-      phCanisterCurrentRestL: Number(restL.toFixed(2)),
-      phCanisterUsedL: Number(usedL.toFixed(2)),
-      phCanisterRestPercent: restPercent,
-      phCanisterLastCorrection: String(lastCorrection),
-      phCanisterAdminRestLastApplied: Number(restL.toFixed(2))
-    });
-  }
-
-  async addPhCanisterDoseMl(ml) {
-    const doseMl = Math.max(0, parseNum(ml));
-    if (!doseMl) return;
-    await this.ensurePhCanisterStates();
-    const usedState = await this.getStateAsync('status.phCanister.usedL');
-    const oldUsedL = parseNum(usedState && usedState.val) || 0;
-    const newUsedL = Number((oldUsedL + doseMl / 1000).toFixed(3));
-    await this.setStateAsync('status.phCanister.usedL', newUsedL, true);
-    await this.setStateAsync('status.phCanister.lastDoseMl', Number(doseMl.toFixed(1)), true);
-    await this.setStateAsync('status.phCanister.lastDoseTs', Date.now(), true);
-    await this.recalcPhCanister();
-  }
-
-  async applyPhCanisterCorrection() {
-    await this.ensurePhCanisterStates();
-    const capacityL = await this.getPhCanisterCapacityL();
-    let measuredRestL = parseNum((await this.getStateAsync('control.phCanister.measuredRestL'))?.val);
-    if (!Number.isFinite(measuredRestL)) measuredRestL = 0;
-    measuredRestL = Math.max(0, Math.min(capacityL, measuredRestL));
-    const usedL = Number((capacityL - measuredRestL).toFixed(3));
-    await this.setStateAsync('status.phCanister.usedL', usedL, true);
-    await this.setStateAsync('status.phCanister.lastCorrection', `${new Date().toLocaleString('de-DE')} - Rest manuell auf ${measuredRestL.toFixed(2)} l gesetzt`, true);
-    await this.setStateAsync('control.phCanister.applyCorrection', false, true);
-    await this.recalcPhCanister();
-    this.queueRender();
-  }
-
-  async resetPhCanister() {
-    await this.ensurePhCanisterStates();
-    const capacityL = await this.getPhCanisterCapacityL();
-    await this.setStateAsync('status.phCanister.capacityL', Number(capacityL.toFixed(2)), true);
-    await this.setStateAsync('status.phCanister.usedL', 0, true);
-    await this.setStateAsync('status.phCanister.lastReset', `${new Date().toLocaleString('de-DE')} - Neuer Kanister`, true);
-    await this.setStateAsync('control.phCanister.measuredRestL', Number(capacityL.toFixed(2)), true);
-    await this.setStateAsync('control.phCanister.newCanister', false, true);
-    await this.recalcPhCanister();
-    this.queueRender();
-  }
-
-  async handlePhCanisterControl(id, state) {
-    if (!state || state.ack) return;
-    if (id.endsWith('.applyCorrection') && state.val === true) {
-      await this.applyPhCanisterCorrection();
-      return;
-    }
-    if (id.endsWith('.newCanister') && state.val === true) {
-      await this.resetPhCanister();
-      return;
-    }
-    if (id.endsWith('.capacityL')) {
-      await this.recalcPhCanister();
-      this.queueRender();
-    }
-  }
-
-  async getPhCanisterSnapshot() {
-    await this.ensurePhCanisterStates();
-    const capacityL = parseNum((await this.getStateAsync('status.phCanister.capacityL'))?.val);
-    const usedL = parseNum((await this.getStateAsync('status.phCanister.usedL'))?.val);
-    const restL = parseNum((await this.getStateAsync('status.phCanister.restL'))?.val);
-    const restPercent = parseNum((await this.getStateAsync('status.phCanister.restPercent'))?.val);
-    const lastDoseMl = parseNum((await this.getStateAsync('status.phCanister.lastDoseMl'))?.val);
-    const lastDoseTs = parseNum((await this.getStateAsync('status.phCanister.lastDoseTs'))?.val);
-    const lastCorrection = (await this.getStateAsync('status.phCanister.lastCorrection'))?.val || '-';
-    const lastReset = (await this.getStateAsync('status.phCanister.lastReset'))?.val || '-';
-    const statusText = (await this.getStateAsync('status.phCanister.statusText'))?.val || '-';
-    return {
-      capacityL: this.fmt(capacityL, 2, '10.00'),
-      usedL: this.fmt(usedL, 2, '0.00'),
-      restL: this.fmt(restL, 2, '0.00'),
-      restPercent: this.fmt(restPercent, 1, '0.0'),
-      lastDoseMl: this.fmt(lastDoseMl, 0, '0'),
-      lastDoseAt: lastDoseTs ? new Date(lastDoseTs).toLocaleString('de-DE') : '-',
-      lastCorrection: String(lastCorrection),
-      lastReset: String(lastReset),
-      statusText: String(statusText),
-      warning: !!((await this.getStateAsync('status.phCanister.warning'))?.val),
-      critical: !!((await this.getStateAsync('status.phCanister.critical'))?.val)
-    };
-  }
-
-  buildPhCanisterCard(data, compact = false) {
-    const c = data.phCanister || {};
-    const pct = Math.max(0, Math.min(100, parseNum(c.restPercent)));
-    const color = c.critical ? '#dc2626' : c.warning ? '#f59e0b' : '#16a34a';
-    const ns = this.namespace;
-    const barH = compact ? 8 : 12;
-    return `<div style="background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:${compact ? '8px' : '10px'};box-shadow:0 8px 18px rgba(0,0,0,.08);color:#0f172a;font-family:Arial,Helvetica,sans-serif">
-      <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:6px">
-        <div style="font-size:${compact ? '13px' : '15px'};font-weight:900">pH-Minus Kanister</div>
-        <div style="font-size:11px;font-weight:900;color:${color}">${esc(c.critical ? 'KRITISCH' : c.warning ? 'BESTELLEN' : 'OK')}</div>
-      </div>
-      <div style="height:${barH}px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin:6px 0 8px"><div style="height:100%;width:${pct}%;background:${color};border-radius:999px"></div></div>
-      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:8px;margin-bottom:8px">
-        <div style="font-size:10px;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:.03em">Aktueller Füllstand</div>
-        <div style="display:flex;align-items:baseline;gap:6px;margin-top:2px">
-          <div style="font-size:${compact ? '22px' : '28px'};font-weight:900;color:#0f172a">${esc(c.restL)} l</div>
-          <div style="font-size:12px;color:#64748b">von ${esc(c.capacityL)} l · ${esc(c.restPercent)} %</div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px">
-        <div><div style="font-size:10px;color:#64748b">Kanistergröße</div><div style="font-size:${compact ? '13px' : '16px'};font-weight:900">${esc(c.capacityL)} l</div></div>
-        <div><div style="font-size:10px;color:#64748b">Verbraucht</div><div style="font-size:${compact ? '13px' : '16px'};font-weight:900">${esc(c.usedL)} l</div></div>
-        <div><div style="font-size:10px;color:#64748b">Füllstand</div><div style="font-size:${compact ? '13px' : '16px'};font-weight:900">${esc(c.restPercent)} %</div></div>
-      </div>
-      <div style="font-size:11px;color:#475569;line-height:1.35;margin-bottom:8px">${esc(c.statusText)}<br>Letzte Dosis: ${esc(c.lastDoseMl)} ml · ${esc(c.lastDoseAt)}</div>
-      <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;margin-bottom:6px">
-        <input id="psPhRestInput" type="number" step="0.01" min="0" max="${esc(c.capacityL)}" placeholder="Aktueller Füllstand in Liter" style="min-width:0;border:1px solid #cbd5e1;border-radius:9px;padding:8px;font-size:13px">
-        <button onclick="var el=document.getElementById('psPhRestInput');var v=parseFloat(String(el.value).replace(',','.'));if(!isNaN(v)){vis.conn.setState('${ns}.control.phCanister.measuredRestL',v);vis.conn.setState('${ns}.control.phCanister.applyCorrection',true);}" style="border:0;border-radius:9px;background:#2563eb;color:#fff;font-weight:900;padding:8px 10px;cursor:pointer">Setzen</button>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-        <button onclick="if(confirm('Neuen pH-Minus-Kanister setzen?')){vis.conn.setState('${ns}.control.phCanister.newCanister',true);}" style="border:0;border-radius:9px;background:#16a34a;color:#fff;font-weight:900;padding:8px;cursor:pointer">Neuer Kanister</button>
-        <button onclick="var v=prompt('Kanistergröße in Liter:', '${esc(c.capacityL)}');if(v!==null){v=parseFloat(String(v).replace(',','.'));if(!isNaN(v)&&v>0){vis.conn.setState('${ns}.control.phCanister.capacityL',v);}}" style="border:0;border-radius:9px;background:#475569;color:#fff;font-weight:900;padding:8px;cursor:pointer">Größe</button>
-      </div>
-    </div>`;
-  }
 
   async renderVis() {
     const ph = this.fmt(await this.getNumber(this.config.phStateId, 2), 2);
@@ -1345,7 +1099,15 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         : 'info';
     const phMlPer01Per10 = this.fmt(parseNum(this.config.phDoseMlPer01Per10m3), 0, '--');
     const volume = this.fmt(this.calcVolume(), 2, '--');
-    const phCanister = await this.getPhCanisterSnapshot();
+    await this.updatePhCanisterStatus();
+    const phCanisterSizeL = this.fmt(await this.getNumber('status.phCanister.sizeL', 2), 2, '10.00');
+    const phCanisterFillL = this.fmt(await this.getNumber('status.phCanister.currentFillL', 2), 2, '10.00');
+    const phCanisterConsumedL = this.fmt(await this.getNumber('status.phCanister.consumedL', 2), 2, '0.00');
+    const phCanisterPercent = this.fmt(await this.getNumber('status.phCanister.fillPercent', 1), 1, '100.0');
+    const phCanisterStatusText = await this.getText('status.phCanister.statusText', 'pH-Minus OK');
+    const phCanisterWarning = await this.getBool('status.phCanister.warning');
+    const phCanisterCritical = await this.getBool('status.phCanister.critical');
+    const phCanisterLastCorrection = await this.getText('status.phCanister.lastCorrection', '-');
 
     const circulationEnabled = !standbyMode && this.config.enableCirculationControl !== false;
     const phEnabledMaster = !standbyMode && this.config.enablePhControl !== false;
@@ -1436,12 +1198,19 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       phLastDoseMl,
       manualGranulateG,
       manualGranulateText,
+      phCanisterSizeL,
+      phCanisterFillL,
+      phCanisterConsumedL,
+      phCanisterPercent,
+      phCanisterStatusText,
+      phCanisterWarning,
+      phCanisterCritical,
+      phCanisterLastCorrection,
       phInfoText,
       phInfoLevel,
       phNextCheck,
       phFlowMlMin,
       phMlPer01Per10,
-      phCanister,
       orpSet: this.fmt(parseNum(this.config.orpSetpoint), 0, '--'),
       threshold: this.fmt(threshold, 0, '1000'),
       orpOnThreshold: this.fmt(orpOnThreshold, 0, '725'),
@@ -1456,7 +1225,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       pvRounded: Math.round(parseNum(pv) / 100) * 100,
       feedInRounded: Math.round(parseNum(feedIn) / 100) * 100,
       gridSupplyRounded: Math.round(parseNum(gridSupply) / 100) * 100,
-      batteryRounded: Math.round(parseNum(battery))
+      batteryRounded: Math.round(parseNum(battery)),
+      adapterVersion: '0.3.17'
     };
 
     const now = Date.now();
@@ -1626,6 +1396,137 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         this.log.warn(`[REGEL] ${rule.name || `Regel ${rule.index + 1}`} fehlgeschlagen: ${e.message || e}`);
       }
     }
+  }
+
+
+  round2(value) {
+    return Math.round((Number(value) || 0) * 100) / 100;
+  }
+
+  getPhCanisterSizeL() {
+    const size = parseNum(this.config.phCanisterSizeL || 10);
+    return Number.isFinite(size) && size > 0 ? size : 10;
+  }
+
+  async ensurePhCanisterStates() {
+    const size = this.getPhCanisterSizeL();
+    await this.ensureState('control.phCanister.currentFillL', 'number', 'value.volume', size, true);
+    await this.ensureState('control.phCanister.newCanister', 'boolean', 'button', false, true);
+    await this.ensureState('control.ph.manualDoseMl', 'number', 'value', 0, true);
+    await this.ensureState('status.phCanister.sizeL', 'number', 'value.volume', size, false);
+    await this.ensureState('status.phCanister.currentFillL', 'number', 'value.volume', size, false);
+    await this.ensureState('status.phCanister.consumedL', 'number', 'value.volume', 0, false);
+    await this.ensureState('status.phCanister.fillPercent', 'number', 'value', 100, false);
+    await this.ensureState('status.phCanister.warning', 'boolean', 'indicator', false, false);
+    await this.ensureState('status.phCanister.critical', 'boolean', 'indicator', false, false);
+    await this.ensureState('status.phCanister.lastCorrection', 'string', 'text', '', false);
+    await this.ensureState('status.phCanister.lastReset', 'string', 'text', '', false);
+    await this.ensureState('status.phCanister.statusText', 'string', 'text', '', false);
+  }
+
+  async syncPhCanisterFromConfig() {
+    await this.ensurePhCanisterStates();
+    const size = this.getPhCanisterSizeL();
+    await this.setStateIfChanged('status.phCanister.sizeL', this.round2(size), true);
+
+    if (this.config.phCanisterNewOnSave === true) {
+      await this.resetPhCanister('Admin: neuer Kanister beim Speichern');
+      return;
+    }
+
+    const configuredFillRaw = this.config.phCanisterCurrentFillL;
+    if (configuredFillRaw !== undefined && configuredFillRaw !== null && String(configuredFillRaw).trim() !== '') {
+      const configuredFill = parseNum(configuredFillRaw);
+      if (Number.isFinite(configuredFill) && configuredFill >= 0 && configuredFill <= size) {
+        const current = await this.getStateAsync('control.phCanister.currentFillL');
+        const curVal = Number(current && current.val);
+        if (!Number.isFinite(curVal) || Math.abs(curVal - configuredFill) > 0.004) {
+          await this.correctPhCanisterFill(configuredFill, 'Admin PH-Reiter');
+        }
+      }
+    }
+    await this.updatePhCanisterStatus();
+  }
+
+  async updatePhCanisterStatus() {
+    await this.ensurePhCanisterStates();
+    const size = this.getPhCanisterSizeL();
+    const warnL = Math.max(0, parseNum(this.config.phCanisterWarnL || 2));
+    const criticalL = Math.max(0, parseNum(this.config.phCanisterCriticalL || 1));
+    const fillState = await this.getStateAsync('control.phCanister.currentFillL');
+    let fill = Number(fillState && fillState.val);
+    if (!Number.isFinite(fill)) fill = size;
+    fill = Math.max(0, Math.min(size, this.round2(fill)));
+    const consumed = this.round2(size - fill);
+    const percent = size > 0 ? this.round2((fill / size) * 100) : 0;
+    const warning = fill <= warnL;
+    const critical = fill <= criticalL;
+    const text = critical
+      ? `pH-Minus kritisch: ${fill.toFixed(2)} l Rest (${percent.toFixed(1)} %)`
+      : warning
+        ? `pH-Minus niedrig: ${fill.toFixed(2)} l Rest (${percent.toFixed(1)} %)`
+        : `pH-Minus OK: ${fill.toFixed(2)} l Rest (${percent.toFixed(1)} %)`;
+
+    await this.setStateIfChanged('control.phCanister.currentFillL', fill, true);
+    await this.setStateIfChanged('status.phCanister.sizeL', this.round2(size), true);
+    await this.setStateIfChanged('status.phCanister.currentFillL', fill, true);
+    await this.setStateIfChanged('status.phCanister.consumedL', consumed, true);
+    await this.setStateIfChanged('status.phCanister.fillPercent', percent, true);
+    await this.setStateIfChanged('status.phCanister.warning', warning, true);
+    await this.setStateIfChanged('status.phCanister.critical', critical, true);
+    await this.setStateIfChanged('status.phCanister.statusText', text, true);
+  }
+
+  async correctPhCanisterFill(fillL, source = 'manuelle Korrektur') {
+    await this.ensurePhCanisterStates();
+    const size = this.getPhCanisterSizeL();
+    let fill = parseNum(fillL);
+    if (!Number.isFinite(fill)) return false;
+    fill = Math.max(0, Math.min(size, this.round2(fill)));
+    await this.setStateAsync('control.phCanister.currentFillL', fill, true);
+    await this.setStateAsync('status.phCanister.lastCorrection', `${new Date().toLocaleString('de-DE')} - ${source}: ${fill.toFixed(2)} l`, true);
+    await this.updatePhCanisterStatus();
+    return true;
+  }
+
+  async resetPhCanister(source = 'Neuer Kanister') {
+    const size = this.getPhCanisterSizeL();
+    await this.correctPhCanisterFill(size, source);
+    await this.setStateAsync('status.phCanister.lastReset', `${new Date().toLocaleString('de-DE')} - ${source}`, true);
+    await this.setStateAsync('control.phCanister.newCanister', false, true);
+  }
+
+  async addPhCanisterConsumptionMl(ml, source = 'Dosierung') {
+    await this.ensurePhCanisterStates();
+    const mlNum = parseNum(ml);
+    if (!Number.isFinite(mlNum) || mlNum <= 0) return;
+    const cur = await this.getStateAsync('control.phCanister.currentFillL');
+    const size = this.getPhCanisterSizeL();
+    const fill = Number.isFinite(Number(cur && cur.val)) ? Number(cur.val) : size;
+    const next = Math.max(0, this.round2(fill - (mlNum / 1000)));
+    await this.setStateAsync('control.phCanister.currentFillL', next, true);
+    await this.setStateAsync('status.phCanister.lastCorrection', `${new Date().toLocaleString('de-DE')} - ${source}: -${Math.round(mlNum)} ml`, true);
+    await this.updatePhCanisterStatus();
+  }
+
+  async addPhCanisterConsumptionBySec(seconds, source = 'pH-Dosierung') {
+    const flow = Math.max(1, parseNum(this.config.phPumpFlowMlPerMin || 60));
+    const sec = Math.max(0, parseNum(seconds));
+    const ml = (sec * flow) / 60;
+    await this.addPhCanisterConsumptionMl(ml, source);
+  }
+
+  async handleManualPhDoseMl(value) {
+    const ml = parseNum(value);
+    await this.setStateAsync('control.ph.manualDoseMl', 0, true);
+    if (!Number.isFinite(ml) || ml <= 0) return false;
+    const flow = Math.max(1, parseNum(this.config.phPumpFlowMlPerMin || 60));
+    const sec = Math.max(1, Math.round((ml / flow) * 60));
+    const ok = await this.runDosePumpOnce(sec, { checkTime: 'manuell', phValue: 'manuell', manualDoseMl: ml });
+    if (ok) {
+      await this.setStateAsync('status.debug.lastPhStartInfo', `[PH] Manuelle Dosierung gestartet: ${Math.round(ml)} ml (${sec}s)`, true);
+    }
+    return ok;
   }
 
   async subscribeConfiguredStates() {
@@ -1817,7 +1718,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
     await this.setPhStopAtTs(stopAtTs, 'PH-Start erfolgreich');
     await this.setPhDoseHistory(Date.now(), sec);
-    await this.addPhCanisterDoseMl(sec * (parseNum(this.config.phPumpFlowMlPerMin || 0) || 0) / 60);
+    await this.addPhCanisterConsumptionBySec(sec, context.manualDoseMl ? 'manuelle pH-Dosierung' : 'pH-Dosierung');
 
 
     const msg = `[PH] Dosierpumpe EIN | Prüfzeit ${context.checkTime || '-'} | pH=${context.phValue ?? '-'} | Laufzeit=${sec}s | Stop um ${new Date(stopAtTs).toLocaleTimeString('de-DE')}`;
@@ -2375,7 +2276,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.ensureControlState('control.auto.ph', this.config.enablePhControl !== false);
       await this.ensureControlState('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
       await this.syncControlStates();
-      await this.ensurePhCanisterStates();
+      await this.syncPhCanisterFromConfig();
       await this.setStateAsync('info.connection', true, true);
       await this.subscribeConfiguredStates();
       try { this.subscribeStates('control.*'); } catch {}
@@ -2428,10 +2329,6 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onStateChange(id, state) {
     if (!state) return;
-    if (id && id.startsWith(`${this.namespace}.control.phCanister.`)) {
-      try { await this.handlePhCanisterControl(id, state); } catch (e) { this.log.warn(`pH-Kanister-Control konnte nicht angewendet werden: ${e.message || e}`); }
-      return;
-    }
     if (id && id.startsWith(`${this.namespace}.control.`)) {
       try {
         if (id === `${this.namespace}.control.standby` && !!state.val === true) {
@@ -2439,6 +2336,22 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           await this.setStateIfChanged('control.auto.chlor', false, false);
           await this.setStateIfChanged('control.auto.ph', false, false);
           await this.setStateIfChanged('control.auto.heatpump', false, false);
+        }
+        if (id === `${this.namespace}.control.phCanister.currentFillL` && state.ack === false) {
+          await this.correctPhCanisterFill(state.val, 'VIS/Admin manuell');
+          await this.renderVis();
+          return;
+        }
+        if (id === `${this.namespace}.control.phCanister.newCanister` && state.ack === false && state.val === true) {
+          await this.resetPhCanister('VIS/Admin neuer Kanister');
+          await this.renderVis();
+          return;
+        }
+        if (id === `${this.namespace}.control.ph.manualDoseMl` && state.ack === false) {
+          await this.handleManualPhDoseMl(state.val);
+          await this.applyControlLogic();
+          await this.renderVis();
+          return;
         }
         await this.applyControlLogic();
         await this.renderVis();
