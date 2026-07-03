@@ -1220,7 +1220,7 @@ body{
         </div>
         ${barHtml || ''}
       </div>`;
-    const metricValue = (value, trend = '→', ok = false) => `<span class="metric-main ${ok ? 'ok' : ''}">${esc(value)}</span><span class="trend ${trendClass(trend)} ${ok ? 'ok' : ''}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>`;
+    const metricValue = (value, trend = '→', ok = false, sparkline = '') => `<span class="metric-main ${ok ? 'ok' : ''}">${esc(value)}</span><span class="trend ${trendClass(trend)} ${ok ? 'ok' : ''}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>${sparkline ? `<span class="sparkline-wrap">${sparkline}</span>` : ''}`;
     const batteryPct = Math.max(0, Math.min(100, parseNum(data.battery)));
     const batteryBar = `<div class="mini-bar"><div class="mini-fill battery-fill" style="width:${batteryPct}%"></div></div>`;
 
@@ -1240,7 +1240,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .scale{margin:2px 0 4px}.track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.target-mark{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#ffffff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.target-label{position:relative;height:12px;font-size:9px;color:#d2dded}.target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}.scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}
 .metrics,.quick-grid,.auto-grid,.status-grid,.control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
 .ph-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.metric-label{font-size:10px;color:#d9e5f5}.metric-value{font-size:13px;font-weight:900;color:#fff}
+.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.metric-label{font-size:10px;color:#d9e5f5}.metric-value{font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center;min-width:0}.sparkline-wrap{display:inline-flex;align-items:center;margin-left:10px;flex:1;min-width:54px;max-width:96px}.sparkline{width:100%;height:24px;display:block;overflow:visible}.sparkline polyline{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;opacity:.95}.sparkline-ph{color:#48b8ff}.sparkline-orp{color:#5be878}
 .section-title{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px;line-height:1.05}
 .quick-card{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:11px;padding:5px}.quick-label{font-size:8px;color:#64748b;font-weight:700;margin-bottom:2px}.quick-value-row{display:flex;align-items:center;gap:6px}.quick-value{font-size:11px;font-weight:900;color:#0f172a;line-height:1.03}.quick-trend{font-size:15px;font-weight:900;line-height:1}.quick-trend.up{color:#ffb36b}.quick-trend.down{color:#52b7ff}.quick-trend.flat{color:#8fa3bc}.mini-bar{margin-top:4px;height:6px;border-radius:999px;background:linear-gradient(90deg,#ff6b6b 0%,#f59e0b 35%,#84cc16 65%,#22c55e 100%);position:relative;overflow:hidden}.mini-fill{height:100%;border-radius:999px}.battery-fill{background:linear-gradient(90deg,rgba(255,255,255,.28),rgba(255,255,255,.12));box-shadow:inset 0 0 0 999px rgba(255,255,255,.10)}
 .action-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:8px 10px;border-radius:12px;min-height:46px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 6px 14px rgba(6,24,44,.22);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}
@@ -1260,8 +1260,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     <div class="temp-row"><div class="temp">${esc(data.poolTemp)}</div><div class="unit">°C</div></div>
     <div class="scale"><div class="track"><div class="target-mark"></div><div class="dot"></div></div><div class="target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="metrics">
-      <div class="metric"><div class="metric-label">pH</div><div class="metric-value">${metricValue(data.ph, data.phTrend, ((data.phBadge && data.phBadge.cls) === 'ok' ? 'ok' : ((((data.phBadge && data.phBadge.cls) === 'warn') || ((data.phBadge && data.phBadge.cls) === 'bad')) ? 'bad' : '')))}</div></div>
-      <div class="metric"><div class="metric-label">ORP</div><div class="metric-value">${metricValue(data.orp, data.orpTrend, ((data.orpBadge && data.orpBadge.cls) === 'ok' ? 'ok' : ((((data.orpBadge && data.orpBadge.cls) === 'warn') || ((data.orpBadge && data.orpBadge.cls) === 'bad')) ? 'bad' : '')))}</div></div>
+      <div class="metric"><div class="metric-label">pH</div><div class="metric-value">${metricValue(data.ph, data.phTrend, ((data.phBadge && data.phBadge.cls) === 'ok' ? 'ok' : ((((data.phBadge && data.phBadge.cls) === 'warn') || ((data.phBadge && data.phBadge.cls) === 'bad')) ? 'bad' : '')), data.phSparklineSvg)}</div></div>
+      <div class="metric"><div class="metric-label">ORP</div><div class="metric-value">${metricValue(data.orp, data.orpTrend, ((data.orpBadge && data.orpBadge.cls) === 'ok' ? 'ok' : ((((data.orpBadge && data.orpBadge.cls) === 'warn') || ((data.orpBadge && data.orpBadge.cls) === 'bad')) ? 'bad' : '')), data.orpSparklineSvg)}</div></div>
       <div class="metric"><div class="metric-label">Außen</div><div class="metric-value">${metricValue(`${data.outsideTemp}°C`, data.outsideTempTrend, false)}</div></div>
       <div class="metric"><div class="metric-label">Soll</div><div class="metric-value">${esc(data.targetTemp)}°C</div></div>
     </div>
@@ -1561,7 +1561,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const deviceBtn = (label, key, active, syncCls = 'warn', syncLabel = '?') => `<button class="ps-btn js-device-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}"><span class="ps-sync ${esc(syncCls)}">${esc(syncLabel)}</span><span class="ps-btn-name">${esc(label)}</span><span class="ps-btn-state">${active ? 'EIN' : 'AUS'}</span></button>`;
     const quick = (l, v, trend = '', barHtml = '') => `<div class="ps-q"><div class="ps-ql">${esc(l)}</div><div class="ps-qvr"><div class="ps-qv">${esc(v)}</div>${trend ? `<div class="ps-qtrend ${trendClass(trend)}">${esc(trend)}</div>` : ''}</div>${barHtml || ''}</div>`;
     const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
-    const metricValue = (value, trend = '→', stateCls = '') => `<span class="ps-mmain ${stateCls}">${esc(value)}</span><span class="ps-trend ${trendClass(trend)} ${stateCls}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>`;
+    const metricValue = (value, trend = '→', stateCls = '', sparkline = '') => `<span class="ps-mmain ${stateCls}">${esc(value)}</span><span class="ps-trend ${trendClass(trend)} ${stateCls}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>${sparkline ? `<span class="ps-sparkline-wrap">${sparkline}</span>` : ''}`;
     const batteryPct = Math.max(0, Math.min(100, parseNum(data.battery)));
     const batteryBar = `<div class="ps-bbar"><div class="ps-bfill" style="width:${batteryPct}%"></div></div>`;
     return `<!-- phone-render:${esc(data.updated)} -->
@@ -1573,7 +1573,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-tempRow{display:flex;align-items:flex-end;gap:5px;margin:4px 0 4px}.ps-temp{font-size:42px;font-weight:900;line-height:.9}.ps-unit{font-size:16px;padding-bottom:4px;color:#d5e5f6}
 .ps-scale{margin:2px 0 5px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-target{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#fff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}.ps-target-label{position:relative;height:12px;font-size:9px;color:#d2dded}.ps-target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}
 .ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.ps-phGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
-.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.ps-ml{font-size:10px;color:#d9e5f5}.ps-mv{font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center}.ps-ms{display:none}.ps-mmain.ok{color:#67dd7c}.ps-mmain.bad{color:#ff7a6a}.ps-trend{font-size:18px;font-weight:900;color:#c9d7ee;line-height:1;display:inline-flex;min-width:18px;justify-content:center;margin-left:10px}.ps-trend.up{color:#ffb36b}.ps-trend.down{color:#7dd3fc}.ps-trend.flat{color:#c9d7ee}.ps-trend.ok{color:#67dd7c}.ps-trend.bad{color:#ff7a6a}.ps-section{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px}
+.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.ps-ml{font-size:10px;color:#d9e5f5}.ps-mv{font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center;min-width:0}.ps-ms{display:none}.ps-mmain.ok{color:#67dd7c}.ps-mmain.bad{color:#ff7a6a}.ps-trend{font-size:18px;font-weight:900;color:#c9d7ee;line-height:1;display:inline-flex;min-width:18px;justify-content:center;margin-left:10px}.ps-trend.up{color:#ffb36b}.ps-trend.down{color:#7dd3fc}.ps-trend.flat{color:#c9d7ee}.ps-trend.ok{color:#67dd7c}.ps-trend.bad{color:#ff7a6a}.ps-sparkline-wrap{display:inline-flex;align-items:center;margin-left:8px;flex:1;min-width:50px;max-width:92px}.sparkline{width:100%;height:23px;display:block;overflow:visible}.sparkline polyline{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;opacity:.95}.sparkline-ph{color:#48b8ff}.sparkline-orp{color:#5be878}.ps-section{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px}
 .ps-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:7px 9px;border-radius:13px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}.ps-btn:disabled{opacity:.5;cursor:default}.ps-btn-name{font-size:12px;font-weight:800}.ps-btn-state{font-size:9px;font-weight:800}.ps-btn.is-on .ps-btn-name,.ps-btn.is-on .ps-btn-state{color:#67dd7c}.ps-btn.is-off .ps-btn-name,.ps-btn.is-off .ps-btn-state{color:#ff8d7b}
 .ps-q{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.ps-ql{font-size:9px;color:#64748b;font-weight:700;margin-bottom:3px}.ps-qv{font-size:12px;font-weight:900;color:#0f172a;line-height:1.08}
 .manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:7px 9px;border-radius:999px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}.manual-btn span{font-size:13px}.manual-btn small{font-size:10px;color:#dbeafe}.manual-dose-control{display:grid;grid-template-columns:1fr;gap:5px;grid-column:1 / -1;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.manual-dose-field label{display:block;font-size:9px;color:#64748b;font-weight:800;margin-bottom:3px}.manual-dose-input{width:100%;height:34px;border-radius:10px;border:1px solid rgba(15,23,42,.14);background:#f8fafc;color:#0f172a;font-size:16px;font-weight:900;text-align:center;padding:4px 8px}.ps-can{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:8px;grid-column:1 / -1}.ps-can-top{display:flex;justify-content:space-between;font-weight:900}.ps-can-bar{height:9px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin:6px 0}.ps-can-fill{height:100%;background:#22c55e}.ps-can-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.ps-can-k{font-size:9px;color:#64748b}.ps-can-v{font-size:12px;font-weight:900;color:#0f172a}.ps-can-input{height:32px;border-radius:9px;border:1px solid #cbd5e1;padding:4px 8px}.ps-can-btn{border:none;border-radius:9px;background:#3b5bff;color:#fff;font-weight:900}.ps-can-actions{display:grid;grid-template-columns:1fr 70px;gap:5px;margin-top:6px}.ps-can-actions.two{grid-template-columns:1fr 1fr}.ps-can-btn.green{background:#25a84a}.ps-can-btn.gray{background:#475569}
@@ -1584,8 +1584,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
     <div class="ps-scale"><div class="ps-track"><div class="ps-target"></div><div class="ps-dot"></div></div><div class="ps-target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="ps-metrics">
-      <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${metricValue(data.ph, data.phTrend, ((data.phBadge && data.phBadge.cls) === 'ok' ? 'ok' : ((((data.phBadge && data.phBadge.cls) === 'warn') || ((data.phBadge && data.phBadge.cls) === 'bad')) ? 'bad' : '')))}</div></div>
-      <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${metricValue(data.orp, data.orpTrend, ((data.orpBadge && data.orpBadge.cls) === 'ok' ? 'ok' : ((((data.orpBadge && data.orpBadge.cls) === 'warn') || ((data.orpBadge && data.orpBadge.cls) === 'bad')) ? 'bad' : '')))}</div></div>
+      <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${metricValue(data.ph, data.phTrend, ((data.phBadge && data.phBadge.cls) === 'ok' ? 'ok' : ((((data.phBadge && data.phBadge.cls) === 'warn') || ((data.phBadge && data.phBadge.cls) === 'bad')) ? 'bad' : '')), data.phSparklineSvg)}</div></div>
+      <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${metricValue(data.orp, data.orpTrend, ((data.orpBadge && data.orpBadge.cls) === 'ok' ? 'ok' : ((((data.orpBadge && data.orpBadge.cls) === 'warn') || ((data.orpBadge && data.orpBadge.cls) === 'bad')) ? 'bad' : '')), data.orpSparklineSvg)}</div></div>
       <div class="ps-metric"><div class="ps-ml">Außen</div><div class="ps-mv">${metricValue(`${data.outsideTemp}°C`, data.outsideTempTrend, false)}</div></div>
       <div class="ps-metric"><div class="ps-ml">Soll</div><div class="ps-mv">${esc(data.targetTemp)}°C</div></div>
     </div>
@@ -1615,7 +1615,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Heute dosiert', `${data.phDailyCount}x`)}
     ${quick('Nächste Prüfung', data.phNextCheck)}
     ${quick('Granulat manuell', data.manualGranulateText)}
-    ${quick('pH-Minus', `${data.phCanister.critical ? '🔴 Fast leer' : (data.phCanister.warn ? '🟡 Nachbestellen' : '🟢 OK')} · ${String(data.phCanister.levelL).replace('.', ',')} / ${String(data.phCanister.sizeL).replace('.', ',')} l`)}
+    ${quick('pH-Minus', `${data.phCanister.critical ? '🔴 Fast leer' : (data.phCanister.warn ? '🟡 Nachbestellen' : '🟢 OK')} · ${String(data.phCanister.levelL).replace('.', ',')} l · ${String(data.phCanister.percent).replace('.', ',')} %`)}
     <div class="manual-dose-control">
       <div class="manual-dose-field"><label>PH Manuell Sekunden</label><input class="manual-dose-input js-manual-dose-sec" type="number" min="1" max="600" step="1" value="${esc(data.manualDoseButtonSec || 30)}"></div>
       <button class="manual-btn js-manual-dose-btn" data-sec="${Number(data.manualDoseButtonSec || 30) || 30}"><span>PH Manuell</span><small>Start Dosierung</small></button>
@@ -1765,7 +1765,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.21</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.22</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -2125,6 +2125,22 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const pvTrend = historyTrends.pvTrend || '→';
     const feedInTrend = historyTrends.feedInTrend || '→';
 
+    let historySparklines = { phSparklineSvg: '', orpSparklineSvg: '' };
+    try {
+      historySparklines = await Promise.race([
+        this.getHistorySparklines(),
+        new Promise(resolve => setTimeout(() => resolve({ phSparklineSvg: '', orpSparklineSvg: '', __timeout: true }), 1200))
+      ]);
+      if (historySparklines && historySparklines.__timeout) {
+        this.visTrace('renderVisFull History-Sparklines TIMEOUT', 'verwende leere Charts');
+      }
+    } catch (e) {
+      this.visTrace('renderVisFull History-Sparklines ERROR', String(e && e.message ? e.message : e).slice(0, 300));
+      historySparklines = { phSparklineSvg: '', orpSparklineSvg: '' };
+    }
+    const phSparklineSvg = historySparklines.phSparklineSvg || '';
+    const orpSparklineSvg = historySparklines.orpSparklineSvg || '';
+
     const phNumStable = parseNum(ph);
     const orpNumStable = parseNum(orp);
     const phInRange = Number.isFinite(phNumStable) && phNumStable >= 7.1 && phNumStable <= 7.25;
@@ -2146,6 +2162,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       phSet: this.fmt(parseNum(this.config.phSetpoint), 2, '--'),
       phTrend,
       orpTrend,
+      phSparklineSvg,
+      orpSparklineSvg,
       poolTempTrend,
       outsideTempTrend,
       pvTrend,
@@ -2221,7 +2239,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
-      adapterVersion: 'v0.3.21'
+      adapterVersion: 'v0.3.22'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -3391,6 +3409,73 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     if (delta > eps) return '↑';
     if (delta < -eps) return '↓';
     return '→';
+  }
+
+  buildSparklineSvgFromValues(values, cssClass = '') {
+    const rows = (Array.isArray(values) ? values : [])
+      .map(v => ({
+        ts: Number(v && v.ts !== undefined ? v.ts : 0),
+        val: parseNum(v && v.val !== undefined ? v.val : v)
+      }))
+      .filter(v => Number.isFinite(v.val))
+      .sort((a, b) => a.ts - b.ts);
+
+    if (rows.length < 2) return '';
+
+    const maxPoints = 56;
+    const sampled = [];
+    if (rows.length <= maxPoints) {
+      sampled.push(...rows);
+    } else {
+      for (let i = 0; i < maxPoints; i++) {
+        sampled.push(rows[Math.round(i * (rows.length - 1) / (maxPoints - 1))]);
+      }
+    }
+
+    const nums = sampled.map(v => v.val);
+    let min = Math.min(...nums);
+    let max = Math.max(...nums);
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return '';
+    if (Math.abs(max - min) < 0.0001) {
+      min -= 1;
+      max += 1;
+    }
+
+    const w = 82;
+    const h = 24;
+    const pad = 3;
+    const points = sampled.map((v, idx) => {
+      const x = sampled.length === 1 ? w / 2 : pad + (idx / (sampled.length - 1)) * (w - pad * 2);
+      const y = pad + (1 - ((v.val - min) / (max - min))) * (h - pad * 2);
+      return `${Math.round(x * 10) / 10},${Math.round(y * 10) / 10}`;
+    }).join(' ');
+
+    return `<svg class="sparkline ${cssClass}" viewBox="0 0 ${w} ${h}" aria-hidden="true" focusable="false"><polyline points="${points}"></polyline></svg>`;
+  }
+
+  async getHistorySparklines() {
+    const now = Date.now();
+    if (this.sparklineCache && this.sparklineCache.data && (now - this.sparklineCache.ts) < 300000) {
+      return this.sparklineCache.data;
+    }
+
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+
+    const result = { phSparklineSvg: '', orpSparklineSvg: '' };
+    try {
+      const [phValues, orpValues] = await Promise.all([
+        this.fetchHistoryValues(this.config.phStateId, start.getTime(), now),
+        this.fetchHistoryValues(this.config.orpStateId, start.getTime(), now)
+      ]);
+      result.phSparklineSvg = this.buildSparklineSvgFromValues(phValues, 'sparkline-ph');
+      result.orpSparklineSvg = this.buildSparklineSvgFromValues(orpValues, 'sparkline-orp');
+    } catch (e) {
+      if (this.config.debugMode) this.log.debug('[SPARKLINE] Erstellung fehlgeschlagen: ' + (e.message || e));
+    }
+
+    this.sparklineCache = { ts: now, data: result };
+    return result;
   }
 
   async getHistoryTrends() {
