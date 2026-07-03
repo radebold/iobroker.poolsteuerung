@@ -1240,7 +1240,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .scale{margin:2px 0 4px}.track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.target-mark{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#ffffff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.target-label{position:relative;height:12px;font-size:9px;color:#d2dded}.target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}.scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}
 .metrics,.quick-grid,.auto-grid,.status-grid,.control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
 .ph-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.metric-label{font-size:10px;color:#d9e5f5}.metric-value{font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center;min-width:0}.sparkline-wrap{display:inline-flex;align-items:center;margin-left:10px;flex:1;min-width:54px;max-width:96px}.sparkline{width:100%;height:24px;display:block;overflow:visible}.sparkline polyline{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;opacity:.95}.sparkline-ph{color:#48b8ff}.sparkline-orp{color:#5be878}
+.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.metric-label{font-size:10px;color:#d9e5f5}.metric-value{font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center;min-width:0}.metric-sub{margin-top:3px;font-size:9px;color:#d9e5f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sparkline-wrap{display:inline-flex;align-items:center;margin-left:10px;flex:1;min-width:54px;max-width:96px}.sparkline{width:100%;height:24px;display:block;overflow:visible}.sparkline polyline{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;opacity:.95}.sparkline-ph{color:#48b8ff}.sparkline-orp{color:#5be878}
 .section-title{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px;line-height:1.05}
 .quick-card{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:11px;padding:5px}.quick-label{font-size:8px;color:#64748b;font-weight:700;margin-bottom:2px}.quick-value-row{display:flex;align-items:center;gap:6px}.quick-value{font-size:11px;font-weight:900;color:#0f172a;line-height:1.03}.quick-trend{font-size:15px;font-weight:900;line-height:1}.quick-trend.up{color:#ffb36b}.quick-trend.down{color:#52b7ff}.quick-trend.flat{color:#8fa3bc}.mini-bar{margin-top:4px;height:6px;border-radius:999px;background:linear-gradient(90deg,#ff6b6b 0%,#f59e0b 35%,#84cc16 65%,#22c55e 100%);position:relative;overflow:hidden}.mini-fill{height:100%;border-radius:999px}.battery-fill{background:linear-gradient(90deg,rgba(255,255,255,.28),rgba(255,255,255,.12));box-shadow:inset 0 0 0 999px rgba(255,255,255,.10)}
 .action-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:8px 10px;border-radius:12px;min-height:46px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 6px 14px rgba(6,24,44,.22);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}
@@ -1260,7 +1260,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     <div class="temp-row"><div class="temp">${esc(data.poolTemp)}</div><div class="unit">°C</div></div>
     <div class="scale"><div class="track"><div class="target-mark"></div><div class="dot"></div></div><div class="target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="metrics">
-      <div class="metric"><div class="metric-label">pH</div><div class="metric-value">${metricValue(data.ph, data.phTrend, ((data.phBadge && data.phBadge.cls) === 'ok' ? 'ok' : ((((data.phBadge && data.phBadge.cls) === 'warn') || ((data.phBadge && data.phBadge.cls) === 'bad')) ? 'bad' : '')), data.phSparklineSvg)}</div></div>
+      <div class="metric"><div class="metric-label">pH</div><div class="metric-value">${metricValue(data.ph, data.phTrend, ((data.phBadge && data.phBadge.cls) === 'ok' ? 'ok' : ((((data.phBadge && data.phBadge.cls) === 'warn') || ((data.phBadge && data.phBadge.cls) === 'bad')) ? 'bad' : '')), data.phSparklineSvg)}</div><div class="metric-sub">pH-Minus: ${esc(data.phCanister.levelL)} l · ${esc(data.phCanister.percent)} %</div></div>
       <div class="metric"><div class="metric-label">ORP</div><div class="metric-value">${metricValue(data.orp, data.orpTrend, ((data.orpBadge && data.orpBadge.cls) === 'ok' ? 'ok' : ((((data.orpBadge && data.orpBadge.cls) === 'warn') || ((data.orpBadge && data.orpBadge.cls) === 'bad')) ? 'bad' : '')), data.orpSparklineSvg)}</div></div>
       <div class="metric"><div class="metric-label">Außen</div><div class="metric-value">${metricValue(`${data.outsideTemp}°C`, data.outsideTempTrend, false)}</div></div>
       <div class="metric"><div class="metric-label">Soll</div><div class="metric-value">${esc(data.targetTemp)}°C</div></div>
@@ -1573,7 +1573,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-tempRow{display:flex;align-items:flex-end;gap:5px;margin:4px 0 4px}.ps-temp{font-size:42px;font-weight:900;line-height:.9}.ps-unit{font-size:16px;padding-bottom:4px;color:#d5e5f6}
 .ps-scale{margin:2px 0 5px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-target{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#fff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}.ps-target-label{position:relative;height:12px;font-size:9px;color:#d2dded}.ps-target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}
 .ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.ps-phGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
-.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.ps-ml{font-size:10px;color:#d9e5f5}.ps-mv{font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center;min-width:0}.ps-ms{display:none}.ps-mmain.ok{color:#67dd7c}.ps-mmain.bad{color:#ff7a6a}.ps-trend{font-size:18px;font-weight:900;color:#c9d7ee;line-height:1;display:inline-flex;min-width:18px;justify-content:center;margin-left:10px}.ps-trend.up{color:#ffb36b}.ps-trend.down{color:#7dd3fc}.ps-trend.flat{color:#c9d7ee}.ps-trend.ok{color:#67dd7c}.ps-trend.bad{color:#ff7a6a}.ps-sparkline-wrap{display:inline-flex;align-items:center;margin-left:8px;flex:1;min-width:50px;max-width:92px}.sparkline{width:100%;height:23px;display:block;overflow:visible}.sparkline polyline{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;opacity:.95}.sparkline-ph{color:#48b8ff}.sparkline-orp{color:#5be878}.ps-section{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px}
+.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.ps-ml{font-size:10px;color:#d9e5f5}.ps-mv{font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center;min-width:0}.ps-ms{margin-top:3px;font-size:9px;color:#d9e5f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ps-mmain.ok{color:#67dd7c}.ps-mmain.bad{color:#ff7a6a}.ps-trend{font-size:18px;font-weight:900;color:#c9d7ee;line-height:1;display:inline-flex;min-width:18px;justify-content:center;margin-left:10px}.ps-trend.up{color:#ffb36b}.ps-trend.down{color:#7dd3fc}.ps-trend.flat{color:#c9d7ee}.ps-trend.ok{color:#67dd7c}.ps-trend.bad{color:#ff7a6a}.ps-sparkline-wrap{display:inline-flex;align-items:center;margin-left:8px;flex:1;min-width:50px;max-width:92px}.sparkline{width:100%;height:23px;display:block;overflow:visible}.sparkline polyline{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;opacity:.95}.sparkline-ph{color:#48b8ff}.sparkline-orp{color:#5be878}.ps-section{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px}
 .ps-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:7px 9px;border-radius:13px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}.ps-btn:disabled{opacity:.5;cursor:default}.ps-btn-name{font-size:12px;font-weight:800}.ps-btn-state{font-size:9px;font-weight:800}.ps-btn.is-on .ps-btn-name,.ps-btn.is-on .ps-btn-state{color:#67dd7c}.ps-btn.is-off .ps-btn-name,.ps-btn.is-off .ps-btn-state{color:#ff8d7b}
 .ps-q{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.ps-ql{font-size:9px;color:#64748b;font-weight:700;margin-bottom:3px}.ps-qv{font-size:12px;font-weight:900;color:#0f172a;line-height:1.08}
 .manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:7px 9px;border-radius:999px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}.manual-btn span{font-size:13px}.manual-btn small{font-size:10px;color:#dbeafe}.manual-dose-control{display:grid;grid-template-columns:1fr;gap:5px;grid-column:1 / -1;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.manual-dose-field label{display:block;font-size:9px;color:#64748b;font-weight:800;margin-bottom:3px}.manual-dose-input{width:100%;height:34px;border-radius:10px;border:1px solid rgba(15,23,42,.14);background:#f8fafc;color:#0f172a;font-size:16px;font-weight:900;text-align:center;padding:4px 8px}.ps-can{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:8px;grid-column:1 / -1}.ps-can-top{display:flex;justify-content:space-between;font-weight:900}.ps-can-bar{height:9px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin:6px 0}.ps-can-fill{height:100%;background:#22c55e}.ps-can-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.ps-can-k{font-size:9px;color:#64748b}.ps-can-v{font-size:12px;font-weight:900;color:#0f172a}.ps-can-input{height:32px;border-radius:9px;border:1px solid #cbd5e1;padding:4px 8px}.ps-can-btn{border:none;border-radius:9px;background:#3b5bff;color:#fff;font-weight:900}.ps-can-actions{display:grid;grid-template-columns:1fr 70px;gap:5px;margin-top:6px}.ps-can-actions.two{grid-template-columns:1fr 1fr}.ps-can-btn.green{background:#25a84a}.ps-can-btn.gray{background:#475569}
@@ -1584,7 +1584,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
     <div class="ps-scale"><div class="ps-track"><div class="ps-target"></div><div class="ps-dot"></div></div><div class="ps-target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
     <div class="ps-metrics">
-      <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${metricValue(data.ph, data.phTrend, ((data.phBadge && data.phBadge.cls) === 'ok' ? 'ok' : ((((data.phBadge && data.phBadge.cls) === 'warn') || ((data.phBadge && data.phBadge.cls) === 'bad')) ? 'bad' : '')), data.phSparklineSvg)}</div></div>
+      <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${metricValue(data.ph, data.phTrend, ((data.phBadge && data.phBadge.cls) === 'ok' ? 'ok' : ((((data.phBadge && data.phBadge.cls) === 'warn') || ((data.phBadge && data.phBadge.cls) === 'bad')) ? 'bad' : '')), data.phSparklineSvg)}</div><div class="ps-ms">pH-Minus: ${esc(data.phCanister.levelL)} l · ${esc(data.phCanister.percent)} %</div></div>
       <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${metricValue(data.orp, data.orpTrend, ((data.orpBadge && data.orpBadge.cls) === 'ok' ? 'ok' : ((((data.orpBadge && data.orpBadge.cls) === 'warn') || ((data.orpBadge && data.orpBadge.cls) === 'bad')) ? 'bad' : '')), data.orpSparklineSvg)}</div></div>
       <div class="ps-metric"><div class="ps-ml">Außen</div><div class="ps-mv">${metricValue(`${data.outsideTemp}°C`, data.outsideTempTrend, false)}</div></div>
       <div class="ps-metric"><div class="ps-ml">Soll</div><div class="ps-mv">${esc(data.targetTemp)}°C</div></div>
@@ -1765,7 +1765,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.22</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.23</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -1879,6 +1879,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const phPumpSync = await this.getVerifiedDeviceSyncInfo(this.config.phPumpSocketStateId, phPumpStateSnap, 180);
     const heatpumpSync = await this.getVerifiedDeviceSyncInfo(this.config.heatpumpPowerStateId, heatpumpStateSnap, 180);
     this.visTrace('renderVisFull Basiswerte gelesen', `pH=${ph} ORP=${orp} Temp=${poolTemp}`);
+    try {
+      await this.updateLocalTrendHistory(ph, orp);
+    } catch (e) {
+      this.visTrace('renderVisFull Local-Trend ERROR', String(e && e.message ? e.message : e).slice(0, 300));
+    }
     const wallboxChargingRawText = String(wallboxChargingStatusRaw || '').trim().toLowerCase();
     const wallboxPlugRawText = String(wallboxPlugStatusRaw || '').trim().toLowerCase();
     const wallboxIsConnected = ['connected', 'verbunden'].includes(wallboxPlugRawText);
@@ -2138,6 +2143,15 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       this.visTrace('renderVisFull History-Sparklines ERROR', String(e && e.message ? e.message : e).slice(0, 300));
       historySparklines = { phSparklineSvg: '', orpSparklineSvg: '' };
     }
+    if (!historySparklines.phSparklineSvg || !historySparklines.orpSparklineSvg) {
+      try {
+        const localSparklines = await this.getLocalTrendSparklines();
+        historySparklines.phSparklineSvg = historySparklines.phSparklineSvg || localSparklines.phSparklineSvg || '';
+        historySparklines.orpSparklineSvg = historySparklines.orpSparklineSvg || localSparklines.orpSparklineSvg || '';
+      } catch (e) {
+        this.visTrace('renderVisFull Local-Sparklines ERROR', String(e && e.message ? e.message : e).slice(0, 300));
+      }
+    }
     const phSparklineSvg = historySparklines.phSparklineSvg || '';
     const orpSparklineSvg = historySparklines.orpSparklineSvg || '';
 
@@ -2239,7 +2253,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
-      adapterVersion: 'v0.3.22'
+      adapterVersion: 'v0.3.23'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -3476,6 +3490,69 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
     this.sparklineCache = { ts: now, data: result };
     return result;
+  }
+
+
+  async ensureLocalTrendHistoryStates() {
+    await this.ensureState('status.trend.todayKey', 'string', 'text', '', false);
+    await this.ensureState('status.trend.phTodayJson', 'string', 'json', '[]', false);
+    await this.ensureState('status.trend.orpTodayJson', 'string', 'json', '[]', false);
+  }
+
+  async updateLocalTrendHistory(phValue, orpValue) {
+    await this.ensureLocalTrendHistoryStates();
+    const now = Date.now();
+    const key = new Date(now).toISOString().slice(0, 10);
+    const oldKey = await this.getText('poolsteuerung.0.status.trend.todayKey', '');
+    if (oldKey !== key) {
+      await this.setStateIfChanged('status.trend.todayKey', key, true);
+      await this.setStateIfChanged('status.trend.phTodayJson', '[]', true);
+      await this.setStateIfChanged('status.trend.orpTodayJson', '[]', true);
+    }
+
+    const updateOne = async (stateId, val) => {
+      const num = parseNum(val);
+      if (!Number.isFinite(num)) return;
+      let arr = [];
+      try {
+        const raw = await this.getText('poolsteuerung.0.' + stateId, '[]');
+        const parsed = JSON.parse(raw || '[]');
+        if (Array.isArray(parsed)) arr = parsed;
+      } catch (e) {
+        arr = [];
+      }
+      const last = arr.length ? arr[arr.length - 1] : null;
+      // nicht bei jedem Render sinnlos duplizieren; ca. alle 5 Minuten oder bei sichtbarer Änderung speichern
+      if (last && (now - Number(last.ts || 0)) < 300000 && Math.abs(Number(last.val) - num) < 0.005) return;
+      arr.push({ ts: now, val: Math.round(num * 1000) / 1000 });
+      const start = new Date(now); start.setHours(0, 0, 0, 0);
+      arr = arr.filter(x => Number(x.ts) >= start.getTime() && Number.isFinite(Number(x.val))).slice(-288);
+      await this.setStateIfChanged(stateId, JSON.stringify(arr), true);
+    };
+
+    await updateOne('status.trend.phTodayJson', phValue);
+    await updateOne('status.trend.orpTodayJson', orpValue);
+  }
+
+  async getLocalTrendSparklines() {
+    await this.ensureLocalTrendHistoryStates();
+    const readArr = async (stateId) => {
+      try {
+        const raw = await this.getText('poolsteuerung.0.' + stateId, '[]');
+        const parsed = JSON.parse(raw || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    };
+    const [phValues, orpValues] = await Promise.all([
+      readArr('status.trend.phTodayJson'),
+      readArr('status.trend.orpTodayJson')
+    ]);
+    return {
+      phSparklineSvg: this.buildSparklineSvgFromValues(phValues, 'sparkline-ph'),
+      orpSparklineSvg: this.buildSparklineSvgFromValues(orpValues, 'sparkline-orp')
+    };
   }
 
   async getHistoryTrends() {
