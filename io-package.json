@@ -89,5 +89,6 @@
     "phCanisterSizeL": 10,
     "phCanisterWarnL": 2,
     "phCanisterCriticalL": 1
-  }
+  },
+  "version": "0.3.20"
 }

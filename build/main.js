@@ -1077,19 +1077,11 @@ body{
       </div>
     </div>
 
-    <div class="phcan">
-      <div class="phcan-head"><span>pH-Minus Kanister</span><span class="${data.phCanister.critical ? 'phcan-critical' : (data.phCanister.warn ? 'phcan-warn' : 'phcan-ok')}">${data.phCanister.critical ? 'KRITISCH' : (data.phCanister.warn ? 'WARNUNG' : 'OK')}</span></div>
-      <div class="phcan-bar"><div class="phcan-fill ${data.phCanister.critical ? 'critical' : (data.phCanister.warn ? 'warn' : '')}" style="width:${Math.max(0, Math.min(100, parseNum(data.phCanister.percent)))}%"></div></div>
-      <div class="phcan-main"><div class="phcan-label">Aktueller Füllstand</div><div class="phcan-level">${esc(data.phCanister.levelL)} l</div></div>
-      <div class="phcan-grid"><div><div class="phcan-k">Größe</div><div class="phcan-v">${esc(data.phCanister.sizeL)} l</div></div><div><div class="phcan-k">Verbraucht</div><div class="phcan-v">${esc(data.phCanister.consumedL)} l</div></div><div><div class="phcan-k">Füllstand</div><div class="phcan-v">${esc(data.phCanister.percent)} %</div></div></div>
-      <div class="phcan-info">Letzte Dosis: ${esc(data.phCanister.lastDoseMl)} ml<br>Letzte Korrektur: ${esc(data.phCanister.lastCorrection)}</div>
-      <div class="phcan-actions"><input class="phcan-input js-phcan-level" type="number" min="0" step="0.01" placeholder="Füllstand l"><button class="phcan-btn" onclick="poolPhSetCanisterLevel()">Setzen</button></div>
-      <div class="phcan-actions two"><button class="phcan-btn green" onclick="poolPhNewCanister()">Neuer Kanister</button><button class="phcan-btn gray" onclick="var e=document.querySelector('.js-phcan-level'); if(e) e.value='${esc(data.phCanister.sizeL)}';">Größe</button></div>
-    </div>
 
     <div class="card">
       <div class="section extra">Zusatzwerte</div>
       <div class="mini-list">
+        ${mini('pH-Minus', `${data.phCanister.critical ? 'NICHT OK' : (data.phCanister.warn ? 'WARNUNG' : 'OK')} · ${data.phCanister.levelL} l`, data.phCanister.critical ? 'highlight' : 'info')}
         ${mini('pH zum Soll', data.phCorrectionText, data.phCorrectionNeeded ? 'highlight' : 'info')}
         ${mini('pH Zielbereich', data.phTargetRangeText, 'info')}
         ${mini('pH Tag', `${data.phDailyCount}`, 'info')}
@@ -1623,13 +1615,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ${quick('Heute dosiert', `${data.phDailyCount}x`)}
     ${quick('Nächste Prüfung', data.phNextCheck)}
     ${quick('Granulat manuell', data.manualGranulateText)}
-    <div class="ps-can">
-      <div class="ps-can-top"><span>pH-Minus Kanister</span><span>${esc(data.phCanister.levelL)} l / ${esc(data.phCanister.percent)} %</span></div>
-      <div class="ps-can-bar"><div class="ps-can-fill" style="width:${Math.max(0, Math.min(100, parseNum(data.phCanister.percent)))}%"></div></div>
-      <div class="ps-can-row"><div><div class="ps-can-k">Größe</div><div class="ps-can-v">${esc(data.phCanister.sizeL)} l</div></div><div><div class="ps-can-k">Verbraucht</div><div class="ps-can-v">${esc(data.phCanister.consumedL)} l</div></div><div><div class="ps-can-k">Letzte Dosis</div><div class="ps-can-v">${esc(data.phCanister.lastDoseMl)} ml</div></div></div>
-      <div class="ps-can-actions"><input class="ps-can-input js-phcan-level" type="number" min="0" step="0.01" placeholder="Füllstand l"><button class="ps-can-btn" onclick="poolPhSetCanisterLevel()">Setzen</button></div>
-      <div class="ps-can-actions two"><button class="ps-can-btn green" onclick="poolPhNewCanister()">Neuer Kanister</button><button class="ps-can-btn gray" onclick="var e=document.querySelector('.js-phcan-level'); if(e) e.value='${esc(data.phCanister.sizeL)}';">Größe</button></div>
-    </div>
+    ${quick('pH-Minus', `${data.phCanister.critical ? 'NICHT OK' : (data.phCanister.warn ? 'WARNUNG' : 'OK')} · ${data.phCanister.levelL} l`)}
     <div class="manual-dose-control">
       <div class="manual-dose-field"><label>PH Manuell Sekunden</label><input class="manual-dose-input js-manual-dose-sec" type="number" min="1" max="600" step="1" value="${esc(data.manualDoseButtonSec || 30)}"></div>
       <button class="manual-btn js-manual-dose-btn" data-sec="${Number(data.manualDoseButtonSec || 30) || 30}"><span>PH Manuell</span><small>Start Dosierung</small></button>
@@ -1779,7 +1765,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.19</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.20</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -2235,7 +2221,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
-      adapterVersion: 'v0.3.19'
+      adapterVersion: 'v0.3.20'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -3519,7 +3505,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] v0.3.19 Diagnose-Logging aktiv');
+      this.log.info('[VIS] v0.3.20 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
