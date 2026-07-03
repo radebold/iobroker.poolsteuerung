@@ -1,6 +1,6 @@
 # ioBroker Poolsteuerung
 
-## 0.3.21
+## 0.3.26
 
 - Tablet-VIS: Auto-Status für Pumpe, Chlor, pH und Wärmepumpe ist jetzt als klickbarer Button umgesetzt.
 - Klick schaltet die jeweiligen States `control.auto.circulation`, `control.auto.chlor`, `control.auto.ph`, `control.auto.heatpump`.
@@ -8,15 +8,15 @@
 
 # ioBroker Poolsteuerung
 
-## 0.3.16-hotfix68
+## 0.3.26-hotfix68
 - Neues Admin-UI-Feld im pH-Tab: Standarddauer PH Manuell (Sekunden).
 - Wenn leer/0, wird für manuelle pH-Dosierung auf 30 Sekunden zurückgefallen.
 - Der VIS-State control.ph.manualDoseSec wird beim Start nur initial gesetzt, wenn er leer ist.
 
 
-Version 0.3.16-hotfix68
+Version 0.3.26-hotfix68
 
-## 0.3.16-hotfix68
+## 0.3.26-hotfix68
 - Tablet-VIS aufgeräumt: Poolvolumen, Pumpenleistung und ml/0,1/10m³ aus Zusatzwerten entfernt.
 - ORP-Schaltgrenzen direkt am ORP-Wert angezeigt.
 - pH-Korrektur zum Sollwert als ml und Sekunden eingeblendet, nur wenn pH über Soll liegt.
@@ -28,23 +28,23 @@ Version 0.3.16-hotfix68
 - Temperaturprüfung und Anti-Pendel-Mindestzeiten aus der WP-Freigabelogik entfernt.
 - VIS-Render-Fix aus hotfix68 bleibt enthalten.
 
-## 0.3.16-hotfix68
+## 0.3.26-hotfix68
 - Tablet-VIS: doppelte Anzeige 'Letzte pH-Dosis' entfernt.
 - Tablet-VIS: doppelte Zusatzwert-Anzeige 'PV Schwelle' entfernt.
 
 
-## 0.3.16-hotfix68
+## 0.3.26-hotfix68
 - Manuelle pH-Dosierdauer aus der Adapter-UI wird beim Start in `control.ph.manualDoseSec` übernommen, wenn gepflegt.
 - Bei leerem/0-Konfigurationswert bleibt ein vorhandener VIS-State erhalten; fallback nur dann 30 Sekunden.
 - Tablet-VIS Schnellzugriff kompakter: PH-Manuell-Button und Eingabe kleiner.
 
 
-## v0.3.21
+## v0.3.26
 - VIS auf Basis des hochgeladenen stabilen Stands erweitert.
 - pH-Minus-Kanister in Tablet-/Phone-VIS ergänzt.
 - Manueller pH-Dosierbutton bleibt erhalten.
 - Füllstand mit 2 Nachkommastellen und Kanister-Reset.
 
 
-## 0.3.21
+## 0.3.26
 - pH-Minus-Zusatzkachel als Ampelanzeige mit deutschem Zahlenformat ergänzt.

@@ -1765,7 +1765,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.23</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.26</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -2261,7 +2261,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
-      adapterVersion: 'v0.3.23'
+      adapterVersion: 'v0.3.26'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -3446,24 +3446,24 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         ts: Number(v && v.ts !== undefined ? v.ts : 0),
         val: parseNum(v && v.val !== undefined ? v.val : v)
       }))
-      .filter(v => Number.isFinite(v.val) && Number.isFinite(v.ts))
+      .filter(v => Number.isFinite(v.val) && Number.isFinite(v.ts) && v.ts >= dayStart.getTime())
       .sort((a, b) => a.ts - b.ts);
 
-    // Für die mobile Kurve nur den relevanten Pool-Zeitraum 10:00-21:00 Uhr zeigen.
+    // Ziel: mobile Sparkline muss immer sichtbar bleiben.
+    // Wenn ausreichend Messpunkte zwischen 10-21 Uhr vorhanden sind, nutzen wir diesen Bereich.
+    // Bei wenigen Punkten nehmen wir die heutigen Werte und verteilen sie über die volle Breite.
     const inWindow = rows.filter(v => v.ts >= startMs && v.ts <= endMs);
-    if (inWindow.length) rows = inWindow;
-    else rows = rows.filter(v => v.ts >= dayStart.getTime());
+    if (inWindow.length >= 4) rows = inWindow;
 
     if (rows.length < 1) return '';
     if (rows.length === 1) {
       rows = [
-        { ts: startMs, val: rows[0].val },
-        { ts: Math.min(Math.max(Number(rows[0].ts || now), startMs), endMs), val: rows[0].val },
-        { ts: Math.min(now, endMs), val: rows[0].val }
-      ].filter((v, i, a) => i === 0 || v.ts !== a[i - 1].ts);
+        { ts: now - 900000, val: rows[0].val },
+        { ts: now, val: rows[0].val }
+      ];
     }
 
-    const maxPoints = 72;
+    const maxPoints = 64;
     const sampled = [];
     if (rows.length <= maxPoints) {
       sampled.push(...rows);
@@ -3478,41 +3478,43 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     let max = Math.max(...nums);
     if (!Number.isFinite(min) || !Number.isFinite(max)) return '';
     if (Math.abs(max - min) < 0.0001) {
-      min -= 1;
-      max += 1;
+      min -= 0.5;
+      max += 0.5;
     } else {
-      const margin = (max - min) * 0.18;
+      const margin = (max - min) * 0.22;
       min -= margin;
       max += margin;
     }
 
-    const w = 128;
-    const h = 26;
-    const padX = 2;
-    const padY = 3;
-    const effectiveEnd = Math.max(startMs + 1, Math.min(endMs, Math.max(now, sampled[sampled.length - 1].ts || now)));
-    const toX = ts => padX + ((Math.min(Math.max(ts, startMs), endMs) - startMs) / (endMs - startMs)) * (w - padX * 2);
+    const w = 150;
+    const h = 28;
+    const padX = 3;
+    const padY = 4;
+    const n = sampled.length;
+
+    // X bewusst nach Index statt Uhrzeit: so nutzt die Linie den vorhandenen Platz,
+    // auch wenn erst wenige Tagespunkte vorhanden sind.
+    const toX = i => padX + (n <= 1 ? 0 : (i / (n - 1)) * (w - padX * 2));
     const toY = val => padY + (1 - ((val - min) / (max - min))) * (h - padY * 2);
-    const pts = sampled
-      .filter(v => v.ts >= startMs && v.ts <= endMs)
-      .map(v => ({ x: toX(v.ts), y: toY(v.val) }));
+    const pts = sampled.map((v, i) => ({ x: toX(i), y: toY(v.val) }));
 
     if (pts.length < 2) {
       const y = toY(sampled[sampled.length - 1].val);
       pts.length = 0;
-      pts.push({ x: padX, y }, { x: toX(effectiveEnd), y });
+      pts.push({ x: padX, y }, { x: w - padX, y });
     }
 
     const r = n => Math.round(n * 10) / 10;
-    const path = pts.map((p, i) => {
-      if (i === 0) return `M ${r(p.x)} ${r(p.y)}`;
+    let path = `M ${r(pts[0].x)} ${r(pts[0].y)}`;
+    for (let i = 1; i < pts.length; i++) {
       const prev = pts[i - 1];
+      const p = pts[i];
       const cx = (prev.x + p.x) / 2;
-      return `C ${r(cx)} ${r(prev.y)}, ${r(cx)} ${r(p.y)}, ${r(p.x)} ${r(p.y)}`;
-    }).join(' ');
+      path += ` C ${r(cx)} ${r(prev.y)}, ${r(cx)} ${r(p.y)}, ${r(p.x)} ${r(p.y)}`;
+    }
     const last = pts[pts.length - 1];
 
-    return `<svg class="sparkline ${cssClass}" viewBox="0 0 ${w} ${h}" aria-hidden="true" focusable="false"><path d="${path}"></path><circle cx="${r(last.x)}" cy="${r(last.y)}" r="1.8"></circle></svg>`;
+    return `<svg class="sparkline ${cssClass}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="${path}"></path><circle cx="${r(last.x)}" cy="${r(last.y)}" r="1.8"></circle></svg>`;
   }
 
   async getHistorySparklines() {
@@ -3715,7 +3717,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] v0.3.21 Diagnose-Logging aktiv');
+      this.log.info('[VIS] v0.3.26 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
