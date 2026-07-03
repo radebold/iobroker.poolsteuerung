@@ -1240,7 +1240,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .scale{margin:2px 0 4px}.track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.target-mark{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#ffffff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.target-label{position:relative;height:12px;font-size:9px;color:#d2dded}.target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}.scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}
 .metrics,.quick-grid,.auto-grid,.status-grid,.control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
 .ph-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.metric-label{font-size:10px;color:#d9e5f5}.metric-value{font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center;min-width:0}.metric-sub{margin-top:3px;font-size:9px;color:#d9e5f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sparkline-wrap{display:inline-flex;align-items:center;margin-left:10px;flex:1;min-width:54px;max-width:96px}.sparkline{width:100%;height:24px;display:block;overflow:visible}.sparkline polyline{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;opacity:.95}.sparkline-ph{color:#48b8ff}.sparkline-orp{color:#5be878}
+.metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.metric-label{font-size:10px;color:#d9e5f5}.metric-value{font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center;min-width:0}.metric-sub{margin-top:3px;font-size:9px;color:#d9e5f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sparkline-wrap{display:inline-flex;align-items:center;margin-left:10px;flex:1;min-width:86px;max-width:150px}.sparkline{width:100%;height:26px;display:block;overflow:visible}.sparkline path{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;opacity:.95}.sparkline circle{fill:currentColor;opacity:.95}.sparkline-ph{color:#48b8ff}.sparkline-orp{color:#5be878}
 .section-title{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px;line-height:1.05}
 .quick-card{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:11px;padding:5px}.quick-label{font-size:8px;color:#64748b;font-weight:700;margin-bottom:2px}.quick-value-row{display:flex;align-items:center;gap:6px}.quick-value{font-size:11px;font-weight:900;color:#0f172a;line-height:1.03}.quick-trend{font-size:15px;font-weight:900;line-height:1}.quick-trend.up{color:#ffb36b}.quick-trend.down{color:#52b7ff}.quick-trend.flat{color:#8fa3bc}.mini-bar{margin-top:4px;height:6px;border-radius:999px;background:linear-gradient(90deg,#ff6b6b 0%,#f59e0b 35%,#84cc16 65%,#22c55e 100%);position:relative;overflow:hidden}.mini-fill{height:100%;border-radius:999px}.battery-fill{background:linear-gradient(90deg,rgba(255,255,255,.28),rgba(255,255,255,.12));box-shadow:inset 0 0 0 999px rgba(255,255,255,.10)}
 .action-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:8px 10px;border-radius:12px;min-height:46px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 6px 14px rgba(6,24,44,.22);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}
@@ -1573,7 +1573,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-tempRow{display:flex;align-items:flex-end;gap:5px;margin:4px 0 4px}.ps-temp{font-size:42px;font-weight:900;line-height:.9}.ps-unit{font-size:16px;padding-bottom:4px;color:#d5e5f6}
 .ps-scale{margin:2px 0 5px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-target{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#fff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}.ps-target-label{position:relative;height:12px;font-size:9px;color:#d2dded}.ps-target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}
 .ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.ps-phGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
-.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.ps-ml{font-size:10px;color:#d9e5f5}.ps-mv{font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center;min-width:0}.ps-ms{margin-top:3px;font-size:9px;color:#d9e5f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ps-mmain.ok{color:#67dd7c}.ps-mmain.bad{color:#ff7a6a}.ps-trend{font-size:18px;font-weight:900;color:#c9d7ee;line-height:1;display:inline-flex;min-width:18px;justify-content:center;margin-left:10px}.ps-trend.up{color:#ffb36b}.ps-trend.down{color:#7dd3fc}.ps-trend.flat{color:#c9d7ee}.ps-trend.ok{color:#67dd7c}.ps-trend.bad{color:#ff7a6a}.ps-sparkline-wrap{display:inline-flex;align-items:center;margin-left:8px;flex:1;min-width:50px;max-width:92px}.sparkline{width:100%;height:23px;display:block;overflow:visible}.sparkline polyline{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;opacity:.95}.sparkline-ph{color:#48b8ff}.sparkline-orp{color:#5be878}.ps-section{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px}
+.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.ps-ml{font-size:10px;color:#d9e5f5}.ps-mv{font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center;min-width:0}.ps-ms{margin-top:3px;font-size:9px;color:#d9e5f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ps-mmain.ok{color:#67dd7c}.ps-mmain.bad{color:#ff7a6a}.ps-trend{font-size:18px;font-weight:900;color:#c9d7ee;line-height:1;display:inline-flex;min-width:18px;justify-content:center;margin-left:10px}.ps-trend.up{color:#ffb36b}.ps-trend.down{color:#7dd3fc}.ps-trend.flat{color:#c9d7ee}.ps-trend.ok{color:#67dd7c}.ps-trend.bad{color:#ff7a6a}.ps-sparkline-wrap{display:inline-flex;align-items:center;margin-left:8px;flex:1;min-width:86px;max-width:150px}.sparkline{width:100%;height:26px;display:block;overflow:visible}.sparkline path{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;opacity:.95}.sparkline circle{fill:currentColor;opacity:.95}.sparkline-ph{color:#48b8ff}.sparkline-orp{color:#5be878}.ps-section{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px}
 .ps-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:7px 9px;border-radius:13px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}.ps-btn:disabled{opacity:.5;cursor:default}.ps-btn-name{font-size:12px;font-weight:800}.ps-btn-state{font-size:9px;font-weight:800}.ps-btn.is-on .ps-btn-name,.ps-btn.is-on .ps-btn-state{color:#67dd7c}.ps-btn.is-off .ps-btn-name,.ps-btn.is-off .ps-btn-state{color:#ff8d7b}
 .ps-q{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.ps-ql{font-size:9px;color:#64748b;font-weight:700;margin-bottom:3px}.ps-qv{font-size:12px;font-weight:900;color:#0f172a;line-height:1.08}
 .manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:7px 9px;border-radius:999px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}.manual-btn span{font-size:13px}.manual-btn small{font-size:10px;color:#dbeafe}.manual-dose-control{display:grid;grid-template-columns:1fr;gap:5px;grid-column:1 / -1;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.manual-dose-field label{display:block;font-size:9px;color:#64748b;font-weight:800;margin-bottom:3px}.manual-dose-input{width:100%;height:34px;border-radius:10px;border:1px solid rgba(15,23,42,.14);background:#f8fafc;color:#0f172a;font-size:16px;font-weight:900;text-align:center;padding:4px 8px}.ps-can{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:8px;grid-column:1 / -1}.ps-can-top{display:flex;justify-content:space-between;font-weight:900}.ps-can-bar{height:9px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin:6px 0}.ps-can-fill{height:100%;background:#22c55e}.ps-can-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.ps-can-k{font-size:9px;color:#64748b}.ps-can-v{font-size:12px;font-weight:900;color:#0f172a}.ps-can-input{height:32px;border-radius:9px;border:1px solid #cbd5e1;padding:4px 8px}.ps-can-btn{border:none;border-radius:9px;background:#3b5bff;color:#fff;font-weight:900}.ps-can-actions{display:grid;grid-template-columns:1fr 70px;gap:5px;margin-top:6px}.ps-can-actions.two{grid-template-columns:1fr 1fr}.ps-can-btn.green{background:#25a84a}.ps-can-btn.gray{background:#475569}
@@ -3434,20 +3434,36 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   }
 
   buildSparklineSvgFromValues(values, cssClass = '') {
-    const rows = (Array.isArray(values) ? values : [])
+    const now = Date.now();
+    const dayStart = new Date(now); dayStart.setHours(0, 0, 0, 0);
+    const windowStart = new Date(now); windowStart.setHours(10, 0, 0, 0);
+    const windowEnd = new Date(now); windowEnd.setHours(21, 0, 0, 0);
+    const startMs = windowStart.getTime();
+    const endMs = windowEnd.getTime();
+
+    let rows = (Array.isArray(values) ? values : [])
       .map(v => ({
         ts: Number(v && v.ts !== undefined ? v.ts : 0),
         val: parseNum(v && v.val !== undefined ? v.val : v)
       }))
-      .filter(v => Number.isFinite(v.val))
+      .filter(v => Number.isFinite(v.val) && Number.isFinite(v.ts))
       .sort((a, b) => a.ts - b.ts);
+
+    // Für die mobile Kurve nur den relevanten Pool-Zeitraum 10:00-21:00 Uhr zeigen.
+    const inWindow = rows.filter(v => v.ts >= startMs && v.ts <= endMs);
+    if (inWindow.length) rows = inWindow;
+    else rows = rows.filter(v => v.ts >= dayStart.getTime());
 
     if (rows.length < 1) return '';
     if (rows.length === 1) {
-      rows.push({ ts: Number(rows[0].ts || 0) + 1, val: rows[0].val });
+      rows = [
+        { ts: startMs, val: rows[0].val },
+        { ts: Math.min(Math.max(Number(rows[0].ts || now), startMs), endMs), val: rows[0].val },
+        { ts: Math.min(now, endMs), val: rows[0].val }
+      ].filter((v, i, a) => i === 0 || v.ts !== a[i - 1].ts);
     }
 
-    const maxPoints = 56;
+    const maxPoints = 72;
     const sampled = [];
     if (rows.length <= maxPoints) {
       sampled.push(...rows);
@@ -3464,18 +3480,39 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     if (Math.abs(max - min) < 0.0001) {
       min -= 1;
       max += 1;
+    } else {
+      const margin = (max - min) * 0.18;
+      min -= margin;
+      max += margin;
     }
 
-    const w = 82;
-    const h = 24;
-    const pad = 3;
-    const points = sampled.map((v, idx) => {
-      const x = sampled.length === 1 ? w / 2 : pad + (idx / (sampled.length - 1)) * (w - pad * 2);
-      const y = pad + (1 - ((v.val - min) / (max - min))) * (h - pad * 2);
-      return `${Math.round(x * 10) / 10},${Math.round(y * 10) / 10}`;
-    }).join(' ');
+    const w = 128;
+    const h = 26;
+    const padX = 2;
+    const padY = 3;
+    const effectiveEnd = Math.max(startMs + 1, Math.min(endMs, Math.max(now, sampled[sampled.length - 1].ts || now)));
+    const toX = ts => padX + ((Math.min(Math.max(ts, startMs), endMs) - startMs) / (endMs - startMs)) * (w - padX * 2);
+    const toY = val => padY + (1 - ((val - min) / (max - min))) * (h - padY * 2);
+    const pts = sampled
+      .filter(v => v.ts >= startMs && v.ts <= endMs)
+      .map(v => ({ x: toX(v.ts), y: toY(v.val) }));
 
-    return `<svg class="sparkline ${cssClass}" viewBox="0 0 ${w} ${h}" aria-hidden="true" focusable="false"><polyline points="${points}"></polyline></svg>`;
+    if (pts.length < 2) {
+      const y = toY(sampled[sampled.length - 1].val);
+      pts.length = 0;
+      pts.push({ x: padX, y }, { x: toX(effectiveEnd), y });
+    }
+
+    const r = n => Math.round(n * 10) / 10;
+    const path = pts.map((p, i) => {
+      if (i === 0) return `M ${r(p.x)} ${r(p.y)}`;
+      const prev = pts[i - 1];
+      const cx = (prev.x + p.x) / 2;
+      return `C ${r(cx)} ${r(prev.y)}, ${r(cx)} ${r(p.y)}, ${r(p.x)} ${r(p.y)}`;
+    }).join(' ');
+    const last = pts[pts.length - 1];
+
+    return `<svg class="sparkline ${cssClass}" viewBox="0 0 ${w} ${h}" aria-hidden="true" focusable="false"><path d="${path}"></path><circle cx="${r(last.x)}" cy="${r(last.y)}" r="1.8"></circle></svg>`;
   }
 
   async getHistorySparklines() {
