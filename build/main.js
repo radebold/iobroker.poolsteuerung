@@ -1252,7 +1252,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .temp-btn{appearance:none;border:none;cursor:pointer;border-radius:12px;min-height:52px;padding:8px 10px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:16px}
 .temp-center{display:flex;flex-direction:column;justify-content:center;align-items:center;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}
 .temp-center .quick-label{margin-bottom:1px}
-.temp-center .quick-value{font-size:16px}.ph-today-line{grid-column:1 / -1;display:flex;justify-content:space-between;gap:8px;align-items:center;background:#f8fafc;border:1px solid rgba(15,23,42,.08);border-radius:11px;padding:7px 9px;color:#0f172a;font-size:11px;font-weight:800}.ph-today-line b{font-size:12px}.ph-next{color:#334155;text-align:right}
+.temp-center .quick-value{font-size:16px}.ph-today-line{grid-column:1 / -1;display:flex;justify-content:space-between;gap:6px;align-items:center;background:#f8fafc;border:1px solid rgba(15,23,42,.08);border-radius:11px;padding:7px 9px;color:#0f172a;font-size:10.5px;font-weight:800;white-space:nowrap}.ph-today-line b{font-size:11.5px}.ph-next{color:#334155;text-align:right}
 </style>
 </head><body><div class="wrap">
   <div class="card hero">
@@ -1274,7 +1274,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       <div class="manual-dose-field"><label>PH Manuell</label><input class="manual-dose-input js-manual-dose-sec" type="number" min="1" max="600" step="1" value="${esc(data.manualDoseButtonSec || 30)}"></div>
       <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.manualDoseButtonSec || 30) || 30}"><span>PH Manuell</span><small>Start Dosierung</small></button>
     </div>
-    <div class="ph-today-line"><span>Heute: <b>${esc(data.phDailyMl)} ml</b> · ${esc(data.phDailyCount)}x</span><span class="ph-next">Nächste pH-Prüfung: <b>${esc(data.phNextCheck)}</b></span></div>
+    <div class="ph-today-line"><span>Heute: <b>${esc(data.phDailyMl)} ml</b> · ${esc(data.phDailyCount)}x</span><span>Letzte: <b>${esc(data.phLastCheckTime)}</b></span><span class="ph-next">Nächste: <b>${esc(data.phNextCheck)}</b></span></div>
   </div></div>
 
   <div class="card" style="min-height:138px;"><div class="section-title">Automatik</div><div class="auto-grid">
@@ -1766,7 +1766,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.27</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.28</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -1924,6 +1924,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const phDecision = await this.getText('poolsteuerung.0.status.debug.lastPhDecision', '--');
     const phDailyCount = await this.getText('poolsteuerung.0.status.phDose.dailyCount', '0');
     const phDailyMl = await this.getText('poolsteuerung.0.status.phDose.dailyMl', '0');
+    const phLastCheckTime = await this.getText('poolsteuerung.0.status.phDose.lastCheckTime', '-');
+    const phLastCheckResultRaw = await this.getText('poolsteuerung.0.status.phDose.lastCheckResult', '-');
+    const phLastCheckResult = String(phLastCheckResultRaw || '-').replace(/^pH OK /, 'OK ').replace(/^dosiert /, 'dosiert ').replace(/^würde dosieren /, 'würde dosieren ');
     const phLastDoseDurationSec = await this.getText('poolsteuerung.0.status.phDose.lastDoseDurationSec', '0');
     const phCalculatedDoseSec = await this.getText('poolsteuerung.0.status.phDose.calculatedDoseSec', '0');
     const phLastDoseTsRaw = await this.getNumber('poolsteuerung.0.status.phDose.lastDoseTs', 0);
@@ -2200,6 +2203,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       phDecision,
       phDailyCount,
       phDailyMl,
+      phLastCheckTime,
+      phLastCheckResult,
       phLastDoseDurationSec,
       phCalculatedDoseSec,
       phCalculatedDoseMl,
@@ -2264,7 +2269,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
-      adapterVersion: 'v0.3.27'
+      adapterVersion: 'v0.3.28'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -2738,8 +2743,61 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     return this.isWithinCirculationSchedule(now);
   }
 
+  getPhCheckTimesList() {
+    return String(this.config.phCheckTimes || '').split(',').map(v => v.trim()).filter(Boolean);
+  }
+
+  getPhCheckDateForHHMM(hhmm, base = new Date()) {
+    const mins = this.parseHHMM(hhmm);
+    if (mins === null) return null;
+    const d = new Date(base);
+    d.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
+    return d;
+  }
+
+  async getDuePhCheck(now = new Date()) {
+    const list = this.getPhCheckTimesList();
+    if (!list.length) return null;
+
+    await this.ensureState('status.phDose.lastProcessedCheckKey', 'string', 'text', '', false);
+    const lastState = await this.getStateAsync('status.phDose.lastProcessedCheckKey');
+    const lastKey = lastState && lastState.val ? String(lastState.val) : '';
+    const today = this.getTodayKey(now);
+
+    // Prüfzeit darf innerhalb des Poll-Intervalls/kleiner Verzögerungen nicht verloren gehen.
+    // Deshalb wird nicht mehr nur die exakte Minute verglichen, sondern ein kleines Nachlauf-Fenster genutzt.
+    const pollMin = Math.max(1, Number(this.config.pollIntervalMin) || 1);
+    const graceMin = Math.max(3, pollMin + 2);
+    const due = [];
+    for (const hhmm of list) {
+      const d = this.getPhCheckDateForHHMM(hhmm, now);
+      if (!d) continue;
+      const key = `${today} ${hhmm}`;
+      const ageMs = now.getTime() - d.getTime();
+      if (ageMs >= 0 && ageMs <= graceMin * 60000 && key !== lastKey) {
+        due.push({ hhmm, key, at: d, ageMs });
+      }
+    }
+    if (!due.length) return null;
+    due.sort((a, b) => b.at - a.at);
+    return due[0];
+  }
+
+  async markPhCheckProcessed(check, resultText = '') {
+    if (!check || !check.key) return;
+    await this.ensureState('status.phDose.lastProcessedCheckKey', 'string', 'text', '', false);
+    await this.ensureState('status.phDose.lastCheckTs', 'number', 'value.time', 0, false);
+    await this.ensureState('status.phDose.lastCheckTime', 'string', 'text', '', false);
+    await this.ensureState('status.phDose.lastCheckResult', 'string', 'text', '', false);
+    await this.setStateAsync('status.phDose.lastProcessedCheckKey', check.key, true);
+    await this.setStateAsync('status.phDose.lastCheckTs', Date.now(), true);
+    await this.setStateAsync('status.phDose.lastCheckTime', check.hhmm || '', true);
+    await this.setStateAsync('status.phDose.lastCheckResult', resultText || '', true);
+  }
+
   isPhCheckDue(now = new Date()) {
-    const list = String(this.config.phCheckTimes || '').split(',').map(v => v.trim()).filter(Boolean);
+    // Legacy-Fallback für alte Logik/Anzeigen. Die Dosierlogik nutzt getDuePhCheck().
+    const list = this.getPhCheckTimesList();
     const current = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
     return list.includes(current);
   }
@@ -3106,6 +3164,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     await this.setStateIfChanged('status.phDose.currentPhValue', phValue === null || !Number.isFinite(phValue) ? '--' : String(phValue), true);
     await this.setStateIfChanged('status.phDose.calculatedDoseSec', Number(calcDoseSec) || 0, true);
     const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const duePhCheck = await this.getDuePhCheck(now);
 
     let phDecision = 'keine Prüfung';
     if (standbyMode) {
@@ -3118,7 +3177,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       phDecision = 'Blockiert: Umwälzpumpe nicht erreichbar';
     } else if (!(await this.getHeartbeatOk('status.checks.phPump'))) {
       phDecision = 'Blockiert: pH-Dosierpumpe nicht erreichbar';
-    } else if (!this.isPhCheckDue(now)) {
+    } else if (!duePhCheck) {
       phDecision = `warte auf Prüfzeit (${this.config.phCheckTimes || '-'})`;
     } else if (phValue === null || !Number.isFinite(phValue)) {
       phDecision = 'pH ungültig';
@@ -3140,13 +3199,16 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       }
       phDecision = stopAtTs ? `Dosierpumpe läuft bis ${new Date(stopAtTs).toLocaleTimeString('de-DE')}` : 'Dosierpumpe läuft bereits';
     } else {
-      const ok = await this.runDosePumpOnce(calcDoseSec, { checkTime: currentHHMM, phValue });
+      const ok = await this.runDosePumpOnce(calcDoseSec, { checkTime: duePhCheck ? duePhCheck.hhmm : currentHHMM, phValue });
       if (ok) {
         const newCount = await this.incrementTodayDoseCount(now);
         phDecision = `${this.config.simulateMode ? 'würde dosieren' : 'dosiert'} ${calcDoseSec}s | pH ${phValue} > ${phSet}+${phTolerance} | Tag ${newCount}/${doseMaxPerDay}`;
       } else {
         phDecision = 'Dosierung fehlgeschlagen';
       }
+    }
+    if (duePhCheck) {
+      await this.markPhCheckProcessed(duePhCheck, phDecision);
     }
     await this.setStateAsync('status.debug.lastPumpDecision', pumpDecision, true);
     const lastPumpLoggedDecisionState = await this.getStateAsync('status.debug.lastPumpLoggedDecision');
@@ -3735,7 +3797,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] v0.3.27 Diagnose-Logging aktiv');
+      this.log.info('[VIS] v0.3.28 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
