@@ -1274,7 +1274,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       <div class="manual-dose-field"><label>PH Manuell</label><input class="manual-dose-input js-manual-dose-sec" type="number" min="1" max="600" step="1" value="${esc(data.manualDoseButtonSec || 30)}"></div>
       <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.manualDoseButtonSec || 30) || 30}"><span>PH Manuell</span><small>Start Dosierung</small></button>
     </div>
-    <div class="ph-today-line"><span>Heute: <b>${esc(data.phDailyMl)} ml</b> · ${esc(data.phDailyCount)}x</span><span>Letzte: <b>${esc(data.phLastCheckTime)}</b></span><span class="ph-next">Nächste: <b>${esc(data.phNextCheck)}</b></span></div>
+    <div class="ph-today-line"><span>🧪 Heute: <b>${esc(data.phDailyMl)} ml</b> · ${esc(data.phDailyCount)}x</span><span>✔ Letzte: <b>${esc(data.phLastDoseTime)}</b> (${esc(data.phLastDoseMl)} ml)</span><span class="ph-next">⏰ Nächste: <b>${esc(data.phNextCheck)}</b></span></div>
   </div></div>
 
   <div class="card" style="min-height:138px;"><div class="section-title">Automatik</div><div class="auto-grid">
@@ -1766,7 +1766,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.28</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.29</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -2269,7 +2269,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
-      adapterVersion: 'v0.3.28'
+      adapterVersion: 'v0.3.29'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -2561,8 +2561,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     if (!current && prev) {
       if (!this.phManagedActive && this.phManualStartedAt) {
         const durationSec = Math.max(1, Math.round((ts - this.phManualStartedAt) / 1000));
-        await this.setPhDoseHistory(this.phManualStartedAt, durationSec);
-        const newCount = await this.incrementTodayDoseCount(new Date(ts));
+        const newCount = await this.setPhDoseHistory(this.phManualStartedAt, durationSec, { actual: true });
         const msg = `[PH] Manuell dosiert | Laufzeit=${durationSec}s | Tag ${newCount}`;
         await this.setStateAsync('status.debug.lastPhStartInfo', msg, true);
         if (this.config.debugMode) this.log.info(msg);
@@ -2877,6 +2876,12 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     await this.ensureState('status.phDose.lastDoseDurationSec', 'number', 'value.interval', 0, false);
     await this.ensureState('status.debug.lastPhStartInfo', 'string', 'text', '', false);
 
+    const alreadyStopAt = await this.getEffectivePhStopAtTs(false);
+    if (this.phManagedActive || (alreadyStopAt && Date.now() < alreadyStopAt)) {
+      if (this.config.debugMode) this.log.info('[PH] Dosierstart ignoriert: Dosierung läuft bereits oder ist geplant');
+      return false;
+    }
+
     const circulationOn = circulationId ? await this.getBool(circulationId) : false;
     const isManualStart = context && context.manual === true;
     const circulationHeartbeatOk = isManualStart ? true : await this.getHeartbeatOk('status.checks.circulationPump');
@@ -2903,7 +2908,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     if (this.config.simulateMode) {
       this.phManagedActive = true;
       await this.setPhStopAtTs(stopAtTs, 'Start Simulationsmodus');
-      await this.setPhDoseHistory(Date.now(), sec);
+      await this.setPhDoseHistory(Date.now(), sec, { actual: false });
       const msg = `[PH] würde dosieren | Prüfzeit ${context.checkTime || '-'} | pH=${context.phValue ?? '-'} | Laufzeit=${sec}s | Stop um ${new Date(stopAtTs).toLocaleTimeString('de-DE')}`;
       await this.setStateAsync('status.debug.lastPhStartInfo', msg, true);
       if (this.config.debugMode) this.log.info(msg);
@@ -2919,8 +2924,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     }
 
     await this.setPhStopAtTs(stopAtTs, 'PH-Start erfolgreich');
-    await this.setPhDoseHistory(Date.now(), sec);
-
+    const startTs = Date.now();
+    await this.ensureState('status.phDose.pendingStartTs', 'number', 'value.time', 0, false);
+    await this.ensureState('status.phDose.pendingDurationSec', 'number', 'value.interval', 0, false);
+    await this.setStateIfChanged('status.phDose.pendingStartTs', startTs, true);
+    await this.setStateIfChanged('status.phDose.pendingDurationSec', sec, true);
 
     const msg = `[PH] Dosierpumpe EIN | Prüfzeit ${context.checkTime || '-'} | pH=${context.phValue ?? '-'} | Laufzeit=${sec}s | Stop um ${new Date(stopAtTs).toLocaleTimeString('de-DE')}`;
     await this.setStateAsync('status.debug.lastPhStartInfo', msg, true);
@@ -3201,8 +3209,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     } else {
       const ok = await this.runDosePumpOnce(calcDoseSec, { checkTime: duePhCheck ? duePhCheck.hhmm : currentHHMM, phValue });
       if (ok) {
-        const newCount = await this.incrementTodayDoseCount(now);
-        phDecision = `${this.config.simulateMode ? 'würde dosieren' : 'dosiert'} ${calcDoseSec}s | pH ${phValue} > ${phSet}+${phTolerance} | Tag ${newCount}/${doseMaxPerDay}`;
+        const plannedCount = dailyCount + 1;
+        phDecision = `${this.config.simulateMode ? 'würde dosieren' : 'Dosierung gestartet'} ${calcDoseSec}s | pH ${phValue} > ${phSet}+${phTolerance} | Tag ${plannedCount}/${doseMaxPerDay}`;
       } else {
         phDecision = 'Dosierung fehlgeschlagen';
       }
@@ -3257,21 +3265,30 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
 
 
-  async setPhDoseHistory(ts, durationSec) {
-    const tsNum = Number(ts) || 0;
+  async setPhDoseHistory(ts, durationSec, options = {}) {
+    const actual = options && options.actual === false ? false : true;
+    const tsNum = Number(ts) || Date.now();
     const durNum = Number(durationSec) || 0;
     this.phLastDoseTsMemory = tsNum;
     this.phLastDoseDurationSecMemory = durNum;
     await this.ensureState('status.phDose.lastDoseTs', 'number', 'value.time', 0, false);
     await this.ensureState('status.phDose.lastDoseDurationSec', 'number', 'value.interval', 0, false);
+    await this.ensureState('status.phDose.lastDoseMl', 'number', 'value', 0, false);
     await this.setStateIfChanged('status.phDose.lastDoseTs', tsNum, true);
     await this.setStateIfChanged('status.phDose.lastDoseDurationSec', durNum, true);
+
     const flow = parseNum(this.config.phPumpFlowMlPerMin);
-    if (Number.isFinite(flow) && flow > 0 && durNum > 0) {
-      const doseMl = (durNum * flow) / 60;
-      await this.addPhCanisterConsumptionMl(doseMl);
-      await this.addTodayDoseMl(doseMl, new Date(tsNum || Date.now()));
+    const doseMl = (Number.isFinite(flow) && flow > 0 && durNum > 0) ? (durNum * flow) / 60 : 0;
+    await this.setStateIfChanged('status.phDose.lastDoseMl', Math.round(doseMl), true);
+
+    if (!actual || doseMl <= 0) {
+      return await this.getTodayDoseCount(new Date(tsNum || Date.now()));
     }
+
+    await this.addPhCanisterConsumptionMl(doseMl);
+    await this.addTodayDoseMl(doseMl, new Date(tsNum || Date.now()));
+    const newCount = await this.incrementTodayDoseCount(new Date(tsNum || Date.now()));
+    return newCount;
   }
 
   async getEffectivePhStopAtTs(phPumpCurrent = false) {
@@ -3321,6 +3338,21 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           await this.setPhStopAtTs(0, `PH-AUS bestätigt wegen ${stopReason}`);
           this.phDoseStopAtTsMemory = 0;
           this.lastWrittenPhStopAtTs = 0;
+          if (stopReason === 'Sollzeit erreicht') {
+            try {
+              await this.ensureState('status.phDose.pendingStartTs', 'number', 'value.time', 0, false);
+              await this.ensureState('status.phDose.pendingDurationSec', 'number', 'value.interval', 0, false);
+              const pst = await this.getStateAsync('status.phDose.pendingStartTs');
+              const pdu = await this.getStateAsync('status.phDose.pendingDurationSec');
+              const startTs = Number(pst && pst.val) || (Date.now() - (Number(pdu && pdu.val) || 0) * 1000);
+              const durSec = Math.max(1, Number(pdu && pdu.val) || Math.round((Date.now() - startTs) / 1000));
+              await this.setPhDoseHistory(startTs, durSec, { actual: true });
+              await this.setStateIfChanged('status.phDose.pendingStartTs', 0, true);
+              await this.setStateIfChanged('status.phDose.pendingDurationSec', 0, true);
+            } catch (e) {
+              this.log.warn('[PH] Dosierhistorie konnte beim Stopp nicht geschrieben werden: ' + (e.message || e));
+            }
+          }
           this.phManagedActive = false;
           this.log.info(`[PH] Dosierpumpe AUS | Grund ${stopReason}`);
           if ((stopReason === 'Umwälzpumpe AUS' || stopReason === 'Umwälzpumpe nicht erreichbar' || stopReason === 'pH-Dosierpumpe nicht erreichbar') && this.config.alertOnPhDoseAborted) {
@@ -3797,7 +3829,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] v0.3.28 Diagnose-Logging aktiv');
+      this.log.info('[VIS] v0.3.29 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
@@ -3995,10 +4027,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           this.lastManualPhTriggerTs = nowTs;
           const manualSecState = await this.getStateAsync('control.ph.manualDoseSec');
           const manualSec = Math.max(1, Number(manualSecState && manualSecState.val) || 30);
-          const ok = await this.runDosePumpOnce(manualSec, { checkTime: 'MANUELL', phValue: 'manuell', manual: true });
-          if (ok) {
-            await this.incrementTodayDoseCount(new Date());
-          }
+          await this.runDosePumpOnce(manualSec, { checkTime: 'MANUELL', phValue: 'manuell', manual: true });
           await this.setStateIfChanged('control.ph.manualStart', false, false);
           await this.setStateIfChanged('control.ph.manualTrigger', 0, false);
           await this.applyControlLogic();
