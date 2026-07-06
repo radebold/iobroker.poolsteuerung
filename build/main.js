@@ -1247,12 +1247,12 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .action-name{font-size:12px;font-weight:800}.action-state{font-size:9px;font-weight:800}
 .action-btn.is-on .action-name,.action-btn.is-on .action-state{color:#67dd7c}
 .action-btn.is-off .action-name,.action-btn.is-off .action-state{color:#ff8d7b}
-.manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:8px 10px;border-radius:999px;min-height:42px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 6px 14px rgba(6,24,44,.22);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}
-.manual-btn span{font-size:12px}.manual-btn small{font-size:8px;color:#dbeafe}.manual-dose-control{display:grid;grid-template-columns:1fr;gap:5px;grid-column:1 / -1;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.manual-dose-field label{display:block;font-size:9px;color:#64748b;font-weight:800;margin-bottom:3px}.manual-dose-input{width:100%;height:36px;border-radius:10px;border:1px solid rgba(15,23,42,.14);background:#f8fafc;color:#0f172a;font-size:18px;font-weight:900;text-align:center;padding:4px 8px}
+.manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:6px 10px;border-radius:999px;min-height:42px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 6px 14px rgba(6,24,44,.22);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:800}
+.manual-btn span{font-size:12px}.manual-btn small{font-size:8px;color:#dbeafe}.manual-dose-control{display:grid;grid-template-columns:96px 1fr;gap:6px;grid-column:1 / -1;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.manual-dose-field label{display:block;font-size:9px;color:#64748b;font-weight:800;margin-bottom:3px}.manual-dose-input{width:100%;height:36px;border-radius:10px;border:1px solid rgba(15,23,42,.14);background:#f8fafc;color:#0f172a;font-size:18px;font-weight:900;text-align:center;padding:4px 8px}
 .temp-btn{appearance:none;border:none;cursor:pointer;border-radius:12px;min-height:52px;padding:8px 10px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:16px}
 .temp-center{display:flex;flex-direction:column;justify-content:center;align-items:center;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}
 .temp-center .quick-label{margin-bottom:1px}
-.temp-center .quick-value{font-size:16px}
+.temp-center .quick-value{font-size:16px}.ph-today-line{grid-column:1 / -1;display:flex;justify-content:space-between;gap:8px;align-items:center;background:#f8fafc;border:1px solid rgba(15,23,42,.08);border-radius:11px;padding:7px 9px;color:#0f172a;font-size:11px;font-weight:800}.ph-today-line b{font-size:12px}.ph-next{color:#334155;text-align:right}
 </style>
 </head><body><div class="wrap">
   <div class="card hero">
@@ -1267,13 +1267,14 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     </div>
   </div>
 
-  <div class="card" style="min-height:132px;"><div class="section-title">Schnellzugriff</div><div class="control-grid">
+  <div class="card"><div class="section-title">Schnellzugriff</div><div class="control-grid">
     <button type="button" class="action-btn js-standby-btn ${data.standbyControl ? 'is-on' : 'is-off'}" data-current="${data.standbyControl ? '1' : '0'}"><span class="action-name">Standby</span><span class="action-state">${data.standbyControl ? 'AKTIV' : 'AUS'}</span></button>
     <div class="temp-center"><div class="quick-label">Poolsolltemperatur</div><div class="quick-value">${esc(data.targetTemp)}°C</div></div>
     <div class="manual-dose-control">
-      <div class="manual-dose-field"><label>PH Manuell Sekunden</label><input class="manual-dose-input js-manual-dose-sec" type="number" min="1" max="600" step="1" value="${esc(data.manualDoseButtonSec || 30)}"></div>
+      <div class="manual-dose-field"><label>PH Manuell</label><input class="manual-dose-input js-manual-dose-sec" type="number" min="1" max="600" step="1" value="${esc(data.manualDoseButtonSec || 30)}"></div>
       <button type="button" class="manual-btn js-manual-dose-btn" data-sec="${Number(data.manualDoseButtonSec || 30) || 30}"><span>PH Manuell</span><small>Start Dosierung</small></button>
     </div>
+    <div class="ph-today-line"><span>Heute: <b>${esc(data.phDailyMl)} ml</b> · ${esc(data.phDailyCount)}x</span><span class="ph-next">Nächste pH-Prüfung: <b>${esc(data.phNextCheck)}</b></span></div>
   </div></div>
 
   <div class="card" style="min-height:138px;"><div class="section-title">Automatik</div><div class="auto-grid">
@@ -1612,7 +1613,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   <div class="ps-card"><div class="ps-section">pH Info</div><div class="ps-quickGrid ps-phGrid">
     ${quick('Berechnet', `${data.phCalculatedDoseSec} s / ${data.phCalculatedDoseMl} ml`)}
     ${quick('Letzte Dosis', data.phLastDoseInfo)}
-    ${quick('Heute dosiert', `${data.phDailyCount}x`)}
+    ${quick('Heute dosiert', `${data.phDailyMl} ml · ${data.phDailyCount}x`)}
     ${quick('Nächste Prüfung', data.phNextCheck)}
     ${quick('Granulat manuell', data.manualGranulateText)}
     ${quick('pH-Minus', `${data.phCanister.critical ? '🔴 Fast leer' : (data.phCanister.warn ? '🟡 Nachbestellen' : '🟢 OK')} · ${String(data.phCanister.levelL).replace('.', ',')} l · ${String(data.phCanister.percent).replace('.', ',')} %`)}
@@ -1765,7 +1766,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.26</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.27</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -1922,6 +1923,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const pumpDecision = await this.getText('poolsteuerung.0.status.debug.lastPumpDecision', standbyMode ? 'Standby aktiv' : '--');
     const phDecision = await this.getText('poolsteuerung.0.status.debug.lastPhDecision', '--');
     const phDailyCount = await this.getText('poolsteuerung.0.status.phDose.dailyCount', '0');
+    const phDailyMl = await this.getText('poolsteuerung.0.status.phDose.dailyMl', '0');
     const phLastDoseDurationSec = await this.getText('poolsteuerung.0.status.phDose.lastDoseDurationSec', '0');
     const phCalculatedDoseSec = await this.getText('poolsteuerung.0.status.phDose.calculatedDoseSec', '0');
     const phLastDoseTsRaw = await this.getNumber('poolsteuerung.0.status.phDose.lastDoseTs', 0);
@@ -2197,6 +2199,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       pumpDecision,
       phDecision,
       phDailyCount,
+      phDailyMl,
       phLastDoseDurationSec,
       phCalculatedDoseSec,
       phCalculatedDoseMl,
@@ -2261,7 +2264,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
-      adapterVersion: 'v0.3.26'
+      adapterVersion: 'v0.3.27'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -2749,6 +2752,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   async getTodayDoseCount(now = new Date()) {
     await this.ensureState('status.phDose.dayKey', 'string', 'text', '', false);
     await this.ensureState('status.phDose.dailyCount', 'number', 'value', 0, false);
+    await this.ensureState('status.phDose.dailyMl', 'number', 'value', 0, false);
     const dayKeyState = await this.getStateAsync('status.phDose.dayKey');
     const countState = await this.getStateAsync('status.phDose.dailyCount');
     const today = this.getTodayKey(now);
@@ -2757,6 +2761,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       count = 0;
       await this.setStateAsync('status.phDose.dayKey', today, true);
       await this.setStateAsync('status.phDose.dailyCount', 0, true);
+      await this.setStateAsync('status.phDose.dailyMl', 0, true);
     }
     return count;
   }
@@ -2766,6 +2771,17 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     await this.setStateAsync('status.phDose.dayKey', this.getTodayKey(now), true);
     await this.setStateAsync('status.phDose.dailyCount', count + 1, true);
     return count + 1;
+  }
+
+  async addTodayDoseMl(ml, now = new Date()) {
+    await this.getTodayDoseCount(now);
+    await this.ensureState('status.phDose.dailyMl', 'number', 'value', 0, false);
+    const s = await this.getStateAsync('status.phDose.dailyMl');
+    const current = Number(s && s.val) || 0;
+    const add = Number(ml) || 0;
+    const next = Math.max(0, Math.round((current + add) * 10) / 10);
+    await this.setStateAsync('status.phDose.dailyMl', next, true);
+    return next;
   }
 
 
@@ -3190,7 +3206,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     await this.setStateIfChanged('status.phDose.lastDoseDurationSec', durNum, true);
     const flow = parseNum(this.config.phPumpFlowMlPerMin);
     if (Number.isFinite(flow) && flow > 0 && durNum > 0) {
-      await this.addPhCanisterConsumptionMl((durNum * flow) / 60);
+      const doseMl = (durNum * flow) / 60;
+      await this.addPhCanisterConsumptionMl(doseMl);
+      await this.addTodayDoseMl(doseMl, new Date(tsNum || Date.now()));
     }
   }
 
@@ -3717,7 +3735,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] v0.3.26 Diagnose-Logging aktiv');
+      this.log.info('[VIS] v0.3.27 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
