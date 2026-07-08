@@ -640,6 +640,17 @@
           "lg": 4,
           "help": "Standard: 10 Liter. Der aktuelle Füllstand wird in der VIS gesetzt."
         },
+        "phCanisterCurrentLevelL": {
+          "type": "number",
+          "label": "Aktueller Füllstand pH-Minus (Liter)",
+          "newLine": false,
+          "sm": 12,
+          "md": 4,
+          "lg": 4,
+          "min": 0,
+          "step": 0.01,
+          "help": "Hier den am Kanister gemessenen Restinhalt eintragen, z. B. 1,85. Wird beim Speichern als Korrektur übernommen."
+        },
         "phCanisterWarnL": {
           "type": "number",
           "label": "Nachbestellen ab Rest (Liter)",
