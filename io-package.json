@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.3.30",
+    "version": "0.3.32",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -91,5 +91,5 @@
     "phCanisterCriticalL": 1,
     "phCanisterCurrentLevelL": ""
   },
-  "version": "0.3.30"
+  "version": "0.3.32"
 }

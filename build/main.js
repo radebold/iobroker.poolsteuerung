@@ -62,6 +62,7 @@ class Poolsteuerung extends utils.Adapter {
   lastPhPumpOn = false;
   phManualStartedAt = 0;
   phManagedActive = false;
+  phDoseHistoryKeys = new Set();
   trendCache = { ts: 0, data: null };
   controlTransitionUntil = 0;
 
@@ -76,6 +77,7 @@ class Poolsteuerung extends utils.Adapter {
     this.phDoseStopAtTsMemory = 0;
     this.phLastDoseTsMemory = 0;
     this.phLastDoseDurationSecMemory = 0;
+    this.phDoseHistoryKeys = new Set();
     this.isShuttingDown = false;
     this.pendingTimeouts = new Set();
     this.on('ready', this.onReady.bind(this));
@@ -852,8 +854,8 @@ class Poolsteuerung extends utils.Adapter {
         <span class="auto-toggle-state">${active ? 'AKTIV' : 'AUS'}</span>
       </button>`;
 
-    const status = (name, hint, on, syncCls = 'warn', syncLabel = '?') => `
-      <div class="status-row ${on ? 'status-on' : 'status-off'}">
+    const status = (name, hint, key, on, syncCls = 'warn', syncLabel = '?') => `
+      <button type="button" class="status-row js-device-btn ${on ? 'status-on' : 'status-off'}" data-key="${esc(key)}" data-current="${on ? '1' : '0'}">
         <div class="status-left">
           <div class="status-name">${esc(name)}</div>
           <div class="status-hint">${esc(hint)}</div>
@@ -862,7 +864,7 @@ class Poolsteuerung extends utils.Adapter {
           <div class="sync-badge ${esc(syncCls)}">${esc(syncLabel)}</div>
           <div class="pill ${on ? 'on' : 'off'}">${on ? 'EIN' : 'AUS'}</div>
         </div>
-      </div>`;
+      </button>`;
 
     const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
     const phClass = phBadge && phBadge.cls ? phBadge.cls : '';
@@ -966,7 +968,7 @@ body{
 .kv-value{font-size:13px;font-weight:900;line-height:1.15;text-align:right;word-break:break-word;max-width:58%}
 .status-card{margin-bottom:10px}
 .status-list{display:grid;gap:6px}
-.status-row{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:6px}
+.status-row{appearance:none;width:100%;font-family:inherit;color:#fff;cursor:pointer;text-align:left;display:flex;justify-content:space-between;gap:8px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:6px}.status-right{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
 .status-on{background:linear-gradient(90deg,rgba(78,204,102,.10),rgba(255,255,255,.04))}
 .status-off{background:linear-gradient(90deg,rgba(255,108,95,.10),rgba(255,255,255,.04))}
 .status-left{min-width:0;max-width:calc(100% - 86px)}
@@ -1070,10 +1072,10 @@ body{
     <div class="card status-card">
       <div class="section status">Aktoren & Status</div>
       <div class="status-list">
-        ${status('Umwälzpumpe', 'IST-Zustand', data.pumpOn, data.pumpSyncCls, data.pumpSyncLabel)}
-        ${status('Chlorinator', 'ORP-Regelung', data.chlorOn, data.chlorSyncCls, data.chlorSyncLabel)}
-        ${status('pH-Dosierpumpe', 'Prüfzeiten', data.phPumpOn, data.phPumpSyncCls, data.phPumpSyncLabel)}
-        ${status('Wärmepumpe', 'PV-Freigabe', data.heatpumpOn, data.heatpumpSyncCls, data.heatpumpSyncLabel)}
+        ${status('Umwälzpumpe', 'IST-Zustand', 'circulation', data.pumpOn, data.pumpSyncCls, data.pumpSyncLabel)}
+        ${status('Chlorinator', 'ORP-Regelung', 'chlorinator', data.chlorOn, data.chlorSyncCls, data.chlorSyncLabel)}
+        ${status('pH-Dosierpumpe', 'Prüfzeiten', 'phPump', data.phPumpOn, data.phPumpSyncCls, data.phPumpSyncLabel)}
+        ${status('Wärmepumpe', 'PV-Freigabe', 'heatpump', data.heatpumpOn, data.heatpumpSyncCls, data.heatpumpSyncLabel)}
       </div>
     </div>
 
@@ -1132,6 +1134,17 @@ body{
   window.poolToggleControl = async function(key,current){
     const ns=${JSON.stringify(data.namespace)};
     const ok=await window.poolSetState(ns+'.control.auto.'+key, !current);
+    if(!ok) alert('VIS setState nicht verfügbar');
+  };
+  window.poolToggleState = async function(key,current){
+    const ns=${JSON.stringify(data.namespace)};
+    let ctrl='';
+    if(key==='circulation') ctrl='.control.device.circulation';
+    else if(key==='chlorinator') ctrl='.control.device.chlorinator';
+    else if(key==='phPump') ctrl='.control.device.phPump';
+    else if(key==='heatpump') ctrl='.control.device.heatpump';
+    if(!ctrl){ alert('Kein Control-Key hinterlegt'); return; }
+    const ok=await window.poolSetState(ns+ctrl, !current);
     if(!ok) alert('VIS setState nicht verfügbar');
   };
   window.poolPhManualDose = async function(sec){
@@ -1766,7 +1779,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.30</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.32</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -3287,6 +3300,27 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const actual = options && options.actual === false ? false : true;
     const tsNum = Number(ts) || Date.now();
     const durNum = Number(durationSec) || 0;
+
+    // Wichtig: dieselbe physische Dosierung darf nur einmal in die Tagesstatistik laufen.
+    // stopAt-Timer, Polling und Readback können das Dosierende nahezu gleichzeitig erkennen.
+    const historyKey = `${actual ? 'A' : 'S'}:${Math.round(tsNum / 1000)}:${Math.round(durNum)}`;
+    if (actual) {
+      if (!this.phDoseHistoryKeys) this.phDoseHistoryKeys = new Set();
+      if (this.phDoseHistoryKeys.has(historyKey)) {
+        return await this.getTodayDoseCount(new Date(tsNum || Date.now()));
+      }
+      this.phDoseHistoryKeys.add(historyKey);
+      if (this.phDoseHistoryKeys.size > 50) {
+        this.phDoseHistoryKeys = new Set(Array.from(this.phDoseHistoryKeys).slice(-25));
+      }
+      await this.ensureState('status.phDose.lastHistoryKey', 'string', 'text', '', false);
+      const lastHistoryKeyState = await this.getStateAsync('status.phDose.lastHistoryKey');
+      if (lastHistoryKeyState && String(lastHistoryKeyState.val || '') === historyKey) {
+        return await this.getTodayDoseCount(new Date(tsNum || Date.now()));
+      }
+      await this.setStateIfChanged('status.phDose.lastHistoryKey', historyKey, true);
+    }
+
     this.phLastDoseTsMemory = tsNum;
     this.phLastDoseDurationSecMemory = durNum;
     await this.ensureState('status.phDose.lastDoseTs', 'number', 'value.time', 0, false);
@@ -3362,11 +3396,16 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
               await this.ensureState('status.phDose.pendingDurationSec', 'number', 'value.interval', 0, false);
               const pst = await this.getStateAsync('status.phDose.pendingStartTs');
               const pdu = await this.getStateAsync('status.phDose.pendingDurationSec');
-              const startTs = Number(pst && pst.val) || (Date.now() - (Number(pdu && pdu.val) || 0) * 1000);
-              const durSec = Math.max(1, Number(pdu && pdu.val) || Math.round((Date.now() - startTs) / 1000));
-              await this.setPhDoseHistory(startTs, durSec, { actual: true });
+              const pendingStart = Number(pst && pst.val) || 0;
+              const pendingDur = Number(pdu && pdu.val) || 0;
+              const startTs = pendingStart || (Date.now() - pendingDur * 1000);
+              const durSec = Math.max(1, pendingDur || Math.round((Date.now() - startTs) / 1000));
+              // Pending sofort leeren, damit parallele Stop-Prüfungen dieselbe Dosis nicht mehrfach zählen.
               await this.setStateIfChanged('status.phDose.pendingStartTs', 0, true);
               await this.setStateIfChanged('status.phDose.pendingDurationSec', 0, true);
+              if (pendingStart || pendingDur) {
+                await this.setPhDoseHistory(startTs, durSec, { actual: true });
+              }
             } catch (e) {
               this.log.warn('[PH] Dosierhistorie konnte beim Stopp nicht geschrieben werden: ' + (e.message || e));
             }
