@@ -1167,6 +1167,30 @@ body{
     const ok=await window.poolSetState(ns + '.control.ph.canister.newCanister', true);
     if(!ok) alert('VIS setState nicht verfügbar');
   };
+
+  function poolMarkPending(el){
+    try{
+      if(!el || el.dataset.pending === '1') return;
+      el.dataset.pending = '1';
+      el.dataset.oldPointerEvents = el.style.pointerEvents || '';
+      el.dataset.oldBackground = el.style.background || '';
+      const state = el.querySelector('.action-state,.auto-toggle-state,.ps-btn-state,.ps-state');
+      if(state){ state.dataset.oldText = state.textContent || ''; state.textContent = 'SCHALTE...'; }
+      el.classList.add('is-pending');
+      el.style.pointerEvents = 'none';
+      el.style.background = 'linear-gradient(90deg, rgba(245,158,11,.34), rgba(255,255,255,.08))';
+      setTimeout(function(){
+        try{
+          el.dataset.pending = '0';
+          el.classList.remove('is-pending');
+          el.style.pointerEvents = el.dataset.oldPointerEvents || '';
+          el.style.background = el.dataset.oldBackground || '';
+          const st = el.querySelector('.action-state,.auto-toggle-state,.ps-btn-state,.ps-state');
+          if(st && st.dataset.oldText){ st.textContent = st.dataset.oldText; }
+        }catch(e){}
+      }, 10000);
+    }catch(e){}
+  }
   const bindOne = (selector, handler) => {
     document.querySelectorAll(selector).forEach(el => {
       const run = (ev) => {
@@ -1175,6 +1199,7 @@ body{
         const last = Number(el.dataset.lastTapTs || 0);
         if (now - last < 700) return false;
         el.dataset.lastTapTs = String(now);
+        poolMarkPending(el);
         handler(el);
         return false;
       };
@@ -1392,6 +1417,30 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const ok=await window.poolSetState(ns+'.control.heatpump.setTemp', next);
     if(!ok) alert('VIS setState nicht verfügbar');
   };
+
+  function poolMarkPending(el){
+    try{
+      if(!el || el.dataset.pending === '1') return;
+      el.dataset.pending = '1';
+      el.dataset.oldPointerEvents = el.style.pointerEvents || '';
+      el.dataset.oldBackground = el.style.background || '';
+      const state = el.querySelector('.action-state,.auto-toggle-state,.ps-btn-state,.ps-state');
+      if(state){ state.dataset.oldText = state.textContent || ''; state.textContent = 'SCHALTE...'; }
+      el.classList.add('is-pending');
+      el.style.pointerEvents = 'none';
+      el.style.background = 'linear-gradient(90deg, rgba(245,158,11,.34), rgba(255,255,255,.08))';
+      setTimeout(function(){
+        try{
+          el.dataset.pending = '0';
+          el.classList.remove('is-pending');
+          el.style.pointerEvents = el.dataset.oldPointerEvents || '';
+          el.style.background = el.dataset.oldBackground || '';
+          const st = el.querySelector('.action-state,.auto-toggle-state,.ps-btn-state,.ps-state');
+          if(st && st.dataset.oldText){ st.textContent = st.dataset.oldText; }
+        }catch(e){}
+      }, 10000);
+    }catch(e){}
+  }
   const bindOne = (selector, handler) => {
     document.querySelectorAll(selector).forEach(el => {
       const run = (ev) => {
@@ -1400,6 +1449,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         const last = Number(el.dataset.lastTapTs || 0);
         if (now - last < 700) return false;
         el.dataset.lastTapTs = String(now);
+        poolMarkPending(el);
         handler(el);
         return false;
       };
@@ -1660,9 +1710,33 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   window.poolPhManualDose = async function(sec){ const ns=${JSON.stringify(data.namespace)}; await window.poolSetState(ns + '.control.ph.manualDoseSec', Number(sec) || 30); const ok=await window.poolSetState(ns + '.control.ph.manualStart', true); if(!ok) alert('VIS setState nicht verfügbar'); };
   window.poolPhSetCanisterLevel = async function(){ const ns=${JSON.stringify(data.namespace)}; const el=document.querySelector('.js-phcan-level'); const v=el ? Number(String(el.value).replace(',', '.')) : NaN; if(!Number.isFinite(v)){alert('Bitte Füllstand in Liter eingeben');return;} const ok=await window.poolSetState(ns + '.control.ph.canister.setLevelL', Math.round(v*100)/100); if(!ok) alert('VIS setState nicht verfügbar'); };
   window.poolPhNewCanister = async function(){ if(!confirm('Neuen pH-Minus-Kanister setzen?')) return; const ns=${JSON.stringify(data.namespace)}; const ok=await window.poolSetState(ns + '.control.ph.canister.newCanister', true); if(!ok) alert('VIS setState nicht verfügbar'); };
+
+  function poolMarkPending(el){
+    try{
+      if(!el || el.dataset.pending === '1') return;
+      el.dataset.pending = '1';
+      el.dataset.oldPointerEvents = el.style.pointerEvents || '';
+      el.dataset.oldBackground = el.style.background || '';
+      const state = el.querySelector('.action-state,.auto-toggle-state,.ps-btn-state,.ps-state');
+      if(state){ state.dataset.oldText = state.textContent || ''; state.textContent = 'SCHALTE...'; }
+      el.classList.add('is-pending');
+      el.style.pointerEvents = 'none';
+      el.style.background = 'linear-gradient(90deg, rgba(245,158,11,.34), rgba(255,255,255,.08))';
+      setTimeout(function(){
+        try{
+          el.dataset.pending = '0';
+          el.classList.remove('is-pending');
+          el.style.pointerEvents = el.dataset.oldPointerEvents || '';
+          el.style.background = el.dataset.oldBackground || '';
+          const st = el.querySelector('.action-state,.auto-toggle-state,.ps-btn-state,.ps-state');
+          if(st && st.dataset.oldText){ st.textContent = st.dataset.oldText; }
+        }catch(e){}
+      }, 10000);
+    }catch(e){}
+  }
   const bindOne = (selector, handler) => {
     document.querySelectorAll(selector).forEach(el => {
-      const run = (ev) => { try{ if(ev){ ev.preventDefault(); ev.stopPropagation(); } }catch(e){} handler(el); return false; };
+      const run = (ev) => { try{ if(ev){ ev.preventDefault(); ev.stopPropagation(); } }catch(e){} poolMarkPending(el); handler(el); return false; };
       try{ el.addEventListener('touchend', run, {passive:false}); }catch(e){}
       try{ el.addEventListener('click', run, false); }catch(e){}
       try{ el.style.cursor = 'pointer'; }catch(e){}
@@ -1779,7 +1853,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.32</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.33</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
