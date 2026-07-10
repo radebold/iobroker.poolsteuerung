@@ -631,6 +631,26 @@
           "text": "pH-Minus Kanister",
           "size": 2
         },
+        "phCanisterScaleEnabled": {
+          "type": "checkbox",
+          "label": "Kanisterwaage verwenden",
+          "newLine": true,
+          "sm": 12,
+          "md": 4,
+          "lg": 4,
+          "help": "Wenn aktiv, wird der aktuelle Wert direkt aus dem konfigurierten Waagen-State gelesen. Die rechnerische Restmengenfortschreibung wird dann nicht für die Anzeige verwendet."
+        },
+        "phCanisterWeightStateId": {
+          "type": "text",
+          "label": "State der Kanisterwaage (kg)",
+          "newLine": false,
+          "sm": 12,
+          "md": 8,
+          "lg": 8,
+          "placeholder": "mqtt.0.pool.phminus.waage.weight_kg",
+          "help": "Numerischer ioBroker-State mit dem aktuellen Kanistergewicht in kg. Standard: mqtt.0.pool.phminus.waage.weight_kg",
+          "hidden": "data.phCanisterScaleEnabled !== true"
+        },
         "phCanisterSizeL": {
           "type": "number",
           "label": "Kanistergröße pH-Minus (Liter)",
