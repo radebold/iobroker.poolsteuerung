@@ -1530,7 +1530,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       </button>`;
     const decisionValue = v => `<div class="ps-v ps-wrap">${esc(v)}</div>`;
     const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
-    const metricValue = (value, trend = '→', stateCls = '') => `<span class="ps-mmain ${stateCls}">${esc(value)}</span><span class="ps-trend ${trendClass(trend)} ${stateCls}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>`;
+    const metricValue = (value, trend = '→', stateCls = '', sparkline = '') => `<span class="ps-mmain ${stateCls}">${esc(value)}</span><span class="ps-trend ${trendClass(trend)} ${stateCls}" style="margin-left:10px;font-weight:900;font-size:18px;">${esc(trend)}</span>${sparkline ? `<span class="ps-sparkline-wrap">${sparkline}</span>` : ''}`;
     const batteryPct = Math.max(0, Math.min(100, parseNum(data.battery)));
     const batteryBar = `<div class="ps-bbar"><div class="ps-bfill" style="width:${batteryPct}%"></div></div>`;
     return `
@@ -1543,9 +1543,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-hero{background:radial-gradient(circle at top right, rgba(85,200,255,.22), transparent 28%),linear-gradient(180deg,#1b3763 0%,#102342 100%);color:#fff;border-color:rgba(255,255,255,.1)}
 .ps-header{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.ps-title{font-size:16px;font-weight:800;color:inherit}.ps-ver{font-size:9px;font-weight:800;color:#b9d7ff;margin-left:6px}.ps-sub{font-size:11px;color:#d4deec;text-align:right;flex:0 0 auto}.ps-mode{display:inline-flex;align-items:center;justify-content:center;padding:3px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(180deg,#334f84,#1b3158);font-weight:800;font-size:11px;color:#fff;cursor:pointer}
 .ps-tempRow{display:flex;align-items:flex-end;gap:8px;margin:10px 0 10px}.ps-temp{font-size:70px;font-weight:900;line-height:.9;color:inherit}.ps-unit{font-size:20px;color:#d7e5f5;padding-bottom:8px}
-.ps-scale{margin:2px 0 10px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-target{position:absolute;top:50%;left:${Math.max(0, Math.min(100, ((parseNum(data.targetTemp)-15)/(32-15))*100 || 0))}%;width:3px;height:14px;border-radius:999px;background:#fff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.ps-dot{position:absolute;top:50%;left:${Math.max(0, Math.min(100, ((parseNum(data.poolTemp)-15)/(32-15))*100 || 0))}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}.ps-target-label{position:relative;height:12px;font-size:10px;color:#e3edf9}.ps-target-label span{position:absolute;left:${Math.max(0, Math.min(100, ((parseNum(data.targetTemp)-15)/(32-15))*100 || 0))}%;transform:translateX(-50%)}
-.ps-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:auto}.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px;min-height:74px}.ps-k{font-size:12px;color:inherit;opacity:.88;margin-bottom:6px;font-weight:700}.ps-v{font-size:22px;font-weight:800;line-height:1.15;color:#0f172a}.ps-v.ps-wrap{font-size:13px;font-weight:700;line-height:1.2;word-break:break-word;overflow-wrap:anywhere;white-space:normal}.ps-s{font-size:11px;color:#e3edf9;margin-top:6px}.ps-hero .ps-v{color:#fff}.ps-chip{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;font-size:9px;font-weight:800;margin-top:6px}.ps-chip.good{background:#dcfce7;color:#166534}.ps-chip.warn{background:#fef3c7;color:#92400e}.ps-chip.bad{background:#fee2e2;color:#991b1b}.ps-chip.neutral{background:#e2e8f0;color:#334155}
-.ps-block-title{font-size:16px;font-weight:800;color:#0f172a;margin-bottom:8px}.ps-list{display:grid;gap:6px}.ps-row{display:grid;grid-template-columns:minmax(88px,116px) minmax(0,1fr);gap:8px;align-items:start;background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}.ps-actions-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}.ps-action-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:10px 12px;border-radius:14px;min-height:58px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:4px}.ps-action-btn:disabled{opacity:.5;cursor:default}.ps-action-name{font-size:14px;font-weight:800}.ps-action-state{font-size:12px;font-weight:800}.ps-action-btn.is-on .ps-action-name,.ps-action-btn.is-on .ps-action-state{color:#67dd7c}.ps-action-btn.is-off .ps-action-name,.ps-action-btn.is-off .ps-action-state{color:#ff8d7b}.ps-statuswrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.ps-scale{margin:2px 0 6px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-target{position:absolute;top:50%;left:${Math.max(0, Math.min(100, ((parseNum(data.targetTemp)-15)/(32-15))*100 || 0))}%;width:3px;height:14px;border-radius:999px;background:#fff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.ps-dot{position:absolute;top:50%;left:${Math.max(0, Math.min(100, ((parseNum(data.poolTemp)-15)/(32-15))*100 || 0))}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}.ps-target-label{position:relative;height:12px;font-size:10px;color:#e3edf9}.ps-target-label span{position:absolute;left:${Math.max(0, Math.min(100, ((parseNum(data.targetTemp)-15)/(32-15))*100 || 0))}%;transform:translateX(-50%)}
+.ps-temp-spark{height:38px;margin:0 0 8px;color:#76d7ff}.ps-temp-spark .sparkline{height:38px;width:100%}.ps-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:auto}.ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:10px;min-height:94px}.ps-k{font-size:12px;color:inherit;opacity:.88;margin-bottom:6px;font-weight:700}.ps-v{font-size:26px;font-weight:900;line-height:1.1;color:#0f172a;display:flex;align-items:center;min-width:0}.ps-v.ps-wrap{font-size:13px;font-weight:700;line-height:1.2;word-break:break-word;overflow-wrap:anywhere;white-space:normal}.ps-s{font-size:11px;color:#e3edf9;margin-top:6px}.ps-hero .ps-v{color:#fff}.ps-chip{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;font-size:9px;font-weight:800;margin-top:6px}.ps-chip.good{background:#dcfce7;color:#166534}.ps-chip.warn{background:#fef3c7;color:#92400e}.ps-chip.bad{background:#fee2e2;color:#991b1b}.ps-chip.neutral{background:#e2e8f0;color:#334155}
+.ps-block-title{font-size:16px;font-weight:800;color:#0f172a;margin-bottom:8px}.ps-list{display:grid;gap:6px}.ps-row{display:grid;grid-template-columns:minmax(88px,116px) minmax(0,1fr);gap:8px;align-items:start;background:#ffffff;border:1px solid rgba(15,23,42,.08);border-radius:14px;padding:8px}.ps-actions-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}.ps-action-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:10px 12px;border-radius:14px;min-height:58px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:4px}.ps-action-btn:disabled{opacity:.5;cursor:default}.ps-action-name{font-size:14px;font-weight:800}.ps-action-state{font-size:12px;font-weight:800}.ps-action-btn.is-on .ps-action-name,.ps-action-btn.is-on .ps-action-state{color:#67dd7c}.ps-action-btn.is-off .ps-action-name,.ps-action-btn.is-off .ps-action-state{color:#ff8d7b}.ps-statuswrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}.ps-sparkline-wrap{display:inline-flex;align-items:center;margin-left:10px;flex:1;min-width:78px;max-width:none}.sparkline{width:100%;height:34px;display:block;overflow:visible}.sparkline path{fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;opacity:.98}.sparkline circle{fill:currentColor;opacity:.98}.sparkline-ph{color:#48b8ff}.sparkline-orp{color:#5be878}.sparkline-temp{color:#76d7ff}
 @media (max-width: 1050px){.ps-grid{grid-template-columns:1fr}}
 </style>
 <div class="ps-root"><div class="ps-grid">
@@ -1556,9 +1556,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     </div>
     <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
     <div class="ps-scale"><div class="ps-track"><div class="ps-target"></div><div class="ps-dot"></div></div><div class="ps-target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
+    <div class="ps-temp-spark">${data.poolTempSparklineSvg || ''}</div>
     <div class="ps-metrics">
-      <div class="ps-metric"><div class="ps-k">pH</div><div class="ps-v">${metricValue(data.ph, data.phTrend, ((data.phBadge && data.phBadge.cls) === 'ok' ? 'ok' : ((((data.phBadge && data.phBadge.cls) === 'warn') || ((data.phBadge && data.phBadge.cls) === 'bad')) ? 'bad' : '')))}</div><div class="ps-s">Soll ${esc(data.phSet)} · ${esc(data.phTargetRangeText)}</div><div class="ps-chip ${phClass}">${phClass === 'good' ? 'OK' : phClass === 'warn' ? 'Niedrig' : 'Hoch'}</div></div>
-      <div class="ps-metric"><div class="ps-k">ORP</div><div class="ps-v">${metricValue(data.orp, data.orpTrend, ((data.orpBadge && data.orpBadge.cls) === 'ok' ? 'ok' : ((((data.orpBadge && data.orpBadge.cls) === 'warn') || ((data.orpBadge && data.orpBadge.cls) === 'bad')) ? 'bad' : '')))}</div><div class="ps-s">EIN ≤ ${esc(data.orpOnThreshold)} / AUS > ${esc(data.orpOffThreshold)}</div><div class="ps-chip ${orpClass}">${orpClass === 'good' ? 'OK' : orpClass === 'warn' ? 'Niedrig' : 'Hoch'}</div></div>
+      <div class="ps-metric"><div class="ps-k">pH</div><div class="ps-v">${metricValue(data.ph, data.phTrend, ((data.phBadge && data.phBadge.cls) === 'ok' ? 'ok' : ((((data.phBadge && data.phBadge.cls) === 'warn') || ((data.phBadge && data.phBadge.cls) === 'bad')) ? 'bad' : '')), data.phSparklineSvg)}</div><div class="ps-s">Soll ${esc(data.phSet)} · ${esc(data.phTargetRangeText)}</div><div class="ps-chip ${phClass}">${phClass === 'good' ? 'OK' : phClass === 'warn' ? 'Niedrig' : 'Hoch'}</div></div>
+      <div class="ps-metric"><div class="ps-k">ORP</div><div class="ps-v">${metricValue(data.orp, data.orpTrend, ((data.orpBadge && data.orpBadge.cls) === 'ok' ? 'ok' : ((((data.orpBadge && data.orpBadge.cls) === 'warn') || ((data.orpBadge && data.orpBadge.cls) === 'bad')) ? 'bad' : '')), data.orpSparklineSvg)}</div><div class="ps-s">EIN ≤ ${esc(data.orpOnThreshold)} / AUS > ${esc(data.orpOffThreshold)}</div><div class="ps-chip ${orpClass}">${orpClass === 'good' ? 'OK' : orpClass === 'warn' ? 'Niedrig' : 'Hoch'}</div></div>
       <div class="ps-metric"><div class="ps-k">Außen</div><div class="ps-v">${metricValue(`${data.outsideTemp}°C`, data.outsideTempTrend, false)}</div></div>
       <div class="ps-metric"><div class="ps-k">Solltemp</div><div class="ps-v">${esc(data.targetTemp)}°C</div></div>
     </div>
@@ -1866,7 +1867,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.37</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.38</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -2280,18 +2281,18 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const pvTrend = historyTrends.pvTrend || '→';
     const feedInTrend = historyTrends.feedInTrend || '→';
 
-    let historySparklines = { phSparklineSvg: '', orpSparklineSvg: '' };
+    let historySparklines = { phSparklineSvg: '', orpSparklineSvg: '', poolTempSparklineSvg: '' };
     try {
       historySparklines = await Promise.race([
         this.getHistorySparklines(),
-        new Promise(resolve => setTimeout(() => resolve({ phSparklineSvg: '', orpSparklineSvg: '', __timeout: true }), 1200))
+        new Promise(resolve => setTimeout(() => resolve({ phSparklineSvg: '', orpSparklineSvg: '', poolTempSparklineSvg: '', __timeout: true }), 1200))
       ]);
       if (historySparklines && historySparklines.__timeout) {
         this.visTrace('renderVisFull History-Sparklines TIMEOUT', 'verwende leere Charts');
       }
     } catch (e) {
       this.visTrace('renderVisFull History-Sparklines ERROR', String(e && e.message ? e.message : e).slice(0, 300));
-      historySparklines = { phSparklineSvg: '', orpSparklineSvg: '' };
+      historySparklines = { phSparklineSvg: '', orpSparklineSvg: '', poolTempSparklineSvg: '' };
     }
     if (!historySparklines.phSparklineSvg || !historySparklines.orpSparklineSvg) {
       try {
@@ -2312,6 +2313,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       { ts: Date.now() - 600000, val: orpNumForSparkline },
       { ts: Date.now(), val: orpNumForSparkline }
     ], 'sparkline-orp') : '');
+    const poolTempNumForSparkline = parseNum(poolTemp);
+    const poolTempSparklineSvg = historySparklines.poolTempSparklineSvg || (Number.isFinite(poolTempNumForSparkline) ? this.buildSparklineSvgFromValues([
+      { ts: Date.now() - 600000, val: poolTempNumForSparkline },
+      { ts: Date.now(), val: poolTempNumForSparkline }
+    ], 'sparkline-temp') : '');
 
     const phNumStable = parseNum(ph);
     const orpNumStable = parseNum(orp);
@@ -2336,6 +2342,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       orpTrend,
       phSparklineSvg,
       orpSparklineSvg,
+      poolTempSparklineSvg,
       poolTempTrend,
       outsideTempTrend,
       pvTrend,
@@ -2414,7 +2421,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
-      adapterVersion: 'v0.3.37'
+      adapterVersion: 'v0.3.38'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -3810,14 +3817,16 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const start = new Date(now);
     start.setHours(0, 0, 0, 0);
 
-    const result = { phSparklineSvg: '', orpSparklineSvg: '' };
+    const result = { phSparklineSvg: '', orpSparklineSvg: '', poolTempSparklineSvg: '' };
     try {
-      const [phValues, orpValues] = await Promise.all([
+      const [phValues, orpValues, poolTempValues] = await Promise.all([
         this.fetchHistoryValues(this.config.phStateId, start.getTime(), now),
-        this.fetchHistoryValues(this.config.orpStateId, start.getTime(), now)
+        this.fetchHistoryValues(this.config.orpStateId, start.getTime(), now),
+        this.fetchHistoryValues(this.config.poolTempStateId, start.getTime(), now)
       ]);
       result.phSparklineSvg = this.buildSparklineSvgFromValues(phValues, 'sparkline-ph');
       result.orpSparklineSvg = this.buildSparklineSvgFromValues(orpValues, 'sparkline-orp');
+      result.poolTempSparklineSvg = this.buildSparklineSvgFromValues(poolTempValues, 'sparkline-temp');
     } catch (e) {
       if (this.config.debugMode) this.log.debug('[SPARKLINE] Erstellung fehlgeschlagen: ' + (e.message || e));
     }
