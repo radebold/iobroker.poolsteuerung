@@ -859,10 +859,22 @@ class Poolsteuerung extends utils.Adapter {
         <div class="status-left">
           <div class="status-name">${esc(name)}</div>
           <div class="status-hint">${esc(hint)}</div>
+          <div class="sync-badge sync-inline ${esc(syncCls)}">${esc(syncLabel)}</div>
         </div>
         <div class="status-right">
-          <div class="sync-badge ${esc(syncCls)}">${esc(syncLabel)}</div>
           <div class="pill ${on ? 'on' : 'off'}">${on ? 'EIN' : 'AUS'}</div>
+        </div>
+      </button>`;
+
+    const standbyStatus = active => `
+      <button type="button" class="status-row js-standby-btn ${active ? 'status-on' : 'status-off'}" data-current="${active ? '1' : '0'}">
+        <div class="status-left">
+          <div class="status-name">Standby</div>
+          <div class="status-hint">Betriebsmodus</div>
+          <div class="sync-badge sync-inline ${active ? 'ok' : 'warn'}">${active ? 'STANDBY aktiv' : 'Normalbetrieb'}</div>
+        </div>
+        <div class="status-right">
+          <div class="pill ${active ? 'on' : 'off'}">${active ? 'EIN' : 'AUS'}</div>
         </div>
       </button>`;
 
@@ -971,9 +983,9 @@ body{
 .status-row{appearance:none;width:100%;font-family:inherit;color:#fff;cursor:pointer;text-align:left;display:flex;justify-content:space-between;gap:8px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:6px}.status-right{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
 .status-on{background:linear-gradient(90deg,rgba(78,204,102,.10),rgba(255,255,255,.04))}
 .status-off{background:linear-gradient(90deg,rgba(255,108,95,.10),rgba(255,255,255,.04))}
-.status-left{min-width:0;max-width:calc(100% - 86px)}
+.status-left{min-width:0;max-width:calc(100% - 76px)}
 .status-name{font-size:13px;font-weight:900;line-height:1.1}
-.status-hint{font-size:10px;color:#aebed5;margin-top:2px}
+.status-hint{font-size:10px;color:#aebed5;margin-top:2px}.sync-inline{display:inline-flex;margin-top:4px}
 .pill{min-width:64px;text-align:center;padding:7px 8px;border-radius:999px;font-size:9px;font-weight:900;color:#fff;flex:0 0 auto}
 .pill.on{background:linear-gradient(180deg,#56d56e,#36b357);box-shadow:0 8px 18px rgba(56,179,87,.25)}
 .pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d);box-shadow:0 8px 18px rgba(223,74,61,.25)}
@@ -1076,6 +1088,7 @@ body{
         ${status('Chlorinator', 'ORP-Regelung', 'chlorinator', data.chlorOn, data.chlorSyncCls, data.chlorSyncLabel)}
         ${status('pH-Dosierpumpe', 'Prüfzeiten', 'phPump', data.phPumpOn, data.phPumpSyncCls, data.phPumpSyncLabel)}
         ${status('Wärmepumpe', 'PV-Freigabe', 'heatpump', data.heatpumpOn, data.heatpumpSyncCls, data.heatpumpSyncLabel)}
+        ${standbyStatus(!!data.standbyControl)}
       </div>
     </div>
 
