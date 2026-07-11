@@ -48,3 +48,8 @@ Version v0.3.27-hotfix68
 
 ## v0.3.27
 - pH-Minus-Zusatzkachel als Ampelanzeige mit deutschem Zahlenformat ergänzt.
+
+
+## 0.3.37
+- Tablet-VIS auf 1130 × 740 px erweitert.
+- Vorhandene Adapter-Schaltflächen nutzen den zusätzlichen Platz; keine Steuerlogik geändert.

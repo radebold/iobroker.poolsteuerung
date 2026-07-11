@@ -915,8 +915,8 @@ body{
     radial-gradient(circle at bottom right, rgba(106,124,255,.13), transparent 22%),
     linear-gradient(180deg,var(--bg2),var(--bg));
 }
-.wrap{width:100%;max-width:1000px;height:730px;max-height:730px;padding:6px;overflow:hidden;margin:0 auto}
-.layout{display:flex;gap:8px;align-items:flex-start;width:100%;height:718px;max-height:718px;overflow:hidden}
+.wrap{width:100%;max-width:1130px;height:740px;max-height:740px;padding:6px;overflow:hidden;margin:0 auto}
+.layout{display:flex;gap:8px;align-items:flex-start;width:100%;height:728px;max-height:728px;overflow:hidden}
 .col-left{flex:0 0 28%}
 .col-mid{flex:0 0 34%}
 .col-right{flex:1 1 0}
@@ -1537,8 +1537,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 <!-- widget-render:${esc(data.updated)} -->
 <style>
 .ps-root,*{box-sizing:border-box}
-.ps-root{width:100%;max-width:1000px;height:730px;max-height:730px;overflow:hidden;padding:8px;margin:0 auto;color:#0f172a;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(180deg,#0b1220 0%,#0f172a 100%)}
-.ps-grid{display:grid;grid-template-columns:278px 330px 368px;gap:8px;width:100%;height:714px;overflow:hidden}
+.ps-root{width:100%;max-width:1130px;height:740px;max-height:740px;overflow:hidden;padding:8px;margin:0 auto;color:#0f172a;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(180deg,#0b1220 0%,#0f172a 100%)}
+.ps-grid{display:grid;grid-template-columns:316px 374px 408px;gap:8px;width:100%;height:724px;overflow:hidden}
 .ps-card{display:flex;flex-direction:column;min-width:0;overflow:hidden;background:linear-gradient(180deg,#f8fbff 0%,#eef4fb 100%);border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:10px;box-shadow:0 14px 28px rgba(0,0,0,.18)}
 .ps-hero{background:radial-gradient(circle at top right, rgba(85,200,255,.22), transparent 28%),linear-gradient(180deg,#1b3763 0%,#102342 100%);color:#fff;border-color:rgba(255,255,255,.1)}
 .ps-header{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.ps-title{font-size:16px;font-weight:800;color:inherit}.ps-ver{font-size:9px;font-weight:800;color:#b9d7ff;margin-left:6px}.ps-sub{font-size:11px;color:#d4deec;text-align:right;flex:0 0 auto}.ps-mode{display:inline-flex;align-items:center;justify-content:center;padding:3px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(180deg,#334f84,#1b3158);font-weight:800;font-size:11px;color:#fff;cursor:pointer}
@@ -1866,7 +1866,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.35</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.37</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -2414,7 +2414,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
-      adapterVersion: 'v0.3.29'
+      adapterVersion: 'v0.3.37'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -4001,7 +4001,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] v0.3.29 Diagnose-Logging aktiv');
+      this.log.info('[VIS] v0.3.37 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
