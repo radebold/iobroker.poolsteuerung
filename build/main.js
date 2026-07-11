@@ -1853,7 +1853,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.34</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.35</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -2080,9 +2080,9 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       source: phCanSource,
       scaleEnabled: phCanCfg.scaleEnabled,
       available: phCanAvailable,
-      displayCompact: phCanAvailable ? `${this.fmt(phCanLevelNum, 2, '0.00')} ${phCanUnit}` : 'Waage nicht verfügbar',
+      displayCompact: phCanAvailable ? `${this.fmt(phCanLevelNum, phCanCfg.scaleEnabled ? 3 : 2, phCanCfg.scaleEnabled ? '0.000' : '0.00')} ${phCanUnit}` : 'Waage nicht verfügbar',
       displayDetail: phCanCfg.scaleEnabled
-        ? (phCanAvailable ? `${this.fmt(phCanLevelNum, 2, '0.00')} kg` : 'Waage nicht verfügbar')
+        ? (phCanAvailable ? `${this.fmt(phCanLevelNum, 3, '0.000')} kg` : 'Waage nicht verfügbar')
         : `${this.fmt(phCanLevelNum, 2, '0.00')} l · ${this.fmt(phCanPercentNum, 1, '0.0')} %`,
       lastCorrection: phCanLastCorrTs ? new Date(phCanLastCorrTs).toLocaleString('de-DE') : '-',
       lastDoseMl: this.fmt(phCanLastDoseMlNum, 0, '0'),
