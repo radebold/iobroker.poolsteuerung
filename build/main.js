@@ -881,12 +881,13 @@ class Poolsteuerung extends utils.Adapter {
     const trendClass = trend => trend === '↑' ? 'up' : (trend === '↓' ? 'down' : 'flat');
     const phClass = phBadge && phBadge.cls ? phBadge.cls : '';
     const orpClass = orpBadge && orpBadge.cls ? orpBadge.cls : '';
-    const metric = (label, value, sub = '', badge = null, accent = '', trend = '', trendOk = false, trendBad = false) => `
+    const metric = (label, value, sub = '', badge = null, accent = '', trend = '', trendOk = false, trendBad = false, sparkline = '') => `
       <div class="metric ${accent}">
         <div class="metric-label">${esc(label)}</div>
         <div class="metric-value">
           <span class="metric-main ${trendOk ? 'ok' : (trendBad ? 'bad' : '')}">${esc(value)}</span>
           ${trend ? `<span class="metric-trend ${trendClass(trend)} ${trendOk ? 'ok' : (trendBad ? 'bad' : '')}">${esc(trend)}</span>` : ''}
+          ${sparkline ? `<span class="metric-sparkline">${sparkline}</span>` : ''}
         </div>
         ${sub ? `<div class="metric-sub">${esc(sub)}</div>` : ''}
         ${badge ? `<div class="badge ${badge.cls}">${badge.txt}</div>` : ''}
@@ -954,6 +955,7 @@ body{
 .metric-main.ok{color:#67dd7c}.metric-main.bad{color:#ff7a6a}
 .metric-trend{display:inline-flex;min-width:18px;justify-content:center;font-size:20px;font-weight:900;line-height:1;margin-left:10px}
 .metric-trend.up{color:#ffb36b}.metric-trend.down{color:#7dd3fc}.metric-trend.flat{color:#d5e4f8}.metric-trend.ok{color:#67dd7c}.metric-trend.bad{color:#ff7a6a}
+.metric-sparkline{display:inline-flex;align-items:center;flex:1;min-width:70px;margin-left:6px}.metric-sparkline .sparkline{width:100%;height:30px;display:block;overflow:visible}.metric-sparkline .sparkline path{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}.metric-sparkline .sparkline circle{fill:currentColor}.sparkline-ph{color:#48b8ff}.sparkline-orp{color:#5be878}.sparkline-temp{color:#76d7ff}.temp-history{height:30px;margin:4px 0 6px;color:#76d7ff}.temp-history .sparkline{width:100%;height:30px;display:block}
 .metric-sub{font-size:10px;color:#aebed5;margin-top:4px}
 .badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;margin-top:8px;font-size:11px;font-weight:900}
 .badge.ok{background:rgba(64,196,99,.18);color:#9ff5b3}
@@ -1026,9 +1028,10 @@ body{
         <div class="scale-track"><div class="scale-target" title="Soll ${esc(data.targetTemp)} °C"></div><div class="scale-dot"></div></div>
         <div class="scale-row"><span>15 °C</span><span>Aktuell: ${esc(data.poolTemp)} °C</span><span>32 °C</span></div>
       </div>
+      <div class="temp-history">${data.poolTempSparklineSvg || ''}</div>
       <div class="metrics">
-        ${metric('pH', data.ph, `Soll ${data.phSet} · ${data.phTargetRangeText}`, phBadge, 'warn', data.phTrend || '→', phClass === 'ok', phClass === 'low' || phClass === 'high')}
-        ${metric('ORP', data.orp, `EIN ≤ ${data.orpOnThreshold} / AUS > ${data.orpOffThreshold}`, orpBadge, 'warn', data.orpTrend || '→', orpClass === 'ok', orpClass === 'low' || orpClass === 'high')}
+        ${metric('pH', data.ph, `Soll ${data.phSet} · ${data.phTargetRangeText}`, phBadge, 'warn', data.phTrend || '→', phClass === 'ok', phClass === 'low' || phClass === 'high', data.phSparklineSvg)}
+        ${metric('ORP', data.orp, `EIN ≤ ${data.orpOnThreshold} / AUS > ${data.orpOffThreshold}`, orpBadge, 'warn', data.orpTrend || '→', orpClass === 'ok', orpClass === 'low' || orpClass === 'high', data.orpSparklineSvg)}
         ${metric('Außen', `${data.outsideTemp}°C`, 'Außen', null, 'cool', data.outsideTempTrend || '→', false)}
         ${metric('Solltemp', `${data.targetTemp}°C`, 'Soll', null, 'metric-target')}
       </div>
@@ -1651,6 +1654,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-tempRow{display:flex;align-items:flex-end;gap:5px;margin:4px 0 4px}.ps-temp{font-size:42px;font-weight:900;line-height:.9}.ps-unit{font-size:16px;padding-bottom:4px;color:#d5e5f6}
 .ps-scale{margin:2px 0 5px}.ps-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%)}.ps-target{position:absolute;top:50%;left:${targetPct}%;width:3px;height:14px;border-radius:999px;background:#fff;border:1px solid rgba(17,48,91,.8);transform:translate(-50%,-50%)}.ps-dot{position:absolute;top:50%;left:${tempPct}%;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #314a72;transform:translate(-50%,-50%)}.ps-scale-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#e3edf9}.ps-target-label{position:relative;height:12px;font-size:9px;color:#d2dded}.ps-target-label span{position:absolute;left:${targetPct}%;transform:translateX(-50%)}
 .ps-metrics,.ps-auto,.ps-statusGrid,.ps-quickGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.ps-phGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.ps-temp-spark{height:28px;margin:2px 0 6px;color:#76d7ff}.ps-temp-spark .sparkline{width:100%;height:28px;display:block;overflow:visible}.sparkline-temp{color:#76d7ff}
 .ps-metric{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px}.ps-ml{font-size:10px;color:#d9e5f5}.ps-mv{font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center;min-width:0}.ps-ms{margin-top:3px;font-size:9px;color:#d9e5f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ps-mmain.ok{color:#67dd7c}.ps-mmain.bad{color:#ff7a6a}.ps-trend{font-size:18px;font-weight:900;color:#c9d7ee;line-height:1;display:inline-flex;min-width:18px;justify-content:center;margin-left:10px}.ps-trend.up{color:#ffb36b}.ps-trend.down{color:#7dd3fc}.ps-trend.flat{color:#c9d7ee}.ps-trend.ok{color:#67dd7c}.ps-trend.bad{color:#ff7a6a}.ps-sparkline-wrap{display:inline-flex;align-items:center;margin-left:8px;flex:1;min-width:86px;max-width:150px}.sparkline{width:100%;height:26px;display:block;overflow:visible}.sparkline path{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;opacity:.95}.sparkline circle{fill:currentColor;opacity:.95}.sparkline-ph{color:#48b8ff}.sparkline-orp{color:#5be878}.ps-section{font-size:12px;font-weight:900;color:#0f172a;margin-bottom:3px}
 .ps-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:7px 9px;border-radius:13px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}.ps-btn:disabled{opacity:.5;cursor:default}.ps-btn-name{font-size:12px;font-weight:800}.ps-btn-state{font-size:9px;font-weight:800}.ps-btn.is-on .ps-btn-name,.ps-btn.is-on .ps-btn-state{color:#67dd7c}.ps-btn.is-off .ps-btn-name,.ps-btn.is-off .ps-btn-state{color:#ff8d7b}
 .ps-q{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.ps-ql{font-size:9px;color:#64748b;font-weight:700;margin-bottom:3px}.ps-qv{font-size:12px;font-weight:900;color:#0f172a;line-height:1.08}
@@ -1661,6 +1665,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     <div class="ps-header"><div class="ps-title">Pool Manager <span class="ps-ver">${esc(data.adapterVersion)}</span></div><div class="ps-sub"><button class="ps-mode js-standby-btn" data-current="${data.standbyControl ? '1' : '0'}">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</button><br>Aktualisiert<br>${esc(data.updated)}</div></div>
     <div class="ps-tempRow"><div class="ps-temp">${esc(data.poolTemp)}</div><div class="ps-unit">°C</div></div>
     <div class="ps-scale"><div class="ps-track"><div class="ps-target"></div><div class="ps-dot"></div></div><div class="ps-target-label"><span>Soll ${esc(data.targetTemp)}°C</span></div><div class="ps-scale-labels"><span>15 °C</span><span>32 °C</span></div></div>
+    <div class="ps-temp-spark">${data.poolTempSparklineSvg || ''}</div>
     <div class="ps-metrics">
       <div class="ps-metric"><div class="ps-ml">pH</div><div class="ps-mv">${metricValue(data.ph, data.phTrend, ((data.phBadge && data.phBadge.cls) === 'ok' ? 'ok' : ((((data.phBadge && data.phBadge.cls) === 'warn') || ((data.phBadge && data.phBadge.cls) === 'bad')) ? 'bad' : '')), data.phSparklineSvg)}</div><div class="ps-ms">pH-Minus: ${esc(data.phCanister.displayDetail)}</div></div>
       <div class="ps-metric"><div class="ps-ml">ORP</div><div class="ps-mv">${metricValue(data.orp, data.orpTrend, ((data.orpBadge && data.orpBadge.cls) === 'ok' ? 'ok' : ((((data.orpBadge && data.orpBadge.cls) === 'warn') || ((data.orpBadge && data.orpBadge.cls) === 'bad')) ? 'bad' : '')), data.orpSparklineSvg)}</div></div>
@@ -3822,7 +3827,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       const [phValues, orpValues, poolTempValues] = await Promise.all([
         this.fetchHistoryValues(this.config.phStateId, start.getTime(), now),
         this.fetchHistoryValues(this.config.orpStateId, start.getTime(), now),
-        this.fetchHistoryValues(this.config.poolTempStateId, start.getTime(), now)
+        this.fetchHistoryValues(this.config.waterTempStateId, start.getTime(), now)
       ]);
       result.phSparklineSvg = this.buildSparklineSvgFromValues(phValues, 'sparkline-ph');
       result.orpSparklineSvg = this.buildSparklineSvgFromValues(orpValues, 'sparkline-orp');
