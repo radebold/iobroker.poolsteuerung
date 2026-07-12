@@ -1,3 +1,8 @@
+## v0.3.41
+
+- Tablet: Pooltemperatur-Tageslinie direkt neben der Überschrift, innerhalb der Karte.
+- Versionsanzeige in Adapter, VIS und Metadaten vereinheitlicht.
+
 # ioBroker Poolsteuerung
 
 ## v0.3.27
