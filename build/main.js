@@ -848,9 +848,10 @@ class Poolsteuerung extends utils.Adapter {
         <div class="kv-value">${esc(value)}</div>
       </div>`;
 
+    const autoIcons = { circulation: '↻', chlor: '◉', ph: '⚗', heatpump: '✣' };
     const autoBtn = (label, key, active) => `
       <button type="button" class="kv auto auto-toggle js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}">
-        <span class="kv-label">${esc(label)}</span>
+        <span class="auto-toggle-left"><span class="auto-toggle-icon" aria-hidden="true">${autoIcons[key] || '•'}</span><span class="kv-label">${esc(label)}</span></span>
         <span class="auto-toggle-state">${active ? 'AKTIV' : 'AUS'}</span>
       </button>`;
 
@@ -955,7 +956,7 @@ body{
 .metric.warn{background:linear-gradient(180deg,rgba(255,145,96,.12),rgba(255,255,255,.05))}
 .metric-target{background:linear-gradient(180deg,rgba(86,217,120,.10),rgba(255,255,255,.05))}
 .metric-head{display:flex;align-items:center;gap:6px;height:28px;min-width:0;overflow:hidden;margin-bottom:2px}
-.metric-label{font-size:12px;color:#c8d4e6;font-weight:800;white-space:nowrap;flex:0 0 auto}
+.metric-label{font-size:12px;color:#c8d4e6;font-weight:800;white-space:nowrap;flex:0 0 auto}.hero .metric:nth-child(-n+2) .metric-label{font-size:13px;color:#9edfff}.hero .metric:nth-child(-n+2) .metric-main{font-size:25px;letter-spacing:.2px}.hero .metric:nth-child(-n+2) .metric-value{margin-top:2px}
 .metric-value{font-size:17px;font-weight:900;line-height:1.05;display:flex;align-items:center;gap:8px;min-width:0}
 .metric-main.ok{color:#67dd7c}.metric-main.bad{color:#ff7a6a}
 .metric-trend{display:inline-flex;min-width:18px;justify-content:center;font-size:20px;font-weight:900;line-height:1;margin-left:10px}
@@ -979,7 +980,7 @@ body{
 .auto-toggle:active{transform:translateY(1px)}
 .auto-toggle.is-on{background:linear-gradient(90deg,rgba(74,205,104,.16),rgba(255,255,255,.04))}
 .auto-toggle.is-off{background:linear-gradient(90deg,rgba(255,108,95,.14),rgba(255,255,255,.04))}
-.auto-toggle-state{font-size:12px;font-weight:900;line-height:1.15;text-align:right;border-radius:999px;padding:4px 9px;min-width:58px}
+.auto-toggle-left{display:flex;align-items:center;gap:8px;min-width:0}.auto-toggle-icon{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:8px;background:rgba(255,255,255,.08);font-size:18px;font-weight:900;color:#e8f7ff;flex:0 0 auto}.auto-toggle .kv-label{max-width:none;font-size:13px;color:#eef7ff}.auto-toggle-state{font-size:12px;font-weight:900;line-height:1.15;text-align:right;border-radius:999px;padding:4px 9px;min-width:58px}
 .auto-toggle.is-on .auto-toggle-state{color:#9ff5b3;background:rgba(64,196,99,.16)}
 .auto-toggle.is-off .auto-toggle-state{color:#ffc0b7;background:rgba(255,107,87,.14)}
 .kv.reason{background:linear-gradient(90deg,rgba(94,210,158,.11),rgba(255,255,255,.04))}
@@ -996,7 +997,7 @@ body{
 .pill{min-width:64px;text-align:center;padding:7px 8px;border-radius:999px;font-size:9px;font-weight:900;color:#fff;flex:0 0 auto}
 .pill.on{background:linear-gradient(180deg,#56d56e,#36b357);box-shadow:0 8px 18px rgba(56,179,87,.25)}
 .pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d);box-shadow:0 8px 18px rgba(223,74,61,.25)}
-.mini-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.mini-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.wallbox-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.wallbox-mini{text-align:center;min-height:58px;display:flex;flex-direction:column;justify-content:center;padding:7px 5px}.wallbox-mini .mini-label{font-size:10px;margin-bottom:4px;color:#8edfff}.wallbox-mini .mini-value{font-size:10.5px;font-weight:700;line-height:1.12}
 .mini{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:14px;padding:9px}
 .mini.info{background:linear-gradient(180deg,rgba(90,166,255,.09),rgba(255,255,255,.04))}
 .mini.highlight{background:linear-gradient(180deg,rgba(255,190,76,.11),rgba(255,255,255,.04))}
@@ -1046,15 +1047,15 @@ body{
         ${metric('Solltemp', `${data.targetTemp}°C`, 'Soll', null, 'metric-target')}
       </div>
     </div>
-    <div class="card">
+    <div class="card wallbox-card">
       <div class="section energy">Auto & Wallbox</div>
-      <div class="mini-list">
-        ${mini('Status', data.wallboxChargingStatus, data.wallboxCharging ? 'highlight' : 'info')}
-        ${mini('Stecker', data.wallboxPlugStatus, 'info')}
-        ${mini('Leistung', `${data.wallboxPowerKw} kW`, 'highlight')}
-        ${mini('SoC', `${data.wallboxSoc} % / ${data.wallboxTargetSoc} %`, 'highlight')}
-        ${mini('Restzeit', data.wallboxTimeToFull, 'info')}
-        ${mini('Reichweite', `${data.wallboxRangeKm} km`, 'info')}
+      <div class="mini-list wallbox-grid">
+        ${mini('Status', data.wallboxChargingStatus, (data.wallboxCharging ? 'highlight' : 'info') + ' wallbox-mini')}
+        ${mini('Stecker', data.wallboxPlugStatus, 'info wallbox-mini')}
+        ${mini('Leistung', `${data.wallboxPowerKw} kW`, 'highlight wallbox-mini')}
+        ${mini('SoC', `${data.wallboxSoc} % / ${data.wallboxTargetSoc} %`, 'highlight wallbox-mini')}
+        ${mini('Restzeit', data.wallboxTimeToFull, 'info wallbox-mini')}
+        ${mini('Reichweite', `${data.wallboxRangeKm} km`, 'info wallbox-mini')}
       </div>
       <div style="margin-top:10px;font-size:11px;color:#64748b;line-height:1.45;">
         Stand: ${esc(data.wallboxTibberLastSeen || '--')}
@@ -1880,7 +1881,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.47</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.48</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -2434,7 +2435,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
-      adapterVersion: 'v0.3.47'
+      adapterVersion: 'v0.3.48'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -4023,7 +4024,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] v0.3.47 Diagnose-Logging aktiv');
+      this.log.info('[VIS] v0.3.48 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);

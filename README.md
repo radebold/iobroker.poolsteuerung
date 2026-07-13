@@ -60,7 +60,7 @@ Version v0.3.27-hotfix68
 - Vorhandene Adapter-Schaltflächen nutzen den zusätzlichen Platz; keine Steuerlogik geändert.
 
 
-## 0.3.47
+## 0.3.48
 - Tablet-Schnellzugriff: Poolsolltemperatur-Kachel entfernt.
 - Manuelle pH-Dosierung als drei feste, touchfreundliche Buttons: 60, 120 und 180 Sekunden.
 - Pooltemperatur-Sparkline bleibt rechts neben Temperaturwert und Einheit.
