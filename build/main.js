@@ -848,15 +848,33 @@ class Poolsteuerung extends utils.Adapter {
         <div class="kv-value">${esc(value)}</div>
       </div>`;
 
-    const autoIcons = { circulation: '↻', chlor: '◉', ph: '⚗', heatpump: '✣' };
+    const iconSvg = key => {
+      const icons = {
+        circulation: '<svg viewBox="0 0 24 24"><path d="M20 7h-5V2"/><path d="M20 7a8 8 0 1 0 1.5 8"/><path d="M4 17h5v5"/></svg>',
+        chlor: '<svg viewBox="0 0 24 24"><path d="M12 2C8 7 5 10.5 5 15a7 7 0 0 0 14 0c0-4.5-3-8-7-13Z"/></svg>',
+        ph: '<svg viewBox="0 0 24 24"><path d="M9 2h6"/><path d="M10 2v6l-5 9a3 3 0 0 0 2.6 4.5h8.8A3 3 0 0 0 19 17l-5-9V2"/><path d="M8 15h8"/></svg>',
+        heatpump: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 5c2 2 2 4 0 6"/><path d="M19 12c-2 2-4 2-6 0"/><path d="M12 19c-2-2-2-4 0-6"/><path d="M5 12c2-2 4-2 6 0"/></svg>',
+        chlorinator: '<svg viewBox="0 0 24 24"><path d="M12 2C8 7 5 10.5 5 15a7 7 0 0 0 14 0c0-4.5-3-8-7-13Z"/></svg>',
+        phPump: '<svg viewBox="0 0 24 24"><path d="M9 2h6"/><path d="M10 2v6l-5 9a3 3 0 0 0 2.6 4.5h8.8A3 3 0 0 0 19 17l-5-9V2"/><path d="M8 15h8"/></svg>',
+        standby: '<svg viewBox="0 0 24 24"><path d="M12 2v10"/><path d="M6.3 5.3a9 9 0 1 0 11.4 0"/></svg>',
+        wallboxStatus: '<svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.1-1.1"/></svg>',
+        plug: '<svg viewBox="0 0 24 24"><path d="M9 2v6"/><path d="M15 2v6"/><path d="M7 8h10v3a5 5 0 0 1-5 5v6"/></svg>',
+        power: '<svg viewBox="0 0 24 24"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/></svg>',
+        battery: '<svg viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M10 1h4"/><path d="M9 7h6"/></svg>',
+        clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+        road: '<svg viewBox="0 0 24 24"><path d="M8 2 5 22"/><path d="m16 2 3 20"/><path d="M12 4v3"/><path d="M12 10v4"/><path d="M12 17v3"/></svg>'
+      };
+      return icons[key] || '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>';
+    };
     const autoBtn = (label, key, active) => `
       <button type="button" class="kv auto auto-toggle js-auto-btn ${active ? 'is-on' : 'is-off'}" data-key="${esc(key)}" data-current="${active ? '1' : '0'}">
-        <span class="auto-toggle-left"><span class="auto-toggle-icon" aria-hidden="true">${autoIcons[key] || '•'}</span><span class="kv-label">${esc(label)}</span></span>
+        <span class="auto-toggle-left"><span class="auto-toggle-icon icon-${esc(key)}" aria-hidden="true">${iconSvg(key)}</span><span class="kv-label">${esc(label)}</span></span>
         <span class="auto-toggle-state">${active ? 'AKTIV' : 'AUS'}</span>
       </button>`;
 
     const status = (name, hint, key, on, syncCls = 'warn', syncLabel = '?') => `
       <button type="button" class="status-row js-device-btn ${on ? 'status-on' : 'status-off'}" data-key="${esc(key)}" data-current="${on ? '1' : '0'}">
+        <span class="status-icon icon-${esc(key)}" aria-hidden="true">${iconSvg(key)}</span>
         <div class="status-left">
           <div class="status-name">${esc(name)}</div>
           <div class="status-hint">${esc(hint)}</div>
@@ -869,6 +887,7 @@ class Poolsteuerung extends utils.Adapter {
 
     const standbyStatus = active => `
       <button type="button" class="status-row js-standby-btn ${active ? 'status-on' : 'status-off'}" data-current="${active ? '1' : '0'}">
+        <span class="status-icon icon-standby" aria-hidden="true">${iconSvg('standby')}</span>
         <div class="status-left">
           <div class="status-name">Standby</div>
           <div class="status-hint">Betriebsmodus</div>
@@ -896,10 +915,10 @@ class Poolsteuerung extends utils.Adapter {
         ${badge ? `<div class="badge ${badge.cls}">${badge.txt}</div>` : ''}
       </div>`;
 
-    const mini = (label, value, accent = '') => `
+    const mini = (label, value, accent = '', iconKey = '') => `
       <div class="mini ${accent}">
-        <div class="mini-label">${esc(label)}</div>
-        <div class="mini-value">${esc(value)}</div>
+        ${iconKey ? `<span class="mini-icon" aria-hidden="true">${iconSvg(iconKey)}</span>` : ''}
+        <div class="mini-content"><div class="mini-label">${esc(label)}</div><div class="mini-value">${esc(value)}</div></div>
       </div>`;
 
     return `<!DOCTYPE html>
@@ -980,7 +999,7 @@ body{
 .auto-toggle:active{transform:translateY(1px)}
 .auto-toggle.is-on{background:linear-gradient(90deg,rgba(74,205,104,.16),rgba(255,255,255,.04))}
 .auto-toggle.is-off{background:linear-gradient(90deg,rgba(255,108,95,.14),rgba(255,255,255,.04))}
-.auto-toggle-left{display:flex;align-items:center;gap:8px;min-width:0}.auto-toggle-icon{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:8px;background:rgba(255,255,255,.08);font-size:18px;font-weight:900;color:#e8f7ff;flex:0 0 auto}.auto-toggle .kv-label{max-width:none;font-size:13px;color:#eef7ff}.auto-toggle-state{font-size:12px;font-weight:900;line-height:1.15;text-align:right;border-radius:999px;padding:4px 9px;min-width:58px}
+.auto-toggle-left{display:flex;align-items:center;gap:9px;min-width:0}.auto-toggle-icon{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;background:rgba(255,255,255,.06);color:#dff5ff;flex:0 0 auto}.auto-toggle-icon svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.auto-toggle-icon.icon-chlor{color:#63ddff}.auto-toggle-icon.icon-ph{color:#a58cff}.auto-toggle-icon.icon-heatpump{color:#7bd8ff}.auto-toggle .kv-label{max-width:none;font-size:13px;color:#eef7ff}.auto-toggle-state{font-size:12px;font-weight:900;line-height:1.15;text-align:right;border-radius:999px;padding:4px 9px;min-width:58px}
 .auto-toggle.is-on .auto-toggle-state{color:#9ff5b3;background:rgba(64,196,99,.16)}
 .auto-toggle.is-off .auto-toggle-state{color:#ffc0b7;background:rgba(255,107,87,.14)}
 .kv.reason{background:linear-gradient(90deg,rgba(94,210,158,.11),rgba(255,255,255,.04))}
@@ -988,16 +1007,16 @@ body{
 .kv-value{font-size:13px;font-weight:900;line-height:1.15;text-align:right;word-break:break-word;max-width:58%}
 .status-card{margin-bottom:10px}
 .status-list{display:grid;gap:6px}
-.status-row{appearance:none;width:100%;font-family:inherit;color:#fff;cursor:pointer;text-align:left;display:flex;justify-content:space-between;gap:8px;align-items:flex-start;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:6px}.status-right{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+.status-row{appearance:none;width:100%;font-family:inherit;color:#fff;cursor:pointer;text-align:left;display:flex;justify-content:space-between;gap:10px;align-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:6px}.status-right{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
 .status-on{background:linear-gradient(90deg,rgba(78,204,102,.10),rgba(255,255,255,.04))}
 .status-off{background:linear-gradient(90deg,rgba(255,108,95,.10),rgba(255,255,255,.04))}
-.status-left{min-width:0;max-width:calc(100% - 76px)}
+.status-icon{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}.status-icon svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}.status-icon.icon-circulation{color:#43b8ff}.status-icon.icon-chlorinator{color:#5be878}.status-icon.icon-phPump{color:#9b7cff}.status-icon.icon-heatpump{color:#ff9c3a}.status-icon.icon-standby{color:#d7e2ef}.status-left{min-width:0;max-width:calc(100% - 120px);flex:1}
 .status-name{font-size:13px;font-weight:900;line-height:1.1}
 .status-hint{font-size:10px;color:#aebed5;margin-top:2px}.sync-inline{display:inline-flex;margin-top:4px}
 .pill{min-width:64px;text-align:center;padding:7px 8px;border-radius:999px;font-size:9px;font-weight:900;color:#fff;flex:0 0 auto}
 .pill.on{background:linear-gradient(180deg,#56d56e,#36b357);box-shadow:0 8px 18px rgba(56,179,87,.25)}
 .pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d);box-shadow:0 8px 18px rgba(223,74,61,.25)}
-.mini-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.wallbox-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.wallbox-mini{text-align:center;min-height:58px;display:flex;flex-direction:column;justify-content:center;padding:7px 5px}.wallbox-mini .mini-label{font-size:10px;margin-bottom:4px;color:#8edfff}.wallbox-mini .mini-value{font-size:10.5px;font-weight:700;line-height:1.12}
+.mini-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.wallbox-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.wallbox-mini{text-align:left;min-height:58px;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:7px;padding:7px}.wallbox-mini .mini-icon{width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;color:#dcecff;flex:0 0 auto}.wallbox-mini .mini-icon svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.wallbox-mini .mini-content{min-width:0}.wallbox-mini .mini-label{font-size:10px;margin-bottom:3px;color:#8edfff}.wallbox-mini .mini-value{font-size:10.5px;font-weight:700;line-height:1.12}
 .mini{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:14px;padding:9px}
 .mini.info{background:linear-gradient(180deg,rgba(90,166,255,.09),rgba(255,255,255,.04))}
 .mini.highlight{background:linear-gradient(180deg,rgba(255,190,76,.11),rgba(255,255,255,.04))}
@@ -1050,12 +1069,12 @@ body{
     <div class="card wallbox-card">
       <div class="section energy">Auto & Wallbox</div>
       <div class="mini-list wallbox-grid">
-        ${mini('Status', data.wallboxChargingStatus, (data.wallboxCharging ? 'highlight' : 'info') + ' wallbox-mini')}
-        ${mini('Stecker', data.wallboxPlugStatus, 'info wallbox-mini')}
-        ${mini('Leistung', `${data.wallboxPowerKw} kW`, 'highlight wallbox-mini')}
-        ${mini('SoC', `${data.wallboxSoc} % / ${data.wallboxTargetSoc} %`, 'highlight wallbox-mini')}
-        ${mini('Restzeit', data.wallboxTimeToFull, 'info wallbox-mini')}
-        ${mini('Reichweite', `${data.wallboxRangeKm} km`, 'info wallbox-mini')}
+        ${mini('Status', data.wallboxChargingStatus, (data.wallboxCharging ? 'highlight' : 'info') + ' wallbox-mini', 'wallboxStatus')}
+        ${mini('Stecker', data.wallboxPlugStatus, 'info wallbox-mini', 'plug')}
+        ${mini('Leistung', `${data.wallboxPowerKw} kW`, 'highlight wallbox-mini', 'power')}
+        ${mini('SoC', `${data.wallboxSoc} % / ${data.wallboxTargetSoc} %`, 'highlight wallbox-mini', 'battery')}
+        ${mini('Restzeit', data.wallboxTimeToFull, 'info wallbox-mini', 'clock')}
+        ${mini('Reichweite', `${data.wallboxRangeKm} km`, 'info wallbox-mini', 'road')}
       </div>
       <div style="margin-top:10px;font-size:11px;color:#64748b;line-height:1.45;">
         Stand: ${esc(data.wallboxTibberLastSeen || '--')}
@@ -1881,7 +1900,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.48</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.50</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -1902,7 +1921,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const criticalL = Math.max(0, parseNum(this.config.phCanisterCriticalL || 1) || 1);
     const scaleEnabled = this.config.phCanisterScaleEnabled === true || String(this.config.phCanisterScaleEnabled).toLowerCase() === 'true';
     const weightStateId = String(this.config.phCanisterWeightStateId || 'mqtt.0.pool.phminus.waage.weight_kg').trim();
-    return { sizeL, warnL, criticalL, scaleEnabled, weightStateId };
+    const tareKg = Math.max(0, parseNum(this.config.phCanisterTareKg || 0) || 0);
+    return { sizeL, warnL, criticalL, scaleEnabled, weightStateId, tareKg };
   }
 
   async ensurePhCanisterStates() {
@@ -1915,10 +1935,17 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     await this.ensureState('status.phCanister.lastDoseMl', 'number', 'value', 0, false);
     await this.ensureState('status.phCanister.statusText', 'string', 'text', '', false);
     await this.ensureState('status.phCanister.lastConfigLevelL', 'number', 'value', -1, false);
+    await this.ensureState('status.phCanister.grossWeightKg', 'number', 'value', 0, false);
+    await this.ensureState('status.phCanister.tareWeightKg', 'number', 'value', cfg.tareKg, false);
+    await this.ensureState('status.phCanister.netWeightKg', 'number', 'value', 0, false);
     await this.ensureState('control.ph.canister.setLevelL', 'number', 'value', 0, true);
     await this.ensureState('control.ph.canister.newCanister', 'boolean', 'button', false, true);
-    await this.applyPhCanisterConfigLevelIfChanged();
-    await this.recalculatePhCanister(false);
+    if (cfg.scaleEnabled) {
+      await this.updatePhCanisterFromScale(false);
+    } else {
+      await this.applyPhCanisterConfigLevelIfChanged();
+      await this.recalculatePhCanister(false);
+    }
   }
 
   async applyPhCanisterConfigLevelIfChanged() {
@@ -1937,16 +1964,54 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     return true;
   }
 
+  async persistPhCanisterNetToNative(netKg) {
+    const now = Date.now();
+    if (this._lastPhCanisterNativeWriteTs && now - this._lastPhCanisterNativeWriteTs < 15000) return;
+    const current = Number(this.config.phCanisterCurrentLevelL);
+    if (Number.isFinite(current) && Math.abs(current - netKg) < 0.0005) return;
+    try {
+      const objectId = `system.adapter.${this.namespace}`;
+      const obj = await this.getForeignObjectAsync(objectId);
+      if (!obj || !obj.native) return;
+      obj.native.phCanisterCurrentLevelL = Math.round(netKg * 1000) / 1000;
+      await this.setForeignObjectAsync(objectId, obj);
+      this.config.phCanisterCurrentLevelL = obj.native.phCanisterCurrentLevelL;
+      this._lastPhCanisterNativeWriteTs = now;
+    } catch (e) {
+      this.log.debug(`[PH-Kanister] Nettogewicht konnte nicht in die Admin-Konfiguration übernommen werden: ${e.message || e}`);
+    }
+  }
+
+  async updatePhCanisterFromScale(persistNative = true) {
+    const cfg = this.getPhCanisterConfig();
+    if (!cfg.scaleEnabled || !cfg.weightStateId) return false;
+    const gross = await this.getNumber(cfg.weightStateId, NaN);
+    if (!Number.isFinite(gross)) return false;
+    const net = Math.max(0, Math.round((gross - cfg.tareKg) * 1000) / 1000);
+    await this.setStateIfChanged('status.phCanister.grossWeightKg', Math.round(gross * 1000) / 1000, true);
+    await this.setStateIfChanged('status.phCanister.tareWeightKg', cfg.tareKg, true);
+    await this.setStateIfChanged('status.phCanister.netWeightKg', net, true);
+    await this.setStateIfChanged('status.phCanister.levelL', net, true);
+    await this.setStateIfChanged('status.phCanister.lastConfigLevelL', net, true);
+    await this.setStateIfChanged('status.phCanister.lastCorrectionTs', Date.now(), true);
+    await this.recalculatePhCanister(false);
+    if (persistNative) await this.persistPhCanisterNetToNative(net);
+    return true;
+  }
+
   async recalculatePhCanister(touchCorrection = false) {
     const cfg = this.getPhCanisterConfig();
     await this.ensureState('status.phCanister.sizeL', 'number', 'value', cfg.sizeL, true);
     const levelState = await this.getStateAsync('status.phCanister.levelL');
     let level = Number(levelState && levelState.val);
     if (!Number.isFinite(level)) level = cfg.sizeL;
-    level = Math.max(0, Math.min(cfg.sizeL, Math.round(level * 100) / 100));
-    const consumed = Math.max(0, Math.round((cfg.sizeL - level) * 100) / 100);
+    const precision = cfg.scaleEnabled ? 1000 : 100;
+    level = Math.max(0, Math.min(cfg.sizeL, Math.round(level * precision) / precision));
+    const consumed = Math.max(0, Math.round((cfg.sizeL - level) * precision) / precision);
     const percent = cfg.sizeL > 0 ? Math.round((level / cfg.sizeL) * 1000) / 10 : 0;
-    let txt = `pH-Minus: ${level.toFixed(2)} l Rest (${percent.toFixed(1)} %)`;
+    let txt = cfg.scaleEnabled
+      ? `pH-Minus: ${level.toFixed(3)} kg netto (${percent.toFixed(1)} %)`
+      : `pH-Minus: ${level.toFixed(2)} l Rest (${percent.toFixed(1)} %)`;
     if (level <= cfg.criticalL) txt += ' - KRITISCH';
     else if (level <= cfg.warnL) txt += ' - Nachbestellen';
     else txt += ' - OK';
@@ -2091,11 +2156,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     let phCanSource = 'Berechnung';
     let phCanAvailable = true;
     if (phCanCfg.scaleEnabled) {
-      const weight = await this.getNumber(phCanCfg.weightStateId, NaN);
-      phCanAvailable = Number.isFinite(weight);
-      phCanLevelNum = phCanAvailable ? Math.max(0, weight) : NaN;
-      phCanPercentNum = NaN;
-      phCanUnit = 'kg';
+      const grossWeight = await this.getNumber(phCanCfg.weightStateId, NaN);
+      phCanAvailable = Number.isFinite(grossWeight);
+      phCanLevelNum = phCanAvailable ? Math.max(0, Math.round((grossWeight - phCanCfg.tareKg) * 1000) / 1000) : NaN;
+      phCanPercentNum = phCanAvailable && phCanCfg.sizeL > 0 ? Math.round((phCanLevelNum / phCanCfg.sizeL) * 1000) / 10 : NaN;
+      phCanUnit = 'kg netto';
       phCanSource = phCanCfg.weightStateId;
     }
     const statusValue = Number.isFinite(phCanLevelNum) ? phCanLevelNum : 0;
@@ -2110,7 +2175,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       available: phCanAvailable,
       displayCompact: phCanAvailable ? `${this.fmt(phCanLevelNum, phCanCfg.scaleEnabled ? 3 : 2, phCanCfg.scaleEnabled ? '0.000' : '0.00')} ${phCanUnit}` : 'Waage nicht verfügbar',
       displayDetail: phCanCfg.scaleEnabled
-        ? (phCanAvailable ? `${this.fmt(phCanLevelNum, 3, '0.000')} kg` : 'Waage nicht verfügbar')
+        ? (phCanAvailable ? `${this.fmt(phCanLevelNum, 3, '0.000')} kg netto` : 'Waage nicht verfügbar')
         : `${this.fmt(phCanLevelNum, 2, '0.00')} l · ${this.fmt(phCanPercentNum, 1, '0.0')} %`,
       lastCorrection: phCanLastCorrTs ? new Date(phCanLastCorrTs).toLocaleString('de-DE') : '-',
       lastDoseMl: this.fmt(phCanLastDoseMlNum, 0, '0'),
@@ -2435,7 +2500,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
-      adapterVersion: 'v0.3.48'
+      adapterVersion: 'v0.3.50'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -4024,7 +4089,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] v0.3.48 Diagnose-Logging aktiv');
+      this.log.info('[VIS] v0.3.50 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
@@ -4346,6 +4411,10 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.applyDependencyRules(id);
     }
     await this.handleManualPhPumpStateChange(id, state);
+    const phScaleId = this.config.phCanisterScaleEnabled ? String(this.config.phCanisterWeightStateId || 'mqtt.0.pool.phminus.waage.weight_kg').trim() : '';
+    if (phScaleId && id === phScaleId) {
+      await this.updatePhCanisterFromScale(true);
+    }
     if (this.monitoredIds.includes(id)) {
       this.debug(`State geändert: ${id}`);
       this.queueRender();
