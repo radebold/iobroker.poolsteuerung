@@ -1,4 +1,10 @@
-## v0.3.50
+## v0.3.51
+
+- Mobile manuelle pH-Dosierung wie im Tablet: feste Buttons für 60, 120 und 180 Sekunden.
+- Jeder Dosierbutton hat ein passendes Tropfen-Symbol.
+- Keine Änderung an Dosier- oder Steuerlogik.
+
+## v0.3.51
 
 - Tablet: Pooltemperatur-Tageslinie direkt neben der Überschrift, innerhalb der Karte.
 - Versionsanzeige in Adapter, VIS und Metadaten vereinheitlicht.
