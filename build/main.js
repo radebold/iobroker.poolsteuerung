@@ -883,11 +883,13 @@ class Poolsteuerung extends utils.Adapter {
     const orpClass = orpBadge && orpBadge.cls ? orpBadge.cls : '';
     const metric = (label, value, sub = '', badge = null, accent = '', trend = '', trendOk = false, trendBad = false, sparkline = '') => `
       <div class="metric ${accent}">
-        <div class="metric-label">${esc(label)}</div>
+        <div class="metric-head">
+          <div class="metric-label">${esc(label)}</div>
+          ${sparkline ? `<span class="metric-sparkline">${sparkline}</span>` : ''}
+        </div>
         <div class="metric-value">
           <span class="metric-main ${trendOk ? 'ok' : (trendBad ? 'bad' : '')}">${esc(value)}</span>
           ${trend ? `<span class="metric-trend ${trendClass(trend)} ${trendOk ? 'ok' : (trendBad ? 'bad' : '')}">${esc(trend)}</span>` : ''}
-          ${sparkline ? `<span class="metric-sparkline">${sparkline}</span>` : ''}
         </div>
         ${sub ? `<div class="metric-sub">${esc(sub)}</div>` : ''}
         ${badge ? `<div class="badge ${badge.cls}">${badge.txt}</div>` : ''}
@@ -937,9 +939,11 @@ body{
 .title{font-size:15px;font-weight:900;letter-spacing:.2px}
 .meta{text-align:right;font-size:10px;color:var(--muted);line-height:1.15;max-width:86px}
 .mode{display:inline-flex;align-items:center;justify-content:center;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:9px;font-weight:900;margin-bottom:6px;box-shadow:0 6px 18px rgba(88,172,255,.25)}
-.temp-wrap{margin:18px 0 6px;display:flex;align-items:flex-end;gap:8px}
-.temp{font-size:68px;font-weight:900;line-height:.9}
-.unit{font-size:16px;color:#d4e5f6;padding-bottom:7px}
+.temp-wrap{margin:18px 0 6px;display:flex;align-items:flex-end;gap:8px;min-width:0;overflow:hidden}
+.temp{font-size:68px;font-weight:900;line-height:.9;flex:0 0 auto}
+.unit{font-size:16px;color:#d4e5f6;padding-bottom:7px;flex:0 0 auto}
+.temp-inline-history{position:relative;flex:1 1 auto;min-width:48px;height:34px;margin:0 0 4px 6px;color:#76d7ff;overflow:hidden;contain:paint}
+.temp-inline-history .sparkline,.temp-inline-history svg{position:absolute;inset:0;width:100%!important;max-width:100%!important;height:34px!important;display:block;overflow:hidden!important;clip-path:inset(0)}
 .temp-scale{margin:6px 0 10px}
 .scale-row{display:flex;justify-content:space-between;font-size:11px;color:#c7d6ea;margin-top:6px}
 .scale-track{position:relative;height:8px;border-radius:999px;background:linear-gradient(90deg,#46b3ff 0%, #58d27a 55%, #f5c04f 78%, #ff7f6f 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
@@ -950,12 +954,13 @@ body{
 .metric.cool{background:linear-gradient(180deg,rgba(80,166,255,.15),rgba(255,255,255,.05))}
 .metric.warn{background:linear-gradient(180deg,rgba(255,145,96,.12),rgba(255,255,255,.05))}
 .metric-target{background:linear-gradient(180deg,rgba(86,217,120,.10),rgba(255,255,255,.05))}
-.metric-label{font-size:12px;color:#c8d4e6;font-weight:800;margin-bottom:6px}
-.metric-value{font-size:17px;font-weight:900;line-height:1.05;display:flex;align-items:center;gap:8px}
+.metric-head{display:flex;align-items:center;gap:6px;height:28px;min-width:0;overflow:hidden;margin-bottom:2px}
+.metric-label{font-size:12px;color:#c8d4e6;font-weight:800;white-space:nowrap;flex:0 0 auto}
+.metric-value{font-size:17px;font-weight:900;line-height:1.05;display:flex;align-items:center;gap:8px;min-width:0}
 .metric-main.ok{color:#67dd7c}.metric-main.bad{color:#ff7a6a}
 .metric-trend{display:inline-flex;min-width:18px;justify-content:center;font-size:20px;font-weight:900;line-height:1;margin-left:10px}
 .metric-trend.up{color:#ffb36b}.metric-trend.down{color:#7dd3fc}.metric-trend.flat{color:#d5e4f8}.metric-trend.ok{color:#67dd7c}.metric-trend.bad{color:#ff7a6a}
-.metric-sparkline{display:inline-flex;align-items:center;flex:1;min-width:70px;margin-left:6px}.metric-sparkline .sparkline{width:100%;height:30px;display:block;overflow:visible}.metric-sparkline .sparkline path{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}.metric-sparkline .sparkline circle{fill:currentColor}.sparkline-ph{color:#48b8ff}.sparkline-orp{color:#5be878}.sparkline-temp{color:#76d7ff}.temp-history{height:30px;margin:4px 0 6px;color:#76d7ff}.temp-history .sparkline{width:100%;height:30px;display:block}
+.metric-sparkline{position:relative;display:block;flex:1 1 auto;min-width:0;height:26px;margin-left:auto;overflow:hidden;contain:paint}.metric-sparkline .sparkline,.metric-sparkline svg{position:absolute;inset:0;width:100%!important;max-width:100%!important;height:26px!important;display:block;overflow:hidden!important;clip-path:inset(0)}.metric-sparkline .sparkline path{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}.metric-sparkline .sparkline circle{fill:currentColor}.sparkline-ph{color:#48b8ff}.sparkline-orp{color:#5be878}.sparkline-temp{color:#76d7ff}
 .metric-sub{font-size:10px;color:#aebed5;margin-top:4px}
 .badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;margin-top:8px;font-size:11px;font-weight:900}
 .badge.ok{background:rgba(64,196,99,.18);color:#9ff5b3}
@@ -1023,12 +1028,12 @@ body{
       <div class="temp-wrap">
         <div class="temp">${esc(data.poolTemp)}</div>
         <div class="unit">°C</div>
+        <div class="temp-inline-history">${data.poolTempSparklineSvg || ''}</div>
       </div>
       <div class="temp-scale">
         <div class="scale-track"><div class="scale-target" title="Soll ${esc(data.targetTemp)} °C"></div><div class="scale-dot"></div></div>
         <div class="scale-row"><span>15 °C</span><span>Aktuell: ${esc(data.poolTemp)} °C</span><span>32 °C</span></div>
       </div>
-      <div class="temp-history">${data.poolTempSparklineSvg || ''}</div>
       <div class="metrics">
         ${metric('pH', data.ph, `Soll ${data.phSet} · ${data.phTargetRangeText}`, phBadge, 'warn', data.phTrend || '→', phClass === 'ok', phClass === 'low' || phClass === 'high', data.phSparklineSvg)}
         ${metric('ORP', data.orp, `EIN ≤ ${data.orpOnThreshold} / AUS > ${data.orpOffThreshold}`, orpBadge, 'warn', data.orpTrend || '→', orpClass === 'ok', orpClass === 'low' || orpClass === 'high', data.orpSparklineSvg)}
@@ -1871,7 +1876,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.45</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.46</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -2425,7 +2430,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
-      adapterVersion: 'v0.3.45'
+      adapterVersion: 'v0.3.46'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -4014,7 +4019,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] v0.3.45 Diagnose-Logging aktiv');
+      this.log.info('[VIS] v0.3.46 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
