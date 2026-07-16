@@ -1,10 +1,10 @@
-## v0.3.51
+## v0.3.53
 
 - Mobile manuelle pH-Dosierung wie im Tablet: feste Buttons für 60, 120 und 180 Sekunden.
 - Jeder Dosierbutton hat ein passendes Tropfen-Symbol.
 - Keine Änderung an Dosier- oder Steuerlogik.
 
-## v0.3.51
+## v0.3.53
 
 - Tablet: Pooltemperatur-Tageslinie direkt neben der Überschrift, innerhalb der Karte.
 - Versionsanzeige in Adapter, VIS und Metadaten vereinheitlicht.
@@ -70,3 +70,9 @@ Version v0.3.50-hotfix68
 - Tablet-Schnellzugriff: Poolsolltemperatur-Kachel entfernt.
 - Manuelle pH-Dosierung als drei feste, touchfreundliche Buttons: 60, 120 und 180 Sekunden.
 - Pooltemperatur-Sparkline bleibt rechts neben Temperaturwert und Einheit.
+
+
+## 0.3.53
+- pH-Tagesstatistik verwendet den lokalen Kalendertag statt UTC.
+- VIS prüft den Tageswechsel vor der Anzeige.
+- Einmaliger Reset veralteter/falscher Tageszähler bei der ersten Installation dieser Version.

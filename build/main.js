@@ -1040,7 +1040,7 @@ body{
   .col-left,.col-mid,.col-right{width:auto}
   .col-mid,.col-right{margin-top:14px}
 }
-</style></head><body><div class="wrap"><div class="layout">
+.ph-wa-flag{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border-radius:11px;background:rgba(37,211,102,.10);border:1px solid rgba(37,211,102,.28);color:inherit;font-size:11px;font-weight:900;cursor:pointer;user-select:none}.ph-wa-flag input{width:19px;height:19px;margin:0;accent-color:#25d366;cursor:pointer;flex:0 0 auto}.ph-wa-flag span{line-height:1.15}</style></head><body><div class="wrap"><div class="layout">
   <div class="col-left">
     <div class="card hero">
       <div class="head">
@@ -1091,6 +1091,11 @@ body{
         <button type="button" class="manual-btn js-manual-dose-btn" data-sec="120"><span>120 Sek.</span><small>Start Dosierung</small></button>
         <button type="button" class="manual-btn js-manual-dose-btn" data-sec="180"><span>180 Sek.</span><small>Start Dosierung</small></button>
       </div>
+      <label class="ph-wa-flag" title="WhatsApp-Benachrichtigung für pH-Dosierungen ein- oder ausschalten">
+        <input type="checkbox" class="js-ph-wa-toggle" ${data.phDoseWhatsappEnabled ? 'checked' : ''}
+          onchange="window.poolSetState('${data.namespace}.control.notifications.phDoseWhatsapp', this.checked)">
+        <span>WhatsApp bei pH-Dosierung</span>
+      </label>
     </div>
     <div class="card">
       <div class="section energy">Energie & Steuerung</div>
@@ -1336,7 +1341,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .temp-center{display:flex;flex-direction:column;justify-content:center;align-items:center;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}
 .temp-center .quick-label{margin-bottom:1px}
 .temp-center .quick-value{font-size:16px}.ph-today-line{grid-column:1 / -1;display:flex;justify-content:space-between;gap:6px;align-items:center;background:#f8fafc;border:1px solid rgba(15,23,42,.08);border-radius:11px;padding:7px 9px;color:#0f172a;font-size:10.5px;font-weight:800;white-space:nowrap}.ph-today-line b{font-size:11.5px}.ph-next{color:#334155;text-align:right}
-</style>
+.ph-wa-flag{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border-radius:11px;background:rgba(37,211,102,.10);border:1px solid rgba(37,211,102,.28);color:inherit;font-size:11px;font-weight:900;cursor:pointer;user-select:none}.ph-wa-flag input{width:19px;height:19px;margin:0;accent-color:#25d366;cursor:pointer;flex:0 0 auto}.ph-wa-flag span{line-height:1.15}</style>
 </head><body><div class="wrap">
   <div class="card hero">
     <div class="header"><div class="title">Pool Manager <span class="ver">${esc(data.adapterVersion)}</span></div><div class="meta"><div class="mode-badge">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</div><br>Aktualisiert<br>${esc(data.updated)}</div></div>
@@ -1358,6 +1363,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       <button type="button" class="manual-btn js-manual-dose-btn" data-sec="120"><span>120 Sek.</span><span class="dose-drops"><svg viewBox="0 0 16 20" aria-hidden="true"><path d="M8 1.5S2.5 8.1 2.5 12.2A5.5 5.5 0 0 0 13.5 12.2C13.5 8.1 8 1.5 8 1.5Z"/></svg><svg viewBox="0 0 16 20" aria-hidden="true"><path d="M8 1.5S2.5 8.1 2.5 12.2A5.5 5.5 0 0 0 13.5 12.2C13.5 8.1 8 1.5 8 1.5Z"/></svg></span></button>
       <button type="button" class="manual-btn js-manual-dose-btn" data-sec="180"><span>180 Sek.</span><span class="dose-drops"><svg viewBox="0 0 16 20" aria-hidden="true"><path d="M8 1.5S2.5 8.1 2.5 12.2A5.5 5.5 0 0 0 13.5 12.2C13.5 8.1 8 1.5 8 1.5Z"/></svg><svg viewBox="0 0 16 20" aria-hidden="true"><path d="M8 1.5S2.5 8.1 2.5 12.2A5.5 5.5 0 0 0 13.5 12.2C13.5 8.1 8 1.5 8 1.5Z"/></svg><svg viewBox="0 0 16 20" aria-hidden="true"><path d="M8 1.5S2.5 8.1 2.5 12.2A5.5 5.5 0 0 0 13.5 12.2C13.5 8.1 8 1.5 8 1.5Z"/></svg></span></button>
     </div>
+      <label class="ph-wa-flag" title="WhatsApp-Benachrichtigung für pH-Dosierungen ein- oder ausschalten">
+        <input type="checkbox" class="js-ph-wa-toggle" ${data.phDoseWhatsappEnabled ? 'checked' : ''}
+          onchange="window.poolSetState('${data.namespace}.control.notifications.phDoseWhatsapp', this.checked)">
+        <span>WhatsApp bei pH-Dosierung</span>
+      </label>
     <div class="ph-today-line"><span>🧪 Heute: <b>${esc(data.phDailyMl)} ml</b> · ${esc(data.phDailyCount)}x</span><span>✔ Letzte: <b>${esc(data.phLastDoseTime)}</b> (${esc(data.phLastDoseMl)} ml)</span><span class="ph-next">⏰ Nächste: <b>${esc(data.phNextCheck)}</b></span></div>
   </div></div>
 
@@ -1688,7 +1698,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 .ps-btn{appearance:none;border:none;cursor:pointer;text-align:left;padding:7px 9px;border-radius:13px;min-height:44px;background:linear-gradient(180deg,#2d4f86 0%,#162d52 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),0 8px 18px rgba(6,24,44,.28);border:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;justify-content:center;gap:3px}.ps-btn:disabled{opacity:.5;cursor:default}.ps-btn-name{font-size:12px;font-weight:800}.ps-btn-state{font-size:9px;font-weight:800}.ps-btn.is-on .ps-btn-name,.ps-btn.is-on .ps-btn-state{color:#67dd7c}.ps-btn.is-off .ps-btn-name,.ps-btn.is-off .ps-btn-state{color:#ff8d7b}
 .ps-q{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.ps-ql{font-size:9px;color:#64748b;font-weight:700;margin-bottom:3px}.ps-qv{font-size:12px;font-weight:900;color:#0f172a;line-height:1.08}
 .manual-btn{appearance:none;border:none;cursor:pointer;text-align:center;padding:7px 6px;border-radius:12px;min-height:48px;background:linear-gradient(180deg,#2d5da0 0%,#173765 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 6px 14px rgba(6,24,44,.25);border:1px solid rgba(255,255,255,.10);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;font-weight:900;gap:2px}.manual-btn span{font-size:13px}.manual-btn small{font-size:9px;color:#dbeafe}.manual-dose-presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;grid-column:1 / -1;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:6px}.dose-drops{display:flex;align-items:center;justify-content:center;gap:1px;height:14px}.dose-drops svg{width:11px;height:14px;display:block;fill:none;stroke:#8fd8ff;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.ps-can{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:12px;padding:8px;grid-column:1 / -1}.ps-can-top{display:flex;justify-content:space-between;font-weight:900}.ps-can-bar{height:9px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin:6px 0}.ps-can-fill{height:100%;background:#22c55e}.ps-can-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.ps-can-k{font-size:9px;color:#64748b}.ps-can-v{font-size:12px;font-weight:900;color:#0f172a}.ps-can-input{height:32px;border-radius:9px;border:1px solid #cbd5e1;padding:4px 8px}.ps-can-btn{border:none;border-radius:9px;background:#3b5bff;color:#fff;font-weight:900}.ps-can-actions{display:grid;grid-template-columns:1fr 70px;gap:5px;margin-top:6px}.ps-can-actions.two{grid-template-columns:1fr 1fr}.ps-can-btn.green{background:#25a84a}.ps-can-btn.gray{background:#475569}
-</style>
+.ph-wa-flag{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border-radius:11px;background:rgba(37,211,102,.10);border:1px solid rgba(37,211,102,.28);color:inherit;font-size:11px;font-weight:900;cursor:pointer;user-select:none}.ph-wa-flag input{width:19px;height:19px;margin:0;accent-color:#25d366;cursor:pointer;flex:0 0 auto}.ph-wa-flag span{line-height:1.15}</style>
 <div class="ps-wrap">
   <div class="ps-card ps-hero">
     <div class="ps-header"><div class="ps-title">Pool Manager <span class="ps-ver">${esc(data.adapterVersion)}</span></div><div class="ps-sub"><button class="ps-mode js-standby-btn" data-current="${data.standbyControl ? '1' : '0'}">${esc(data.modeActive === 'standby' ? 'STANDBY' : 'NORMAL')}</button><br>Aktualisiert<br>${esc(data.updated)}</div></div>
@@ -1733,6 +1743,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       <button type="button" class="manual-btn js-manual-dose-btn" data-sec="120"><span>120 Sek.</span><span class="dose-drops"><svg viewBox="0 0 16 20" aria-hidden="true"><path d="M8 1.5S2.5 8.1 2.5 12.2A5.5 5.5 0 0 0 13.5 12.2C13.5 8.1 8 1.5 8 1.5Z"/></svg><svg viewBox="0 0 16 20" aria-hidden="true"><path d="M8 1.5S2.5 8.1 2.5 12.2A5.5 5.5 0 0 0 13.5 12.2C13.5 8.1 8 1.5 8 1.5Z"/></svg></span></button>
       <button type="button" class="manual-btn js-manual-dose-btn" data-sec="180"><span>180 Sek.</span><span class="dose-drops"><svg viewBox="0 0 16 20" aria-hidden="true"><path d="M8 1.5S2.5 8.1 2.5 12.2A5.5 5.5 0 0 0 13.5 12.2C13.5 8.1 8 1.5 8 1.5Z"/></svg><svg viewBox="0 0 16 20" aria-hidden="true"><path d="M8 1.5S2.5 8.1 2.5 12.2A5.5 5.5 0 0 0 13.5 12.2C13.5 8.1 8 1.5 8 1.5Z"/></svg><svg viewBox="0 0 16 20" aria-hidden="true"><path d="M8 1.5S2.5 8.1 2.5 12.2A5.5 5.5 0 0 0 13.5 12.2C13.5 8.1 8 1.5 8 1.5Z"/></svg></span></button>
     </div>
+      <label class="ph-wa-flag" title="WhatsApp-Benachrichtigung für pH-Dosierungen ein- oder ausschalten">
+        <input type="checkbox" class="js-ph-wa-toggle" ${data.phDoseWhatsappEnabled ? 'checked' : ''}
+          onchange="window.poolSetState('${data.namespace}.control.notifications.phDoseWhatsapp', this.checked)">
+        <span>WhatsApp bei pH-Dosierung</span>
+      </label>
   </div></div>
 </div>
 <script>
@@ -1902,7 +1917,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.51</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}.ph-wa-flag{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border-radius:11px;background:rgba(37,211,102,.10);border:1px solid rgba(37,211,102,.28);color:inherit;font-size:11px;font-weight:900;cursor:pointer;user-select:none}.ph-wa-flag input{width:19px;height:19px;margin:0;accent-color:#25d366;cursor:pointer;flex:0 0 auto}.ph-wa-flag span{line-height:1.15}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.53</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -2127,6 +2142,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const standbyNext = standbyMode ? this.getNextStandbyRun(new Date()) : null;
     const pumpDecision = await this.getText('poolsteuerung.0.status.debug.lastPumpDecision', standbyMode ? 'Standby aktiv' : '--');
     const phDecision = await this.getText('poolsteuerung.0.status.debug.lastPhDecision', '--');
+    // Vor dem Lesen der VIS-Werte immer den lokalen Tageswechsel prüfen.
+    await this.getTodayDoseCount(new Date());
     const phDailyCount = await this.getText('poolsteuerung.0.status.phDose.dailyCount', '0');
     const phDailyMl = await this.getText('poolsteuerung.0.status.phDose.dailyMl', '0');
     const phLastCheckTime = await this.getText('poolsteuerung.0.status.phDose.lastCheckTime', '-');
@@ -2484,6 +2501,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       autoCirculationControl: await this.getControlBool('control.auto.circulation', circulationEnabled),
       autoChlorControl: await this.getControlBool('control.auto.chlor', chlorEnabledMaster),
       autoPhControl: await this.getControlBool('control.auto.ph', phEnabledMaster),
+      phDoseWhatsappEnabled: await this.getControlBool('control.notifications.phDoseWhatsapp', true),
       autoHeatpumpControl: await this.getControlBool('control.auto.heatpump', heatEnabledMaster),
       circulationPumpStateId: this.config.circulationPumpSocketStateId || '',
       chlorinatorStateId: this.config.chlorinatorSocketStateId || '',
@@ -2502,7 +2520,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
-      adapterVersion: 'v0.3.51'
+      adapterVersion: 'v0.3.53'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -3037,7 +3055,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
 
   getTodayKey(now = new Date()) {
-    return now.toISOString().slice(0, 10);
+    const d = now instanceof Date ? now : new Date(now);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   async getTodayDoseCount(now = new Date()) {
@@ -3709,7 +3731,13 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     if (!(await this.shouldSendAlert(key))) return false;
 
     let sent = false;
-    sent = (await this.dispatchWhatsappAlert(message)) || sent;
+    const isPhDoseAlert = String(key || '').startsWith('ph_dose');
+    const phDoseWhatsappEnabled = !isPhDoseAlert || await this.getControlBool('control.notifications.phDoseWhatsapp', true);
+    if (phDoseWhatsappEnabled) {
+      sent = (await this.dispatchWhatsappAlert(message)) || sent;
+    } else if (this.config.debugMode) {
+      this.log.info(`[ALERT] WhatsApp für pH-Dosierung deaktiviert: ${key}`);
+    }
     sent = (await this.dispatchTelegramAlert(message)) || sent;
     sent = (await this.dispatchEmailAlert(message)) || sent;
 
@@ -3926,7 +3954,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   async updateLocalTrendHistory(phValue, orpValue) {
     await this.ensureLocalTrendHistoryStates();
     const now = Date.now();
-    const key = new Date(now).toISOString().slice(0, 10);
+    const key = this.getTodayKey(new Date(now));
     const oldKey = await this.getText('poolsteuerung.0.status.trend.todayKey', '');
     if (oldKey !== key) {
       await this.setStateIfChanged('status.trend.todayKey', key, true);
@@ -4091,7 +4119,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] v0.3.51 Diagnose-Logging aktiv');
+      this.log.info('[VIS] v0.3.53 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
@@ -4102,6 +4130,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       await this.ensureControlState('control.auto.circulation', this.config.enableCirculationControl !== false);
       await this.ensureControlState('control.auto.chlor', this.config.enableChlorControl !== false);
       await this.ensureControlState('control.auto.ph', this.config.enablePhControl !== false);
+      await this.ensureControlState('control.notifications.phDoseWhatsapp', true);
       await this.ensureControlState('control.auto.heatpump', this.config.enableHeatpumpControl !== false);
       await this.ensureState('control.ph.manualDoseSec', 'number', 'value.interval', getManualPhDoseDefaultSec(this.config), true);
       const configuredManualDoseSec = getConfiguredManualPhDoseSec(this.config);
@@ -4113,6 +4142,22 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       }
       await this.ensureState('control.ph.manualStart', 'boolean', 'button', false, true);
       await this.ensureState('control.ph.manualTrigger', 'number', 'value.time', 0, true);
+      // Einmalige Bereinigung der bisher fehlerhaften/alten Tagesstatistik.
+      // Danach werden nur noch tatsächlich abgeschlossene Dosierungen des lokalen Kalendertags gezählt.
+      await this.ensureState('status.phDose.counterSchemaVersion', 'string', 'text', '', false);
+      const doseCounterSchema = await this.getStateAsync('status.phDose.counterSchemaVersion');
+      if (!doseCounterSchema || doseCounterSchema.val !== 'local-day-v1') {
+        await this.ensureState('status.phDose.dayKey', 'string', 'text', '', false);
+        await this.ensureState('status.phDose.dailyCount', 'number', 'value', 0, false);
+        await this.ensureState('status.phDose.dailyMl', 'number', 'value', 0, false);
+        await this.setStateAsync('status.phDose.dayKey', this.getTodayKey(new Date()), true);
+        await this.setStateAsync('status.phDose.dailyCount', 0, true);
+        await this.setStateAsync('status.phDose.dailyMl', 0, true);
+        await this.setStateAsync('status.phDose.counterSchemaVersion', 'local-day-v1', true);
+        this.log.info('pH-Tagesstatistik einmalig zurückgesetzt und auf lokalen Kalendertag umgestellt.');
+      } else {
+        await this.getTodayDoseCount(new Date());
+      }
       await this.ensurePhCanisterStates();
       await this.ensureState('control.device.circulation', 'boolean', 'switch', false, true);
       await this.ensureState('control.device.chlorinator', 'boolean', 'switch', false, true);
@@ -4219,6 +4264,11 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
           }
           await this.forceImmediateRender();
           this.queueDelayedRefresh(1800);
+          return;
+        }
+
+        if (id === `${this.namespace}.control.notifications.phDoseWhatsapp`) {
+          await this.forceImmediateRender();
           return;
         }
 
