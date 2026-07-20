@@ -1931,7 +1931,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}.ph-wa-flag{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border-radius:11px;background:rgba(37,211,102,.10);border:1px solid rgba(37,211,102,.28);color:inherit;font-size:11px;font-weight:900;cursor:pointer;user-select:none}.ph-wa-flag input{width:19px;height:19px;margin:0;accent-color:#25d366;cursor:pointer;flex:0 0 auto}.ph-wa-flag span{line-height:1.15}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.59</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}.ph-wa-flag{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border-radius:11px;background:rgba(37,211,102,.10);border:1px solid rgba(37,211,102,.28);color:inherit;font-size:11px;font-weight:900;cursor:pointer;user-select:none}.ph-wa-flag input{width:19px;height:19px;margin:0;accent-color:#25d366;cursor:pointer;flex:0 0 auto}.ph-wa-flag span{line-height:1.15}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.60</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -2402,7 +2402,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     try {
       historySparklines = await Promise.race([
         this.getHistorySparklines(),
-        new Promise(resolve => setTimeout(() => resolve({ phSparklineSvg: '', orpSparklineSvg: '', poolTempSparklineSvg: '', __timeout: true }), 5000))
+        new Promise(resolve => setTimeout(() => resolve({ phSparklineSvg: '', orpSparklineSvg: '', poolTempSparklineSvg: '', __timeout: true }), 12000))
       ]);
       if (historySparklines && historySparklines.__timeout) {
         this.visTrace('renderVisFull History-Sparklines TIMEOUT', 'verwende leere Charts');
@@ -2540,7 +2540,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
-      adapterVersion: 'v0.3.59'
+      adapterVersion: 'v0.3.60'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -3806,7 +3806,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     return nums.reduce((a, b) => a + b, 0) / nums.length;
   }
 
-  async fetchHistoryValues(stateId, startTs, endTs) {
+  async fetchHistoryValues(stateId, startTs, endTs, aggregate = 'none', count = 500) {
     const instance = String(this.config.trendHistoryInstance || 'history.0').trim() || 'history.0';
     if (!stateId || !instance) return [];
     try {
@@ -3815,8 +3815,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
         options: {
           start: startTs,
           end: endTs,
-          aggregate: 'none',
-          count: 500,
+          aggregate: aggregate || 'none',
+          count: Math.max(10, Number(count) || 500),
           ignoreNull: true
         }
       });
@@ -3898,11 +3898,20 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     let min = Math.min(...nums);
     let max = Math.max(...nums);
     if (!Number.isFinite(min) || !Number.isFinite(max)) return '';
-    if (Math.abs(max - min) < 0.0001) {
-      min -= 0.5;
-      max += 0.5;
+    const rawRange = max - min;
+    if (Math.abs(rawRange) < 0.0001) {
+      min -= timeMode === '24h' ? 0.15 : 0.5;
+      max += timeMode === '24h' ? 0.15 : 0.5;
     } else {
-      const margin = (max - min) * 0.22;
+      // Für die Temperatur wird bewusst frei nach dem realen 24-h-Min/Max skaliert.
+      // Selbst kleine Änderungen von wenigen Zehntel Grad bleiben dadurch sichtbar.
+      const minVisibleRange = timeMode === '24h' ? 0.30 : 0;
+      if (rawRange < minVisibleRange) {
+        const center = (min + max) / 2;
+        min = center - minVisibleRange / 2;
+        max = center + minVisibleRange / 2;
+      }
+      const margin = (max - min) * (timeMode === '24h' ? 0.12 : 0.22);
       min -= margin;
       max += margin;
     }
@@ -3941,7 +3950,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async getHistorySparklines() {
     const now = Date.now();
-    if (this.sparklineCache && this.sparklineCache.data && (now - this.sparklineCache.ts) < 300000) {
+    if (this.sparklineCache && this.sparklineCache.data && (now - this.sparklineCache.ts) < 60000) {
       return this.sparklineCache.data;
     }
 
@@ -3954,7 +3963,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       const [phValues, orpValues, poolTempValues] = await Promise.all([
         this.fetchHistoryValues(this.config.phStateId, start.getTime(), now),
         this.fetchHistoryValues(this.config.orpStateId, start.getTime(), now),
-        this.fetchHistoryValues(this.config.waterTempStateId, tempStartTs, now)
+        this.fetchHistoryValues(this.config.waterTempStateId, tempStartTs, now, 'average', 96)
       ]);
       result.phSparklineSvg = this.buildSparklineSvgFromValues(phValues, 'sparkline-ph');
       result.orpSparklineSvg = this.buildSparklineSvgFromValues(orpValues, 'sparkline-orp');
@@ -4162,7 +4171,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] v0.3.59 Diagnose-Logging aktiv');
+      this.log.info('[VIS] v0.3.60 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
