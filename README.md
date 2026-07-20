@@ -81,3 +81,7 @@ Version v0.3.50-hotfix68
 - pH-Tagesstatistik verwendet den lokalen Kalendertag statt UTC.
 - VIS prüft den Tageswechsel vor der Anzeige.
 - Einmaliger Reset veralteter/falscher Tageszähler bei der ersten Installation dieser Version.
+
+
+## 0.3.55
+- Fix: Waagenwerte werden nicht mehr auf ganze Kilogramm gerundet, bevor die Tara abgezogen wird.

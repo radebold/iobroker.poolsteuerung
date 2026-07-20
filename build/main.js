@@ -1917,7 +1917,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}.ph-wa-flag{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border-radius:11px;background:rgba(37,211,102,.10);border:1px solid rgba(37,211,102,.28);color:inherit;font-size:11px;font-weight:900;cursor:pointer;user-select:none}.ph-wa-flag input{width:19px;height:19px;margin:0;accent-color:#25d366;cursor:pointer;flex:0 0 auto}.ph-wa-flag span{line-height:1.15}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.54</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}.ph-wa-flag{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border-radius:11px;background:rgba(37,211,102,.10);border:1px solid rgba(37,211,102,.28);color:inherit;font-size:11px;font-weight:900;cursor:pointer;user-select:none}.ph-wa-flag input{width:19px;height:19px;margin:0;accent-color:#25d366;cursor:pointer;flex:0 0 auto}.ph-wa-flag span{line-height:1.15}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.55</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -2002,7 +2002,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
   async updatePhCanisterFromScale(persistNative = true) {
     const cfg = this.getPhCanisterConfig();
     if (!cfg.scaleEnabled || !cfg.weightStateId) return false;
-    const gross = await this.getNumber(cfg.weightStateId, NaN);
+    const gross = await this.getNumber(cfg.weightStateId, null);
     if (!Number.isFinite(gross)) return false;
     const net = Math.max(0, Math.round((gross - cfg.tareKg) * 1000) / 1000);
     await this.setStateIfChanged('status.phCanister.grossWeightKg', Math.round(gross * 1000) / 1000, true);
@@ -2179,8 +2179,8 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     let phCanSource = 'Berechnung';
     let phCanAvailable = true;
     if (phCanCfg.scaleEnabled) {
-      const grossWeight = await this.getNumber(`${this.namespace}.status.phCanister.grossWeightKg`, NaN);
-      const netWeight = await this.getNumber(`${this.namespace}.status.phCanister.netWeightKg`, NaN);
+      const grossWeight = await this.getNumber(`${this.namespace}.status.phCanister.grossWeightKg`, null);
+      const netWeight = await this.getNumber(`${this.namespace}.status.phCanister.netWeightKg`, null);
       phCanAvailable = Number.isFinite(grossWeight) && Number.isFinite(netWeight);
       phCanLevelNum = phCanAvailable ? netWeight : NaN;
       phCanPercentNum = phCanAvailable && phCanCfg.sizeL > 0 ? Math.round((phCanLevelNum / phCanCfg.sizeL) * 1000) / 10 : NaN;
@@ -2525,7 +2525,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
-      adapterVersion: 'v0.3.54'
+      adapterVersion: 'v0.3.55'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -4124,7 +4124,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] v0.3.54 Diagnose-Logging aktiv');
+      this.log.info('[VIS] v0.3.55 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
