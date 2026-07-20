@@ -83,5 +83,5 @@ Version v0.3.50-hotfix68
 - Einmaliger Reset veralteter/falscher Tageszähler bei der ersten Installation dieser Version.
 
 
-## 0.3.57
+## 0.3.58
 - Fix: Waagenwerte werden nicht mehr auf ganze Kilogramm gerundet, bevor die Tara abgezogen wird.
