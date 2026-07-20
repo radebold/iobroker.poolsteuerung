@@ -85,3 +85,9 @@ Version v0.3.50-hotfix68
 
 ## 0.3.58
 - Fix: Waagenwerte werden nicht mehr auf ganze Kilogramm gerundet, bevor die Tara abgezogen wird.
+
+
+## v0.4.0 HF 1
+
+- 24-h-Temperaturkurve in der Tablet-VIS auf 1 px Linienstärke reduziert.
+- Keine Änderung an Steuerungs- oder Dosierlogik.

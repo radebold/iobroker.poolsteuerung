@@ -94,5 +94,5 @@
     "phCanisterWeightStateId": "mqtt.0.pool.phminus.waage.weight_kg",
     "phCanisterTareKg": 0
   },
-  "version": "0.4.0"
+  "version": "0.4.0-hf.1"
 }
