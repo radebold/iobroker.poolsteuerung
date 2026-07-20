@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.3.52",
+    "version": "0.3.54",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -91,7 +91,8 @@
     "phCanisterCriticalL": 1,
     "phCanisterCurrentLevelL": "",
     "phCanisterScaleEnabled": false,
-    "phCanisterWeightStateId": "mqtt.0.pool.phminus.waage.weight_kg"
+    "phCanisterWeightStateId": "mqtt.0.pool.phminus.waage.weight_kg",
+    "phCanisterTareKg": 0
   },
-  "version": "0.3.53"
+  "version": "0.3.54"
 }

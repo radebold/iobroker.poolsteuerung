@@ -1,3 +1,8 @@
+## v0.3.54
+
+- Fix: zentrale Netto-Gewichtsberechnung aus Waagen-Bruttogewicht minus Tara.
+- VIS, Warnungen und Admin-Füllstand verwenden denselben State `status.phCanister.netWeightKg`.
+
 ## v0.3.53
 
 - Mobile manuelle pH-Dosierung wie im Tablet: feste Buttons für 60, 120 und 180 Sekunden.
