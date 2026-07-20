@@ -1917,7 +1917,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}.ph-wa-flag{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border-radius:11px;background:rgba(37,211,102,.10);border:1px solid rgba(37,211,102,.28);color:inherit;font-size:11px;font-weight:900;cursor:pointer;user-select:none}.ph-wa-flag input{width:19px;height:19px;margin:0;accent-color:#25d366;cursor:pointer;flex:0 0 auto}.ph-wa-flag span{line-height:1.15}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.55</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}.ph-wa-flag{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border-radius:11px;background:rgba(37,211,102,.10);border:1px solid rgba(37,211,102,.28);color:inherit;font-size:11px;font-weight:900;cursor:pointer;user-select:none}.ph-wa-flag input{width:19px;height:19px;margin:0;accent-color:#25d366;cursor:pointer;flex:0 0 auto}.ph-wa-flag span{line-height:1.15}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.3.56</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -2420,7 +2420,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     const poolTempSparklineSvg = historySparklines.poolTempSparklineSvg || (Number.isFinite(poolTempNumForSparkline) ? this.buildSparklineSvgFromValues([
       { ts: Date.now() - 600000, val: poolTempNumForSparkline },
       { ts: Date.now(), val: poolTempNumForSparkline }
-    ], 'sparkline-temp') : '');
+    ], 'sparkline-temp', '24h') : '');
 
     const phNumStable = parseNum(ph);
     const orpNumStable = parseNum(orp);
@@ -2525,7 +2525,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
-      adapterVersion: 'v0.3.55'
+      adapterVersion: 'v0.3.56'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -3838,27 +3838,28 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     return '→';
   }
 
-  buildSparklineSvgFromValues(values, cssClass = '') {
+  buildSparklineSvgFromValues(values, cssClass = '', timeMode = 'today') {
     const now = Date.now();
     const dayStart = new Date(now); dayStart.setHours(0, 0, 0, 0);
     const windowStart = new Date(now); windowStart.setHours(10, 0, 0, 0);
     const windowEnd = new Date(now); windowEnd.setHours(21, 0, 0, 0);
     const startMs = windowStart.getTime();
     const endMs = windowEnd.getTime();
+    const historyStartMs = timeMode === '24h' ? now - 24 * 60 * 60 * 1000 : dayStart.getTime();
 
     let rows = (Array.isArray(values) ? values : [])
       .map(v => ({
         ts: Number(v && v.ts !== undefined ? v.ts : 0),
         val: parseNum(v && v.val !== undefined ? v.val : v)
       }))
-      .filter(v => Number.isFinite(v.val) && Number.isFinite(v.ts) && v.ts >= dayStart.getTime())
+      .filter(v => Number.isFinite(v.val) && Number.isFinite(v.ts) && v.ts >= historyStartMs && v.ts <= now)
       .sort((a, b) => a.ts - b.ts);
 
-    // Ziel: mobile Sparkline muss immer sichtbar bleiben.
-    // Wenn ausreichend Messpunkte zwischen 10-21 Uhr vorhanden sind, nutzen wir diesen Bereich.
-    // Bei wenigen Punkten nehmen wir die heutigen Werte und verteilen sie über die volle Breite.
-    const inWindow = rows.filter(v => v.ts >= startMs && v.ts <= endMs);
-    if (inWindow.length >= 4) rows = inWindow;
+    // pH/ORP: bevorzugt Tagesfenster 10-21 Uhr. Temperatur: echte letzte 24 Stunden.
+    if (timeMode !== '24h') {
+      const inWindow = rows.filter(v => v.ts >= startMs && v.ts <= endMs);
+      if (inWindow.length >= 4) rows = inWindow;
+    }
 
     if (rows.length < 1) return '';
     if (rows.length === 1) {
@@ -3930,17 +3931,18 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
     const start = new Date(now);
     start.setHours(0, 0, 0, 0);
+    const tempStartTs = now - 24 * 60 * 60 * 1000;
 
     const result = { phSparklineSvg: '', orpSparklineSvg: '', poolTempSparklineSvg: '' };
     try {
       const [phValues, orpValues, poolTempValues] = await Promise.all([
         this.fetchHistoryValues(this.config.phStateId, start.getTime(), now),
         this.fetchHistoryValues(this.config.orpStateId, start.getTime(), now),
-        this.fetchHistoryValues(this.config.waterTempStateId, start.getTime(), now)
+        this.fetchHistoryValues(this.config.waterTempStateId, tempStartTs, now)
       ]);
       result.phSparklineSvg = this.buildSparklineSvgFromValues(phValues, 'sparkline-ph');
       result.orpSparklineSvg = this.buildSparklineSvgFromValues(orpValues, 'sparkline-orp');
-      result.poolTempSparklineSvg = this.buildSparklineSvgFromValues(poolTempValues, 'sparkline-temp');
+      result.poolTempSparklineSvg = this.buildSparklineSvgFromValues(poolTempValues, 'sparkline-temp', '24h');
     } catch (e) {
       if (this.config.debugMode) this.log.debug('[SPARKLINE] Erstellung fehlgeschlagen: ' + (e.message || e));
     }
@@ -4124,7 +4126,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] v0.3.55 Diagnose-Logging aktiv');
+      this.log.info('[VIS] v0.3.56 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);
