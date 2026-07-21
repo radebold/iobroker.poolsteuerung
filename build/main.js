@@ -1023,7 +1023,7 @@ body{
 .pill{min-width:64px;text-align:center;padding:7px 8px;border-radius:999px;font-size:9px;font-weight:900;color:#fff;flex:0 0 auto}
 .pill.on{background:linear-gradient(180deg,#56d56e,#36b357);box-shadow:0 8px 18px rgba(56,179,87,.25)}
 .pill.off{background:linear-gradient(180deg,#f36e62,#df4a3d);box-shadow:0 8px 18px rgba(223,74,61,.25)}
-.mini-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.wallbox-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.wallbox-mini{text-align:left;min-height:58px;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:7px;padding:7px}.wallbox-mini .mini-icon{width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;color:#dcecff;flex:0 0 auto}.wallbox-mini .mini-icon svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.wallbox-mini .mini-content{min-width:0}.wallbox-mini .mini-label{font-size:10px;margin-bottom:3px;color:#8edfff}.wallbox-mini .mini-value{font-size:10.5px;font-weight:700;line-height:1.12}
+.mini-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.wallbox-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.wallbox-mini{text-align:left;min-width:0;min-height:58px;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:5px;padding:6px;overflow:hidden}.wallbox-mini .mini-icon{width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;color:#dcecff;flex:0 0 22px}.wallbox-mini .mini-icon svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.wallbox-mini .mini-content{min-width:0;max-width:100%;overflow:hidden;flex:1 1 auto}.wallbox-mini .mini-label{font-size:9px;line-height:1.05;margin-bottom:3px;color:#8edfff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wallbox-mini .mini-value{display:block;max-width:100%;font-size:9.5px;font-weight:700;line-height:1.08;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mini{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.05);border-radius:14px;padding:9px}
 .mini.info{background:linear-gradient(180deg,rgba(90,166,255,.09),rgba(255,255,255,.04))}
 .mini.highlight{background:linear-gradient(180deg,rgba(255,190,76,.11),rgba(255,255,255,.04))}
@@ -1931,7 +1931,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
     ].join('');
     const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
       body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#071426;color:#fff}.wrap{padding:14px;max-width:760px;margin:auto}.card{background:#10213b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
-      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}.ph-wa-flag{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border-radius:11px;background:rgba(37,211,102,.10);border:1px solid rgba(37,211,102,.28);color:inherit;font-size:11px;font-weight:900;cursor:pointer;user-select:none}.ph-wa-flag input{width:19px;height:19px;margin:0;accent-color:#25d366;cursor:pointer;flex:0 0 auto}.ph-wa-flag span{line-height:1.15}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.4.0 HF 1</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
+      h1{font-size:20px;margin:0 0 6px}.sub{color:#bdd0e8;font-size:12px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kv{background:#fff;color:#0f172a;border-radius:12px;padding:10px;display:flex;justify-content:space-between;gap:8px}.err{white-space:pre-wrap;background:#3a1220;color:#ffd6de;border-radius:12px;padding:10px;margin-top:12px;font-size:12px;max-height:260px;overflow:auto}.ph-wa-flag{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border-radius:11px;background:rgba(37,211,102,.10);border:1px solid rgba(37,211,102,.28);color:inherit;font-size:11px;font-weight:900;cursor:pointer;user-select:none}.ph-wa-flag input{width:19px;height:19px;margin:0;accent-color:#25d366;cursor:pointer;flex:0 0 auto}.ph-wa-flag span{line-height:1.15}</style></head><body><div class="wrap"><div class="card"><h1>Pool Manager <small>v0.4.1</small></h1><div class="sub">Fallback gerendert: ${esc(updated)} · Vollrender ist abgebrochen</div><div class="grid">${rows}</div><div class="err">${safeError}</div></div></div></body></html>`;
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
     await this.ensureState('vis.htmlPhone', 'string', 'html', '', false);
     await this.ensureState('vis.widgetTablet', 'string', 'html', '', false);
@@ -2540,7 +2540,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
       heatpumpSyncLabel: heatpumpSync.label,
       phManualDoseSec: await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config))),
       manualDoseButtonSec: Math.max(1, parseNum(await this.getText('poolsteuerung.0.control.ph.manualDoseSec', String(getManualPhDoseDefaultSec(this.config)))) || getManualPhDoseDefaultSec(this.config)),
-      adapterVersion: 'v0.4.0 HF 1'
+      adapterVersion: 'v0.4.1'
     };
 
     await this.ensureState('vis.htmlTablet', 'string', 'html', '', false);
@@ -4172,7 +4172,7 @@ body{margin:0;background:radial-gradient(circle at top left, rgba(89,188,255,.18
 
   async onReady() {
     try {
-      this.log.info('[VIS] v0.4.0 HF 1 Diagnose-Logging aktiv');
+      this.log.info('[VIS] v0.4.1 Diagnose-Logging aktiv');
       await this.ensureState('info.connection', 'boolean', 'indicator.connected', false, false);
       await this.ensureState('status.debug.lastCycle', 'string', 'text', '', false);
       await this.ensureState('status.debug.lastStartupError', 'string', 'text', '', false);

@@ -91,3 +91,10 @@ Version v0.3.50-hotfix68
 
 - 24-h-Temperaturkurve in der Tablet-VIS auf 1 px Linienstärke reduziert.
 - Keine Änderung an Steuerungs- oder Dosierlogik.
+
+
+## v0.4.1
+
+- Tablet-VIS: Texte in den Kacheln „Auto & Wallbox“ bleiben innerhalb der Boxen.
+- Kleinere, einheitliche Beschriftung und Werte; Überlauf wird abgeschnitten.
+- Keine Änderungen an Steuerungs- oder Dosierlogik.
