@@ -1,5 +1,5 @@
 {
   "name": "iobroker.poolsteuerung",
-  "version": "0.4.10",
-  "main": "build/main-ipadmini-historyfix.js"
+  "version": "0.4.11",
+  "main": "build/main-ipadmini-heatpump.js"
 }
