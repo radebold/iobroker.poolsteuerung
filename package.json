@@ -1,5 +1,5 @@
 {
   "name": "iobroker.poolsteuerung",
-  "version": "0.4.14",
-  "main": "build/main-phcalibration-click.js"
+  "version": "0.4.15",
+  "main": "build/main-vis-recovery.js"
 }
