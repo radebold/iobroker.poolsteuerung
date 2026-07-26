@@ -2,15 +2,13 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.4.12",
+    "version": "0.4.13",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
     "materialize": true,
     "materializeTab": true,
-    "adminUI": {
-      "config": "json"
-    },
+    "adminUI": {"config": "json"},
     "installedFrom": "radebold/iobroker.poolsteuerung#v0.3.41"
   },
   "native": {
@@ -94,5 +92,5 @@
     "phCanisterWeightStateId": "mqtt.0.pool.phminus.waage.weight_kg",
     "phCanisterTareKg": 0.5
   },
-  "version": "0.4.12"
+  "version": "0.4.13"
 }
