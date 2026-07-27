@@ -1,5 +1,5 @@
 {
   "name": "iobroker.poolsteuerung",
-  "version": "0.4.24",
-  "main": "build/main-phcalibration-integrated.js"
+  "version": "0.4.25",
+  "main": "build/main-phcalibration-field.js"
 }
