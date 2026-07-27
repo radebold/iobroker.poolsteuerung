@@ -2,11 +2,11 @@
 
 const createBase = require('./main-phcalibration.js');
 
-const VERSION = 'v0.4.26';
+const VERSION = 'v0.4.27';
 const FIELD_STATE = 'vis.htmlPhCalibrationField';
 
 function patchVersion(html) {
-  return String(html || '').replace(/v0\.4\.(?:5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25)/g, VERSION);
+  return String(html || '').replace(/v0\.4\.(?:5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26)/g, VERSION);
 }
 
 function buildFieldHtml(namespace) {
@@ -17,6 +17,7 @@ function buildFieldHtml(namespace) {
 function install(adapter) {
   if (!adapter || adapter.__phCalibrationInputInstalled) return adapter;
   adapter.__phCalibrationInputInstalled = true;
+  adapter.__phCalibrationFieldReadyLogged = false;
 
   for (const name of ['buildTabletHtml', 'buildTabletWidget', 'buildPhoneHtml', 'buildPhoneWidget']) {
     if (typeof adapter[name] !== 'function') continue;
@@ -25,26 +26,68 @@ function install(adapter) {
   }
 
   async function writeField() {
-    await adapter.ensureState(FIELD_STATE, 'string', 'html', '', false);
-    await adapter.setStateIfChanged(FIELD_STATE, buildFieldHtml(adapter.namespace), true);
+    const objectDefinition = {
+      type: 'state',
+      common: {
+        name: 'PoolLab pH Eingabefeld',
+        type: 'string',
+        role: 'html',
+        read: true,
+        write: false,
+        def: ''
+      },
+      native: {}
+    };
+
+    if (typeof adapter.setObjectNotExistsAsync === 'function') {
+      await adapter.setObjectNotExistsAsync(FIELD_STATE, objectDefinition);
+    } else {
+      await adapter.ensureState(FIELD_STATE, 'string', 'html', '', false);
+    }
+
+    await adapter.setStateAsync(FIELD_STATE, buildFieldHtml(adapter.namespace), true);
+    const check = await adapter.getStateAsync(FIELD_STATE);
+    if (!check || !String(check.val || '').includes('PoolLab pH')) {
+      throw new Error('State wurde nicht angelegt oder nicht befüllt');
+    }
+
+    if (!adapter.__phCalibrationFieldReadyLogged) {
+      adapter.__phCalibrationFieldReadyLogged = true;
+      adapter.log.info(`[PH-KAL] Eingabefeld bereit: ${adapter.namespace}.${FIELD_STATE}`);
+    }
+  }
+
+  if (typeof adapter.renderVisFull === 'function') {
+    const originalRenderVisFull = adapter.renderVisFull.bind(adapter);
+    adapter.renderVisFull = async (...args) => {
+      const result = await originalRenderVisFull(...args);
+      try {
+        await writeField();
+      } catch (error) {
+        if (!adapter.isDbClosedError(error)) adapter.log.warn('[PH-KAL] Eingabefeld konnte beim VIS-Render nicht erzeugt werden: ' + (error.message || error));
+      }
+      return result;
+    };
   }
 
   adapter.on('ready', () => {
-    const handle = adapter.trackTimeout(setTimeout(async () => {
-      adapter.pendingTimeouts.delete(handle);
-      if (adapter.isShuttingDown) return;
-      try {
-        await writeField();
-        adapter.lastRenderSignature = '';
-        adapter.lastRenderAt = 0;
-        await adapter.forceImmediateRender();
-      } catch (error) {
-        if (!adapter.isDbClosedError(error)) adapter.log.warn('[PH-KAL] Eingabefeld konnte nicht erzeugt werden: ' + (error.message || error));
-      }
-    }, 3000));
+    for (const delay of [1500, 6000, 15000]) {
+      const handle = adapter.trackTimeout(setTimeout(async () => {
+        adapter.pendingTimeouts.delete(handle);
+        if (adapter.isShuttingDown) return;
+        try {
+          await writeField();
+          adapter.lastRenderSignature = '';
+          adapter.lastRenderAt = 0;
+          if (delay === 1500) await adapter.forceImmediateRender();
+        } catch (error) {
+          if (!adapter.isDbClosedError(error)) adapter.log.warn(`[PH-KAL] Eingabefeld nach ${delay} ms nicht erzeugt: ` + (error.message || error));
+        }
+      }, delay));
+    }
   });
 
-  try { adapter.log.info('[PH-KAL] v0.4.26: separates PoolLab-Eingabefeld bereit'); } catch {}
+  try { adapter.log.info('[PH-KAL] v0.4.27: PoolLab-Eingabefeld wird bei jedem VIS-Render geprüft'); } catch {}
   return adapter;
 }
 
