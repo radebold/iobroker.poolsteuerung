@@ -2,24 +2,36 @@
 
 const createBase = require('./main-phcalibration-fragment.js');
 
-const VERSION = 'v0.4.34';
+const VERSION = 'v0.4.35';
 const IPAD_MINI_STATE = 'vis.htmlIpadMini';
-const MAX_HTML_LENGTH = 31500;
 
 function patchVersion(html) {
   return String(html || '').replace(/v0\.4\.\d+/g, VERSION);
 }
 
+function byteLength(value) {
+  return Buffer.byteLength(String(value || ''), 'utf8');
+}
+
 function compactHtml(html) {
-  let value = String(html || '').replace(/<!--[\s\S]*?-->/g, '');
+  let value = String(html || '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/\saria-(?:hidden|label)="[^"]*"/g, '')
+    .replace(/\sdata-(?:heatpump-strip|ph-canister|device-status|circulation-status)="[^"]*"/g, '');
+
   value = value.replace(/<style([^>]*)>([\s\S]*?)<\/style>/gi, (_match, attrs, css) => {
     const compactCss = String(css || '')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/\s+/g, ' ')
       .replace(/\s*([{}:;,])\s*/g, '$1')
       .trim();
     return `<style${attrs}>${compactCss}</style>`;
   });
-  return value.replace(/>\s+</g, '><').trim();
+
+  return value
+    .replace(/>\s+</g, '><')
+    .replace(/\n+/g, '')
+    .trim();
 }
 
 function buildDoseControls() {
@@ -33,8 +45,9 @@ function buildDoseScript(namespace) {
 
 function patchDoseControls(html, namespace) {
   const original = patchVersion(html);
+  const originalBytes = byteLength(original);
   if (!original || !original.includes('<span class="metric-label">pH-Wert</span>')) {
-    return { html: original, applied: false, originalLength: original.length, compactLength: original.length, finalLength: original.length };
+    return { html: original, applied: false, originalBytes, compactBytes: originalBytes, finalBytes: originalBytes };
   }
 
   let clean = original
@@ -43,33 +56,36 @@ function patchDoseControls(html, namespace) {
     .replace(/<script data-ph-manual-dose="1">[\s\S]*?<\/script>/g, '');
 
   clean = compactHtml(clean);
+  const compactBytes = byteLength(clean);
   const labelIndex = clean.indexOf('<span class="metric-label">pH-Wert</span>');
   const cardStart = clean.lastIndexOf('<section class="metric-card"', labelIndex);
   const cardEnd = clean.indexOf('</section>', labelIndex);
   if (labelIndex < 0 || cardStart < 0 || cardEnd < 0) {
-    return { html: original, applied: false, originalLength: original.length, compactLength: clean.length, finalLength: original.length };
+    return { html: original, applied: false, originalBytes, compactBytes, finalBytes: originalBytes };
   }
 
   let card = clean.slice(cardStart, cardEnd + 10);
   const historyMarker = '<div class="history-wrap">';
   if (!card.includes(historyMarker)) {
-    return { html: original, applied: false, originalLength: original.length, compactLength: clean.length, finalLength: original.length };
+    return { html: original, applied: false, originalBytes, compactBytes, finalBytes: originalBytes };
   }
 
   card = card.replace(historyMarker, `${buildDoseControls()}${historyMarker}`);
   let candidate = clean.slice(0, cardStart) + card + clean.slice(cardEnd + 10);
-  const css = '<style data-ph-manual-dose="1">.ph-manual-controls{position:absolute;left:15px;top:126px;z-index:6;display:flex;align-items:center;gap:5px}.ph-manual-controls b{font-size:8px;color:#aebed0;text-transform:uppercase;letter-spacing:.04em}.ph-manual-dose{appearance:none;height:22px;min-width:45px;padding:2px 7px;border:1px solid rgba(105,196,255,.32);border-radius:999px;background:linear-gradient(145deg,#247dc0,#174a79);color:#fff;font:900 8px -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.22)}.ph-manual-dose:disabled{opacity:.65}@media(max-width:900px){.ph-manual-controls{left:12px;top:119px;gap:4px}.ph-manual-controls b{display:none}.ph-manual-dose{height:20px;min-width:39px;padding:2px 5px;font-size:7px}}</style>';
+  const css = '<style data-ph-manual-dose="1">.ph-manual-controls{position:absolute;left:15px;top:126px;z-index:6;display:flex;align-items:center;gap:5px}.ph-manual-controls b{font-size:8px;color:#aebed0;text-transform:uppercase;letter-spacing:.04em}.ph-manual-dose{appearance:none;height:22px;min-width:45px;padding:2px 7px;border:1px solid rgba(105,196,255,.32);border-radius:999px;background:linear-gradient(145deg,#247dc0,#174a79);color:#fff;font:900 8px Arial,sans-serif;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.22)}.ph-manual-dose:disabled{opacity:.65}@media(max-width:900px){.ph-manual-controls{left:12px;top:119px;gap:4px}.ph-manual-controls b{display:none}.ph-manual-dose{height:20px;min-width:39px;padding:2px 5px;font-size:7px}}</style>';
   candidate = candidate.includes('</head>') ? candidate.replace('</head>', `${css}</head>`) : css + candidate;
   const script = buildDoseScript(namespace);
   candidate = candidate.includes('</body>') ? candidate.replace('</body>', `${script}</body>`) : candidate + script;
+  candidate = compactHtml(candidate);
 
-  const safe = candidate.length < original.length && candidate.length <= MAX_HTML_LENGTH;
+  const finalBytes = byteLength(candidate);
+  const safe = finalBytes <= originalBytes;
   return {
     html: safe ? candidate : original,
     applied: safe,
-    originalLength: original.length,
-    compactLength: clean.length,
-    finalLength: safe ? candidate.length : original.length
+    originalBytes,
+    compactBytes,
+    finalBytes: safe ? finalBytes : originalBytes
   };
 }
 
@@ -84,15 +100,15 @@ function install(adapter) {
     adapter[name] = data => patchVersion(original({ ...(data || {}), adapterVersion: VERSION }));
   }
 
-  async function patchIpadState() {
+  async function patchIpadState(logResult = false) {
     const state = await adapter.getStateAsync(IPAD_MINI_STATE);
     if (!state || typeof state.val !== 'string' || state.val.length < 50) return false;
     const result = patchDoseControls(state.val, adapter.namespace);
     await adapter.setStateIfChanged(IPAD_MINI_STATE, result.html, true);
-    if (!adapter.__ipadMiniManualDoseLogged) {
+    if (logResult || !adapter.__ipadMiniManualDoseLogged) {
       adapter.__ipadMiniManualDoseLogged = true;
       const level = result.applied ? 'info' : 'warn';
-      adapter.log[level](`[IPAD-MINI] pH-Dosierbuttons ${result.applied ? 'aktiv' : 'nicht eingefügt'}: ${result.originalLength} -> ${result.compactLength} -> ${result.finalLength} Zeichen`);
+      adapter.log[level](`[IPAD-MINI] pH-Dosierbuttons ${result.applied ? 'aktiv' : 'nicht eingefügt'}: ${result.originalBytes} -> ${result.compactBytes} -> ${result.finalBytes} Bytes`);
     }
     return result.applied;
   }
@@ -110,20 +126,24 @@ function install(adapter) {
   }
 
   adapter.on('ready', () => {
-    const handle = adapter.trackTimeout(setTimeout(async () => {
-      adapter.pendingTimeouts.delete(handle);
-      if (adapter.isShuttingDown) return;
-      try {
-        await adapter.setStateAsync(IPAD_MINI_STATE, '', true);
-        adapter.lastRenderSignature = '';
-        adapter.lastRenderAt = 0;
-        await adapter.forceImmediateRender();
-        await patchIpadState();
-        adapter.log.info('[IPAD-MINI] v0.4.34: vollständige Ansicht mit manueller pH-Dosierung erzeugt');
-      } catch (error) {
-        if (!adapter.isDbClosedError(error)) adapter.log.warn('[IPAD-MINI] Wiederherstellung mit Dosierbuttons fehlgeschlagen: ' + (error.message || error));
-      }
-    }, 900));
+    for (const delay of [900, 2600, 6500]) {
+      const handle = adapter.trackTimeout(setTimeout(async () => {
+        adapter.pendingTimeouts.delete(handle);
+        if (adapter.isShuttingDown) return;
+        try {
+          if (delay === 900) {
+            await adapter.setStateAsync(IPAD_MINI_STATE, '', true);
+            adapter.lastRenderSignature = '';
+            adapter.lastRenderAt = 0;
+            await adapter.forceImmediateRender();
+          }
+          await patchIpadState(delay === 2600);
+          if (delay === 2600) adapter.log.info('[IPAD-MINI] v0.4.35: vollständige Ansicht mit 60/120/180-Sekunden-Dosierbuttons erzeugt');
+        } catch (error) {
+          if (!adapter.isDbClosedError(error)) adapter.log.warn('[IPAD-MINI] Wiederherstellung mit Dosierbuttons fehlgeschlagen: ' + (error.message || error));
+        }
+      }, delay));
+    }
   });
 
   return adapter;
