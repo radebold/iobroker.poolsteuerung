@@ -2,245 +2,116 @@
 
 const createBase = require('./main-phcalibration-fragment.js');
 
-const VERSION = 'v0.4.38';
-const STATE_ID = 'vis.htmlIpadMini';
-const MAX_BYTES = 30000;
+const VERSION = 'v0.4.39';
+const STATE = 'vis.htmlIpadMini';
+const LIMIT = 14000;
 
-function esc(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+const n = v => {
+  if (v === null || v === undefined || v === '') return null;
+  const x = Number(String(v).replace(',', '.'));
+  return Number.isFinite(x) ? x : null;
+};
+const f = (v, d = 1) => {
+  const x = n(v);
+  return x === null ? '--' : x.toFixed(d).replace('.', ',');
+};
+const b = v => typeof v === 'boolean' ? v : typeof v === 'number' ? v !== 0 : ['true','1','on','ein','ja','active','aktiv'].includes(String(v ?? '').toLowerCase());
+const e = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-function num(value) {
-  if (value === null || value === undefined || value === '') return null;
-  const parsed = Number(String(value).replace(',', '.'));
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function fmt(value, digits = 1) {
-  const parsed = num(value);
-  return parsed === null ? '--' : parsed.toFixed(digits).replace('.', ',');
-}
-
-function bool(value) {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value !== 0;
-  return ['true', '1', 'on', 'ein', 'yes', 'ja', 'active', 'aktiv'].includes(String(value ?? '').trim().toLowerCase());
-}
-
-function normalizeRows(values, current, maxPoints = 32) {
-  const now = Date.now();
-  const start = now - 24 * 60 * 60 * 1000;
-  let rows = (Array.isArray(values) ? values : [])
-    .map(row => ({ ts: Number(row && row.ts), val: num(row && (row.val !== undefined ? row.val : row)) }))
-    .filter(row => Number.isFinite(row.ts) && row.val !== null && row.ts >= start && row.ts <= now)
-    .sort((a, b) => a.ts - b.ts);
-
-  const currentNum = num(current);
-  if (currentNum !== null && (!rows.length || now - rows[rows.length - 1].ts > 15000)) {
-    rows.push({ ts: now, val: currentNum });
+function pts(list, current) {
+  const now = Date.now(), start = now - 86400000;
+  let a = (Array.isArray(list) ? list : []).map(r => ({ t:Number(r && r.ts), v:n(r && (r.val !== undefined ? r.val : r)) }))
+    .filter(r => Number.isFinite(r.t) && r.v !== null && r.t >= start && r.t <= now).sort((x,y)=>x.t-y.t);
+  const c = n(current);
+  if (c !== null && (!a.length || now-a[a.length-1].t > 15000)) a.push({t:now,v:c});
+  if (!a.length && c !== null) a=[{t:start,v:c},{t:now,v:c}];
+  if (a.length === 1) a.unshift({t:a[0].t-3600000,v:a[0].v});
+  if (a.length > 16) {
+    const z=[]; for(let i=0;i<16;i++) z.push(a[Math.round(i*(a.length-1)/15)]); a=z;
   }
-  if (!rows.length && currentNum !== null) rows = [{ ts: start, val: currentNum }, { ts: now, val: currentNum }];
-  if (rows.length === 1) rows.unshift({ ts: Math.max(start, rows[0].ts - 3600000), val: rows[0].val });
-
-  if (rows.length > maxPoints) {
-    const compact = [];
-    for (let index = 0; index < maxPoints; index++) {
-      compact.push(rows[Math.round(index * (rows.length - 1) / (maxPoints - 1))]);
-    }
-    rows = compact;
-  }
-  return rows;
+  return a;
 }
 
-function chart(values, current, color, digits, minRange, unit = '') {
-  const rows = normalizeRows(values, current);
-  if (rows.length < 2) return { svg: '<div class="empty">Noch keine Verlaufsdaten</div>', min: '--', max: '--' };
-
-  const nums = rows.map(row => row.val);
-  const actualMin = Math.min(...nums);
-  const actualMax = Math.max(...nums);
-  const range = Math.max(actualMax - actualMin, minRange);
-  const center = (actualMin + actualMax) / 2;
-  const minY = center - range * 0.62;
-  const maxY = center + range * 0.62;
-  const first = rows[0].ts;
-  const last = rows[rows.length - 1].ts;
-  const timeRange = Math.max(1, last - first);
-  const valueRange = Math.max(0.0001, maxY - minY);
-  const point = row => ({
-    x: Math.round((3 + ((row.ts - first) / timeRange) * 454) * 10) / 10,
-    y: Math.round((8 + (1 - ((row.val - minY) / valueRange)) * 87) * 10) / 10
-  });
-  const path = rows.map((row, index) => {
-    const p = point(row);
-    return `${index ? 'L' : 'M'}${p.x} ${p.y}`;
-  }).join(' ');
-  const end = point(rows[rows.length - 1]);
-  return {
-    svg: `<svg viewBox="0 0 460 105" preserveAspectRatio="none"><path class="grid" d="M0 27H460M0 53H460M0 79H460"/><path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${end.x}" cy="${end.y}" r="3" fill="${color}"/></svg>`,
-    min: `${fmt(actualMin, digits)}${unit}`,
-    max: `${fmt(actualMax, digits)}${unit}`
-  };
+function graph(list, current, color, digits, minRange, unit='') {
+  const a=pts(list,current);
+  if(a.length<2) return {s:'',lo:'--',hi:'--'};
+  const vs=a.map(x=>x.v), lo=Math.min(...vs), hi=Math.max(...vs), range=Math.max(hi-lo,minRange), mid=(lo+hi)/2, min=mid-range*.62, max=mid+range*.62;
+  const t0=a[0].t, tr=Math.max(1,a[a.length-1].t-t0), vr=Math.max(.0001,max-min);
+  const p=x=>({x:Math.round((2+(x.t-t0)/tr*456)*10)/10,y:Math.round((6+(1-(x.v-min)/vr)*83)*10)/10});
+  const d=a.map((x,i)=>{const q=p(x);return (i?'L':'M')+q.x+' '+q.y}).join(' '), q=p(a[a.length-1]);
+  return {s:`<svg viewBox="0 0 460 95" preserveAspectRatio="none"><path class="g" d="M0 24H460M0 48H460M0 72H460"/><path d="${d}" fill="none" stroke="${color}" stroke-width="2"/><circle cx="${q.x}" cy="${q.y}" r="3" fill="${color}"/></svg>`,lo:f(lo,digits)+unit,hi:f(hi,digits)+unit};
 }
 
-function trendClass(value) {
-  return value === '↑' ? 'up' : value === '↓' ? 'down' : 'flat';
+async function json(adapter,id,fb){
+  try{const s=await adapter.getStateAsync(id);const x=JSON.parse(String((s&&s.val)||''));return x??fb}catch{return fb}
 }
-
-function scheduleHtml(text) {
-  const list = String(text || '--').split(/\n+/).map(value => value.trim()).filter(Boolean).slice(0, 3);
-  if (!list.length || list[0] === '--') return '<span class="schedule-empty">Keine kommenden Schaltungen</span>';
-  return list.map(value => `<span class="schedule-chip">${esc(value)}</span>`).join('');
-}
-
-function canisterHtml(data) {
-  const info = data.phCanister || {};
-  const level = num(info.levelL);
-  const percent = num(info.percent);
-  const weight = num(info.netKg !== undefined ? info.netKg : info.weightKg);
-  const cls = info.critical ? 'bad' : info.warn ? 'warn' : 'good';
-  if (level === null) return '<div class="can bad"><b>pH-Minus --</b><small>nicht verfügbar</small></div>';
-  const parts = [];
-  if (weight !== null) parts.push(`${fmt(weight, 3)} kg`);
-  if (percent !== null) parts.push(`${fmt(percent, 0)} %`);
-  return `<div class="can ${cls}"><b>pH-Minus ${info.scaleEnabled === true ? '≈ ' : ''}${fmt(level, 2)} l</b><small>${esc(parts.join(' · '))}</small></div>`;
-}
-
-function buildHtml(data, history, namespace) {
-  const pumpOn = bool(data.pumpOn);
-  const phPumpOn = bool(data.phPumpOn);
-  const chlorOn = bool(data.chlorOn);
-  const heatpumpOn = bool(data.heatpumpOn);
-  const heatMode = String(data.heatpumpMode ?? '').toLowerCase();
-  const heating = heatpumpOn && /(heiz|heat|warm)/.test(heatMode);
-  const fan = num(data.heatpumpFanPercent);
-  const cards = [
-    { key: 'outside', label: 'Außentemperatur', value: data.outsideTemp, digits: 1, unit: ' °C', color: '#58baff', trend: data.outsideTempTrend, range: 1, icon: '☀' },
-    { key: 'water', label: 'Wassertemperatur', value: data.poolTemp, digits: 1, unit: ' °C', color: '#60ddd9', trend: data.poolTempTrend, range: 1, icon: '◉' },
-    { key: 'ph', label: 'pH-Wert', value: data.ph, digits: 2, unit: '', color: data.phInRange ? '#67df7e' : '#ffbd59', trend: data.phTrend, range: 0.1, icon: '⚗' },
-    { key: 'orp', label: 'ORP-Wert', value: data.orp, digits: 0, unit: ' mV', color: data.orpInRange ? '#67df7e' : '#ff9f59', trend: data.orpTrend, range: 30, icon: 'ϟ' }
-  ];
-
-  const cardsHtml = cards.map(card => {
-    const graph = chart(history[card.key] || [], card.value, card.color, card.digits, card.range, card.unit);
-    let extras = '';
-    if (card.key === 'ph') {
-      extras = `${canisterHtml(data)}<div class="device ${phPumpOn ? 'on' : ''}"><i></i>Dosierpumpe ${phPumpOn ? 'EIN' : 'AUS'}</div><div class="tools"><div class="dose"><button data-dose="60">60 s</button><button data-dose="120">120 s</button><button data-dose="180">180 s</button></div><div class="cal"><input id="poollab" inputmode="decimal" placeholder="PoolLab z. B. 7,18"><button id="savePh">Speichern</button></div></div>`;
-    } else if (card.key === 'orp') {
-      extras = `<div class="device ${chlorOn ? 'on' : ''}"><i></i>Chlorinator ${chlorOn ? 'EIN' : 'AUS'}</div>`;
-    }
-    return `<section class="card" style="--a:${card.color}"><div class="card-head"><span class="icon">${card.icon}</span><b>${esc(card.label)}</b>${card.key === 'ph' ? '' : '<small>24 Stunden</small>'}</div>${extras}<div class="reading"><strong>${esc(fmt(card.value, card.digits))}</strong>${card.unit ? `<em>${esc(card.unit.trim())}</em>` : ''}<span class="trend ${trendClass(card.trend)}">${esc(card.trend || '→')}</span></div><div class="history">${graph.svg}</div><div class="minmax"><span>Min ${esc(graph.min)}</span><span>Max ${esc(graph.max)}</span></div></section>`;
-  }).join('');
-
-  const ns = JSON.stringify(String(namespace || 'poolsteuerung.0'));
-  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><style>:root{--bg:#06111e;--line:rgba(255,255,255,.1);--txt:#f6fbff;--muted:#9bb0c8}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg)}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--txt)}.screen{width:100vw;height:100vh;padding:8px 10px;display:grid;grid-template-rows:36px minmax(0,1fr) 38px 38px;gap:7px;background:linear-gradient(145deg,#06101c,#0a1a2c 58%,#07131f)}header{display:flex;align-items:center;justify-content:space-between;padding:0 4px}.brand{display:flex;align-items:center;gap:8px}.drop{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:linear-gradient(145deg,#228bd8,#28c8c0)}.title{font-size:21px;font-weight:900;letter-spacing:.08em}.sub,.meta{font-size:9px;color:var(--muted);font-weight:700}.meta{text-align:right;line-height:1.25}.pump,.device{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;background:rgba(4,17,30,.82);font-size:8px;font-weight:900}.pump{margin-left:9px;padding:4px 8px}.pump i,.device i{width:10px;height:10px;border-radius:50%;background:#7c8da0}.pump.on i,.device.on i{background:#63e07b;box-shadow:0 0 10px rgba(99,224,123,.65)}.cards{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:7px;min-height:0}.card{position:relative;min-width:0;min-height:0;overflow:hidden;border:1px solid var(--line);border-radius:16px;padding:11px 14px 8px;background:linear-gradient(150deg,rgba(17,40,65,.98),rgba(8,24,41,.98))}.card:after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--a)}.card-head{height:28px;display:grid;grid-template-columns:27px 1fr auto;align-items:center;gap:7px}.icon{width:27px;height:27px;border-radius:8px;display:grid;place-items:center;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.08);color:var(--a)}.card-head b{font-size:16px}.card-head small{font-size:8px;color:var(--muted);font-weight:800;text-transform:uppercase}.reading{height:82px;display:flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap}.reading strong{font-size:74px;font-weight:900;line-height:.88;letter-spacing:-.055em;color:var(--a)}.reading em{font-style:normal;font-size:25px;font-weight:850;color:rgba(247,251,255,.8)}.trend{font-size:29px;font-weight:900}.trend.up{color:#67df7e}.trend.down{color:#ffbd59}.trend.flat{color:#afbed0}.history{height:94px;border-radius:9px;overflow:hidden;background:rgba(3,14,25,.3)}.history svg{width:100%;height:100%;display:block}.grid{fill:none;stroke:rgba(255,255,255,.07);stroke-width:1}.empty{height:100%;display:grid;place-items:center;color:var(--muted);font-size:11px}.minmax{height:18px;display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:9px;font-weight:750}.can{position:absolute;right:14px;top:10px;z-index:4;min-width:130px;padding:3px 7px;border:1px solid var(--line);border-radius:8px;background:rgba(4,17,30,.84);text-align:right}.can b,.can small{display:block}.can b{font-size:8px}.can small{font-size:7px;color:var(--muted)}.can.good b{color:#7cea91}.can.warn b{color:#ffd06e}.can.bad b{color:#ff756d}.device{position:absolute;right:14px;top:112px;z-index:5;height:20px;padding:3px 7px;color:#aab9c8}.tools{position:absolute;left:14px;right:14px;top:109px;z-index:6;display:flex;gap:6px;align-items:center}.dose{display:flex;gap:4px}.dose button,.cal button{height:24px;border:1px solid rgba(105,196,255,.4);border-radius:999px;background:linear-gradient(145deg,#298bd0,#174c7e);color:#fff;font:900 8px Arial;cursor:pointer}.dose button{min-width:43px;padding:2px 6px}.cal{margin-left:auto;display:flex;gap:4px}.cal input{width:112px;height:24px;border:1px solid rgba(105,196,255,.35);border-radius:999px;background:#061522;color:#fff;padding:2px 8px;font-size:9px;font-weight:800;outline:none}.cal button{min-width:57px;padding:2px 7px;background:linear-gradient(145deg,#248d7c,#17685c)}button:disabled{opacity:.6}.heat,.schedule{border:1px solid var(--line);border-radius:12px;background:rgba(10,28,47,.96);align-items:center;padding:5px 9px}.heat{display:grid;grid-template-columns:1.3fr repeat(3,1fr);gap:5px}.heat>div{display:flex;justify-content:space-between;gap:6px;padding:0 8px;border-left:1px solid rgba(255,255,255,.07);font-size:9px;color:var(--muted)}.heat>div:first-child{border-left:0;color:#eaf4ff;font-size:11px;font-weight:900}.heat b{font-size:11px;color:#dbe9f6}.heat b.on{color:#67df7e}.schedule{display:grid;grid-template-columns:auto 1fr;gap:9px;overflow:hidden}.schedule-label{font-size:9px;color:var(--muted);font-weight:900;text-transform:uppercase}.schedule-list{display:flex;justify-content:flex-end;gap:5px;overflow:hidden}.schedule-chip{max-width:32%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid rgba(84,200,255,.17);background:rgba(84,200,255,.09);border-radius:999px;padding:4px 7px;font-size:8px;color:#deedff;font-weight:750}.schedule-empty{font-size:9px;color:var(--muted)}@media(max-width:900px){.reading strong{font-size:65px}.history{height:86px}.tools{top:103px}.device{top:106px}.cal input{width:96px}}</style></head><body><main class="screen"><header><div class="brand"><span class="drop">◉</span><div><div><span class="title">POOL</span><span class="pump ${pumpOn ? 'on' : ''}"><i></i>Umwälzpumpe ${pumpOn ? 'EIN' : 'AUS'}</span></div><div class="sub">24H LIVE-VERLAUF</div></div></div><div class="meta"><div>${esc(data.updated || '--')}</div><div>${VERSION} · iPad Mini · 1024 × 768</div></div></header><section class="cards">${cardsHtml}</section><section class="heat"><div>↻ Wärmepumpe</div><div><span>LÄUFT</span><b class="${heatpumpOn ? 'on' : ''}">${heatpumpOn ? 'JA' : 'NEIN'}</b></div><div><span>HEIZT</span><b class="${heating ? 'on' : ''}">${heating ? 'JA' : 'NEIN'}</b></div><div><span>DREHZAHL</span><b>${fan === null ? '--' : `${Math.round(fan)} %`}</b></div></section><footer class="schedule"><div class="schedule-label">Nächste Schaltungen</div><div class="schedule-list">${scheduleHtml(data.nextActionsText)}</div></footer></main><script>(function(){var n=${ns};function api(){var w=[window];try{w.push(window.parent)}catch(e){}try{w.push(window.top)}catch(e){}for(var i=0;i<w.length;i++)try{if(w[i]&&w[i].vis)return w[i].vis}catch(e){}return null}async function set(id,v){var a=api();if(!a)return false;try{if(typeof a.setValue==='function'){var r=a.setValue(id,v);if(r&&r.then)await r;return true}}catch(e){}try{if(a.conn&&typeof a.conn.setState==='function'){var q=a.conn.setState(id,v);if(q&&q.then)await q;return true}}catch(e){}return false}async function dose(b){var old=b.textContent,sec=Number(b.dataset.dose)||30;b.disabled=true;b.textContent='…';var ok=await set(n+'.control.ph.manualDoseSec',sec);if(ok)ok=await set(n+'.control.ph.manualTrigger',Date.now());b.textContent=ok?'OK':'Fehler';setTimeout(function(){b.textContent=old;b.disabled=false},1200)}async function save(b){var i=document.getElementById('poollab'),v=Number(String(i.value||'').trim().replace(',','.')),old=b.textContent;if(!Number.isFinite(v)||v<0||v>14){b.textContent='Ungültig';setTimeout(function(){b.textContent=old},1200);return}b.disabled=true;b.textContent='…';var ok=await set(n+'.control.ph.calibration.poollabValue',v);if(ok)ok=await set(n+'.control.ph.calibration.saveTrigger',Date.now());b.textContent=ok?'Gespeichert':'Fehler';if(ok)i.value='';setTimeout(function(){b.textContent=old;b.disabled=false},1400)}document.addEventListener('click',function(e){var d=e.target&&e.target.closest?e.target.closest('button[data-dose]'):null;if(d){e.preventDefault();dose(d);return}if(e.target&&e.target.id==='savePh'){e.preventDefault();save(e.target)}},true)})();</script></body></html>`;
-}
-
-function validHtml(html) {
-  const value = String(html || '');
-  return value.startsWith('<!doctype html>') && value.endsWith('</html>') && value.includes('id="poollab"') && value.includes('data-dose="60"') && Buffer.byteLength(value, 'utf8') <= MAX_BYTES;
-}
-
-async function readJson(adapter, id, fallback) {
-  try {
-    const state = await adapter.getStateAsync(id);
-    const parsed = JSON.parse(String((state && state.val) || ''));
-    return parsed && typeof parsed === 'object' ? parsed : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-async function loadHistory(adapter) {
-  const local = await readJson(adapter, 'status.trend.ipadMiniLocal24hJson', {});
-  const [water, ph, orp] = await Promise.all([
-    readJson(adapter, 'status.trend.poolTemp24hJson', []),
-    readJson(adapter, 'status.trend.phTodayJson', []),
-    readJson(adapter, 'status.trend.orpTodayJson', [])
+async function history(adapter){
+  const l=await json(adapter,'status.trend.ipadMiniLocal24hJson',{});
+  const [w,p,o]=await Promise.all([
+    json(adapter,'status.trend.poolTemp24hJson',[]),
+    json(adapter,'status.trend.phTodayJson',[]),
+    json(adapter,'status.trend.orpTodayJson',[])
   ]);
-  return {
-    outside: Array.isArray(local.outside) ? local.outside : [],
-    water: Array.isArray(local.water) && local.water.length ? local.water : water,
-    ph: Array.isArray(local.ph) && local.ph.length ? local.ph : ph,
-    orp: Array.isArray(local.orp) && local.orp.length ? local.orp : orp
-  };
+  return {outside:Array.isArray(l.outside)?l.outside:[],water:Array.isArray(l.water)&&l.water.length?l.water:w,ph:Array.isArray(l.ph)&&l.ph.length?l.ph:p,orp:Array.isArray(l.orp)&&l.orp.length?l.orp:o};
 }
 
-function install(adapter) {
-  if (!adapter || adapter.__ipadMiniSafeInstalled) return adapter;
-  adapter.__ipadMiniSafeInstalled = true;
-  adapter.__ipadMiniSafeData = null;
+function build(data,h,ns){
+  const pump=b(data.pumpOn), php=b(data.phPumpOn), chlor=b(data.chlorOn), hp=b(data.heatpumpOn);
+  const heating=hp&&/(heiz|heat|warm)/i.test(String(data.heatpumpMode??'')), fan=n(data.heatpumpFanPercent);
+  const pc=data.phCanister||{}, lev=n(pc.levelL), pct=n(pc.percent), kg=n(pc.netKg!==undefined?pc.netKg:pc.weightKg);
+  const can=lev===null?'pH-Minus --':`pH-Minus ${pc.scaleEnabled===true?'≈ ':''}${f(lev,2)} l${kg!==null?' · '+f(kg,3)+' kg':''}${pct!==null?' · '+f(pct,0)+' %':''}`;
+  const cards=[
+    ['outside','Außentemperatur',data.outsideTemp,1,'°C','#58baff',data.outsideTempTrend,1,'☀'],
+    ['water','Wassertemperatur',data.poolTemp,1,'°C','#60ddd9',data.poolTempTrend,1,'◉'],
+    ['ph','pH-Wert',data.ph,2,'',data.phInRange?'#67df7e':'#ffbd59',data.phTrend,.1,'⚗'],
+    ['orp','ORP-Wert',data.orp,0,'mV',data.orpInRange?'#67df7e':'#ff9f59',data.orpTrend,30,'ϟ']
+  ];
+  const html=cards.map(c=>{
+    const [k,l,v,d,u,col,tr,r,ic]=c, gr=graph(h[k]||[],v,col,d,r,u?' '+u:'');
+    let x='';
+    if(k==='ph') x=`<div class="can">${e(can)}</div><div class="st ${php?'on':''}"><i></i>Dosierpumpe ${php?'EIN':'AUS'}</div><div class="ctl"><button data-d="60">60 s</button><button data-d="120">120 s</button><button data-d="180">180 s</button><input id="pl" inputmode="decimal" placeholder="PoolLab 7,18"><button id="sv">Speichern</button></div>`;
+    if(k==='orp') x=`<div class="st ${chlor?'on':''}"><i></i>Chlorinator ${chlor?'EIN':'AUS'}</div>`;
+    return `<section class="c ${k}" style="--a:${col}"><header><span>${ic}</span><b>${l}</b>${k==='ph'?'':'<small>24 Stunden</small>'}</header>${x}<div class="v"><strong>${f(v,d)}</strong>${u?`<em>${u}</em>`:''}<q>${e(tr||'→')}</q></div><div class="gr">${gr.s}</div><div class="mm"><span>Min ${e(gr.lo)}</span><span>Max ${e(gr.hi)}</span></div></section>`;
+  }).join('');
+  const sc=String(data.nextActionsText||'--').split(/\n+/).map(x=>x.trim()).filter(Boolean).slice(0,3).map(x=>`<span>${e(x)}</span>`).join('')||'<i>Keine kommenden Schaltungen</i>';
+  const N=JSON.stringify(String(ns||'poolsteuerung.0'));
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#06111e;color:#f6fbff;font-family:Arial,sans-serif}.s{height:100vh;padding:8px 10px;display:grid;grid-template-rows:36px 1fr 38px 38px;gap:7px;background:linear-gradient(145deg,#06101c,#0a1a2c)}.top{display:flex;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:8px}.logo{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:#2199bd}.ttl{font-size:21px;font-weight:900}.sub,.meta{font-size:9px;color:#9bb0c8}.meta{text-align:right}.pump,.st{display:flex;align-items:center;gap:5px;border:1px solid #2a3c50;border-radius:20px;background:#071827;font-size:8px;font-weight:900}.pump{padding:4px 8px;margin-left:8px}.pump i,.st i{width:10px;height:10px;border-radius:50%}.pump i{background:#ff625b}.st i{background:#7c8da0}.pump.on i,.st.on i{background:#63e07b;box-shadow:0 0 8px #63e07b}.cards{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:7px;min-height:0}.c{position:relative;overflow:hidden;border:1px solid #26384a;border-radius:15px;padding:10px 13px 7px;background:#0d2035}.c:after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--a)}.c header{height:27px;display:grid;grid-template-columns:26px 1fr auto;align-items:center;gap:7px}.c header>span{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;border:1px solid #2b4054;color:var(--a)}.c header b{font-size:16px}.c header small{font-size:8px;color:#9bb0c8}.v{height:78px;display:flex;align-items:center;justify-content:center;gap:7px}.v strong{font-size:70px;line-height:.9;color:var(--a);letter-spacing:-3px}.v em{font-style:normal;font-size:24px;font-weight:900}.v q{font-size:28px;text-decoration:none;color:#afbed0}.gr{height:88px;background:#081827;border-radius:9px;overflow:hidden}.gr svg{width:100%;height:100%}.g{fill:none;stroke:#26384a}.mm{height:18px;display:flex;justify-content:space-between;align-items:end;color:#9bb0c8;font-size:9px}.can{position:absolute;right:13px;top:10px;max-width:205px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 7px;border:1px solid #34485b;border-radius:8px;background:#071827;color:#78e68d;font-size:8px;font-weight:900}.st{position:absolute;right:13px;top:105px;padding:4px 7px;color:#aab9c8}.c.ph .st{top:43px}.ctl{position:absolute;left:13px;right:13px;top:102px;z-index:4;display:flex;gap:4px;align-items:center}.ctl button{height:24px;border:1px solid #397baa;border-radius:20px;background:#195786;color:white;font-size:8px;font-weight:900;padding:2px 7px}.ctl input{margin-left:auto;width:105px;height:24px;border:1px solid #397baa;border-radius:20px;background:#061522;color:white;padding:2px 8px;font-size:9px}.ctl #sv{background:#17685c;border-color:#2a927f}.bar{border:1px solid #26384a;border-radius:12px;background:#0a1c2f;display:grid;align-items:center;padding:5px 9px}.hp{grid-template-columns:1.3fr repeat(3,1fr)}.hp div{display:flex;justify-content:space-between;padding:0 8px;border-left:1px solid #26384a;font-size:9px;color:#9bb0c8}.hp div:first-child{border:0;color:white;font-size:11px;font-weight:900}.hp b.on{color:#67df7e}.sch{grid-template-columns:auto 1fr;gap:8px}.sch>b{font-size:9px;color:#9bb0c8}.sch div{display:flex;justify-content:flex-end;gap:5px;overflow:hidden}.sch span{max-width:31%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid #27506d;border-radius:20px;padding:4px 7px;font-size:8px}.sch i{font-size:9px;color:#9bb0c8}@media(max-width:900px){.v strong{font-size:62px}.gr{height:80px}.ctl{top:96px}.st{top:99px}.c.ph .st{top:41px}}</style></head><body><main class="s"><div class="top"><div class="brand"><span class="logo">◉</span><div><div><span class="ttl">POOL</span><span class="pump ${pump?'on':''}"><i></i>Umwälzpumpe ${pump?'EIN':'AUS'}</span></div><div class="sub">24H LIVE-VERLAUF</div></div></div><div class="meta">${e(data.updated||'--')}<br>${VERSION} · iPad Mini</div></div><div class="cards">${html}</div><div class="bar hp"><div>↻ Wärmepumpe</div><div>LÄUFT <b class="${hp?'on':''}">${hp?'JA':'NEIN'}</b></div><div>HEIZT <b class="${heating?'on':''}">${heating?'JA':'NEIN'}</b></div><div>DREHZAHL <b>${fan===null?'--':Math.round(fan)+' %'}</b></div></div><div class="bar sch"><b>NÄCHSTE SCHALTUNGEN</b><div>${sc}</div></div></main><script>(function(){var n=${N};function a(){for(var w of [window,window.parent,window.top])try{if(w.vis)return w.vis}catch(e){}return null}async function s(i,v){var x=a();if(!x)return false;try{if(x.setValue){var r=x.setValue(i,v);if(r&&r.then)await r;return true}}catch(e){}try{if(x.conn&&x.conn.setState){var q=x.conn.setState(i,v);if(q&&q.then)await q;return true}}catch(e){}return false}document.onclick=async function(e){var d=e.target.closest&&e.target.closest('[data-d]');if(d){var t=d.textContent;d.textContent='…';d.disabled=true;var ok=await s(n+'.control.ph.manualDoseSec',+d.dataset.d);if(ok)ok=await s(n+'.control.ph.manualTrigger',Date.now());d.textContent=ok?'OK':'Fehler';setTimeout(()=>{d.textContent=t;d.disabled=false},1200);return}if(e.target.id==='sv'){var i=document.getElementById('pl'),v=Number(String(i.value).replace(',','.')),t=e.target.textContent;if(!Number.isFinite(v)||v<0||v>14){e.target.textContent='Ungültig';setTimeout(()=>e.target.textContent=t,1200);return}e.target.disabled=true;e.target.textContent='…';var ok=await s(n+'.control.ph.calibration.poollabValue',v);if(ok)ok=await s(n+'.control.ph.calibration.saveTrigger',Date.now());e.target.textContent=ok?'Gespeichert':'Fehler';if(ok)i.value='';setTimeout(()=>{e.target.textContent=t;e.target.disabled=false},1400)}}})();</script></body></html>`;
+}
 
-  const originalTablet = typeof adapter.buildTabletHtml === 'function' ? adapter.buildTabletHtml.bind(adapter) : null;
-  if (originalTablet) {
-    adapter.buildTabletHtml = data => {
-      adapter.__ipadMiniSafeData = { ...(data || {}) };
-      return String(originalTablet({ ...(data || {}), adapterVersion: VERSION })).replace(/v0\.4\.\d+/g, VERSION);
-    };
-  }
+function valid(x){return x.startsWith('<!doctype html>')&&x.endsWith('</html>')&&x.includes('id="pl"')&&x.includes('data-d="60"')&&Buffer.byteLength(x,'utf8')<=LIMIT}
 
-  for (const name of ['buildTabletWidget', 'buildPhoneHtml', 'buildPhoneWidget']) {
-    if (typeof adapter[name] !== 'function') continue;
-    const original = adapter[name].bind(adapter);
-    adapter[name] = data => String(original({ ...(data || {}), adapterVersion: VERSION })).replace(/v0\.4\.\d+/g, VERSION);
-  }
-
-  const baseRender = adapter.renderVisFull.bind(adapter);
-  adapter.renderVisFull = async (...args) => {
-    const result = await baseRender(...args);
-    const stableState = await adapter.getStateAsync(STATE_ID);
-    const stableHtml = stableState && typeof stableState.val === 'string' ? stableState.val : '';
-    const data = adapter.__ipadMiniSafeData;
-    if (!data) {
-      adapter.log.warn('[IPAD-MINI] Keine Renderdaten verfügbar; stabile Basisansicht bleibt aktiv');
-      return result;
-    }
-
-    try {
-      const history = await loadHistory(adapter);
-      const html = buildHtml(data, history, adapter.namespace);
-      if (!validHtml(html)) {
-        adapter.log.warn(`[IPAD-MINI] Sichere Ansicht verworfen (${Buffer.byteLength(html, 'utf8')} Bytes); stabile Basisansicht bleibt aktiv`);
-        return result;
-      }
-      await adapter.setStateIfChanged(STATE_ID, html, true);
-      if (!adapter.__ipadMiniSafeLogged) {
-        adapter.__ipadMiniSafeLogged = true;
-        adapter.log.info(`[IPAD-MINI] ${VERSION}: vollständige sichere Ansicht mit PoolLab-Korrektur aktiv (${Buffer.byteLength(html, 'utf8')} Bytes)`);
-      }
-    } catch (error) {
-      adapter.log.warn('[IPAD-MINI] Sichere Ansicht fehlgeschlagen; stabile Basisansicht bleibt aktiv: ' + (error.message || error));
-      if (stableHtml && stableHtml.includes('</html>')) await adapter.setStateIfChanged(STATE_ID, stableHtml, true);
-    }
+function install(adapter){
+  if(!adapter||adapter.__ipadMiniCompactInstalled)return adapter;
+  adapter.__ipadMiniCompactInstalled=true;
+  const original=adapter.buildTabletHtml.bind(adapter);
+  adapter.buildTabletHtml=data=>{
+    adapter.__ipadMiniCompactData={...(data||{})};
+    return String(original({...(data||{}),adapterVersion:VERSION})).replace(/v0\.4\.\d+/g,VERSION);
+  };
+  const base=adapter.renderVisFull.bind(adapter);
+  adapter.renderVisFull=async(...args)=>{
+    const result=await base(...args);
+    const data=adapter.__ipadMiniCompactData;
+    if(!data)return result;
+    try{
+      const x=build(data,await history(adapter),adapter.namespace);
+      if(!valid(x)){adapter.log.warn(`[IPAD-MINI] Kompaktansicht verworfen: ${Buffer.byteLength(x,'utf8')} Bytes`);return result}
+      await adapter.setStateIfChanged(STATE,x,true);
+      if(!adapter.__ipadMiniCompactLogged){adapter.__ipadMiniCompactLogged=true;adapter.log.info(`[IPAD-MINI] ${VERSION}: vollständige Kompaktansicht aktiv (${Buffer.byteLength(x,'utf8')} Bytes)`) }
+    }catch(err){adapter.log.warn('[IPAD-MINI] Kompaktansicht fehlgeschlagen: '+(err.message||err))}
     return result;
   };
-
-  adapter.on('ready', () => {
-    for (const delay of [1200, 4500]) {
-      const handle = adapter.trackTimeout(setTimeout(async () => {
-        adapter.pendingTimeouts.delete(handle);
-        if (adapter.isShuttingDown) return;
-        try {
-          adapter.lastRenderSignature = '';
-          adapter.lastRenderAt = 0;
-          await adapter.forceImmediateRender();
-        } catch (error) {
-          if (!adapter.isDbClosedError(error)) adapter.log.warn('[IPAD-MINI] Wiederherstellung fehlgeschlagen: ' + (error.message || error));
-        }
-      }, delay));
+  adapter.on('ready',()=>{
+    for(const ms of [1000,4000]){
+      const h=adapter.trackTimeout(setTimeout(async()=>{
+        adapter.pendingTimeouts.delete(h);
+        if(adapter.isShuttingDown)return;
+        try{adapter.lastRenderSignature='';adapter.lastRenderAt=0;await adapter.forceImmediateRender()}catch(err){if(!adapter.isDbClosedError(err))adapter.log.warn('[IPAD-MINI] Wiederherstellung fehlgeschlagen: '+(err.message||err))}
+      },ms));
     }
   });
-
   return adapter;
 }
 
-function createAdapter(options = {}) {
-  return install(createBase(options));
-}
-
-if (require.main !== module) module.exports = createAdapter;
-else createAdapter();
+function createAdapter(options={}){return install(createBase(options))}
+if(require.main!==module)module.exports=createAdapter;else createAdapter();
