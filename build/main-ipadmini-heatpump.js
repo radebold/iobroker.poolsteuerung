@@ -2,7 +2,7 @@
 
 const createHistoryAdapter = require('./main-ipadmini-historyfix.js');
 
-const ADAPTER_VERSION = 'v0.4.30';
+const ADAPTER_VERSION = 'v0.4.31';
 const IPAD_MINI_STATE = 'vis.htmlIpadMini';
 
 function esc(value) {
@@ -120,6 +120,37 @@ function buildHeatpumpStrip(data = {}) {
   </section>`;
 }
 
+function buildMetricDeviceStatus(type, active) {
+  const text = type === 'ph'
+    ? `Dosierpumpe ${active ? 'EIN' : 'AUS'}`
+    : `Chlorinator ${active ? 'EIN' : 'AUS'}`;
+  return `<span class="metric-device-status ${active ? 'on' : 'off'}" data-device-status="${type}">${esc(text)}</span>`;
+}
+
+function patchMetricDeviceStatus(html, label, type, active) {
+  const labelMarker = `<span class="metric-label">${label}</span>`;
+  const labelIndex = html.indexOf(labelMarker);
+  if (labelIndex < 0) return html;
+
+  const cardStart = html.lastIndexOf('<section class="metric-card"', labelIndex);
+  const cardEnd = html.indexOf('</section>', labelIndex);
+  if (cardStart < 0 || cardEnd < 0) return html;
+
+  let card = html.slice(cardStart, cardEnd + 10);
+  card = card.replace(/<span class="metric-device-status[^>]*" data-device-status="(?:ph|orp)">[\s\S]*?<\/span>/g, '');
+  const historyMarker = '<div class="history-wrap">';
+  if (!card.includes(historyMarker)) return html;
+  card = card.replace(historyMarker, `${buildMetricDeviceStatus(type, active)}${historyMarker}`);
+  return html.slice(0, cardStart) + card + html.slice(cardEnd + 10);
+}
+
+function patchCirculationStatus(html, active) {
+  const marker = '<div class="brand-title">POOL</div>';
+  if (!html.includes(marker)) return html;
+  const text = `Umwälzpumpe ${active ? 'EIN' : 'AUS'}`;
+  return html.replace(marker, `<div class="brand-title">POOL<span class="circulation-status ${active ? 'on' : 'off'}" data-circulation-status="1">${esc(text)}</span></div>`);
+}
+
 function patchCanisterIntoPhCard(html, data) {
   const labelMarker = '<span class="metric-label">pH-Wert</span>';
   const labelIndex = html.indexOf(labelMarker);
@@ -145,7 +176,9 @@ function patchHeatpumpHtml(html, data) {
     .replace(/<style data-ipad-heatpump="1">[\s\S]*?<\/style>/g, '')
     .replace(/<section class="heatpump-strip" data-heatpump-strip="1">[\s\S]*?<\/section>/g, '')
     .replace(/<span class="ph-canister-badge[^>]*" data-ph-canister="1">[\s\S]*?<\/span>/g, '<span class="metric-period">24 Stunden</span>')
-    .replace(/v0\.4\.(?:5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29)/g, ADAPTER_VERSION);
+    .replace(/<span class="metric-device-status[^>]*" data-device-status="(?:ph|orp)">[\s\S]*?<\/span>/g, '')
+    .replace(/<span class="circulation-status[^>]*" data-circulation-status="1">[\s\S]*?<\/span>/g, '')
+    .replace(/v0\.4\.(?:5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30)/g, ADAPTER_VERSION);
 
   const css = `<style data-ipad-heatpump="1">
 .screen{grid-template-rows:40px minmax(0,1fr) 42px 42px!important}
@@ -153,12 +186,17 @@ function patchHeatpumpHtml(html, data) {
 .heatpump-title{display:flex;align-items:center;gap:8px;color:#e9f4ff;font-size:12px;font-weight:900;white-space:nowrap}.heatpump-icon{width:27px;height:27px;border-radius:9px;display:grid;place-items:center;background:rgba(84,200,255,.10);border:1px solid rgba(84,200,255,.18)}.heatpump-icon svg{width:17px;height:17px;fill:none;stroke:#67d9ff;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .heatpump-item{min-width:0;height:30px;display:grid;grid-template-columns:8px auto 1fr;align-items:center;gap:6px;padding:0 9px;border-left:1px solid rgba(255,255,255,.07)}.heatpump-dot{width:7px;height:7px;border-radius:50%;background:#74869b;box-shadow:0 0 8px rgba(116,134,155,.25)}.heatpump-dot.on,.heatpump-dot.heat{background:#67df7e;box-shadow:0 0 9px rgba(103,223,126,.45)}.heatpump-dot.off{background:#77899c}.heatpump-dot.speed{background:#58baff;box-shadow:0 0 9px rgba(88,186,255,.4)}
 .heatpump-key{color:#9bb0c8;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}.heatpump-value{justify-self:end;color:#dbe9f6;font-size:12px;font-weight:900;white-space:nowrap}.heatpump-value.on,.heatpump-value.heat{color:#67df7e}.heatpump-value.off{color:#aab9c8}.heatpump-value.speed{color:#69c4ff}.heatpump-value.neutral{color:#d1dce7}
+.brand-title{display:flex;align-items:center;gap:12px}.circulation-status{display:inline-flex;align-items:center;gap:7px;padding:4px 9px 4px 7px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(255,255,255,.055);font-size:9px;font-weight:900;letter-spacing:.02em;color:#dbe8f5;white-space:nowrap}.circulation-status:before{content:"";width:16px;height:16px;border-radius:50%;flex:0 0 16px}.circulation-status.on:before{background:#62e27c;box-shadow:0 0 0 3px rgba(98,226,124,.16),0 0 14px rgba(98,226,124,.72)}.circulation-status.off:before{background:#ff655c;box-shadow:0 0 0 3px rgba(255,101,92,.14),0 0 12px rgba(255,101,92,.55)}
+.metric-device-status{position:absolute;right:15px;top:126px;z-index:4;display:inline-flex;align-items:center;gap:6px;height:22px;padding:3px 8px;border:1px solid rgba(255,255,255,.11);border-radius:999px;background:rgba(4,17,30,.82);backdrop-filter:blur(3px);font-size:8px;font-weight:900;letter-spacing:.02em;color:#aab9c8;white-space:nowrap}.metric-device-status:before{content:"";width:10px;height:10px;border-radius:50%;background:#75879b;box-shadow:0 0 7px rgba(117,135,155,.25)}.metric-device-status.on{color:#a8f4b7;border-color:rgba(98,226,124,.25);background:rgba(37,110,55,.26)}.metric-device-status.on:before{background:#62e27c;box-shadow:0 0 0 2px rgba(98,226,124,.13),0 0 10px rgba(98,226,124,.68)}
 .ph-canister-badge{justify-self:end;min-width:142px;max-width:190px;height:30px;display:grid;grid-template-columns:auto auto;grid-template-rows:13px 13px;align-items:center;column-gap:7px;padding:2px 8px;border:1px solid rgba(164,124,255,.22);border-radius:9px;background:linear-gradient(145deg,rgba(164,124,255,.12),rgba(255,255,255,.035));line-height:1;overflow:hidden}.ph-canister-badge small{grid-column:1;grid-row:1;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:#c7b7ef;white-space:nowrap}.ph-canister-badge strong{grid-column:1;grid-row:2;font-size:12px;font-style:normal;color:#7ee493;white-space:nowrap}.ph-canister-badge em{grid-column:2;grid-row:1 / span 2;align-self:center;justify-self:end;font-size:8px;font-style:normal;color:#aabbd0;white-space:nowrap}.ph-canister-badge.warn{border-color:rgba(255,177,62,.30);background:linear-gradient(145deg,rgba(255,177,62,.13),rgba(255,255,255,.035))}.ph-canister-badge.warn small,.ph-canister-badge.warn strong{color:#ffc15f}.ph-canister-badge.critical{border-color:rgba(255,100,88,.30);background:linear-gradient(145deg,rgba(255,100,88,.13),rgba(255,255,255,.035))}.ph-canister-badge.critical small,.ph-canister-badge.critical strong{color:#ff8175}
-@media(max-width:900px){.heatpump-strip{grid-template-columns:1.1fr repeat(3,minmax(0,1fr));padding:5px 7px}.heatpump-title{font-size:10px}.heatpump-item{padding:0 5px;gap:4px}.heatpump-key{font-size:8px}.heatpump-value{font-size:10px}.ph-canister-badge{min-width:126px;max-width:155px;padding:2px 6px;column-gap:5px}.ph-canister-badge small{font-size:7px}.ph-canister-badge strong{font-size:10px}.ph-canister-badge em{font-size:7px}}
+@media(max-width:900px){.heatpump-strip{grid-template-columns:1.1fr repeat(3,minmax(0,1fr));padding:5px 7px}.heatpump-title{font-size:10px}.heatpump-item{padding:0 5px;gap:4px}.heatpump-key{font-size:8px}.heatpump-value{font-size:10px}.circulation-status{font-size:8px;padding:3px 7px 3px 6px;gap:5px}.circulation-status:before{width:14px;height:14px;flex-basis:14px}.metric-device-status{right:12px;top:119px;font-size:7px;height:20px;padding:2px 6px}.metric-device-status:before{width:9px;height:9px}.ph-canister-badge{min-width:126px;max-width:155px;padding:2px 6px;column-gap:5px}.ph-canister-badge small{font-size:7px}.ph-canister-badge strong{font-size:10px}.ph-canister-badge em{font-size:7px}}
 </style>`;
 
   value = value.includes('</head>') ? value.replace('</head>', `${css}</head>`) : css + value;
   value = patchCanisterIntoPhCard(value, data);
+  value = patchMetricDeviceStatus(value, 'pH-Wert', 'ph', boolValue(data.phPumpOn));
+  value = patchMetricDeviceStatus(value, 'ORP-Wert', 'orp', boolValue(data.chlorOn));
+  value = patchCirculationStatus(value, boolValue(data.pumpOn));
   return value.replace('<footer class="schedule">', `${buildHeatpumpStrip(data)}<footer class="schedule">`);
 }
 
@@ -171,7 +209,7 @@ function installHeatpumpStrip(adapter) {
   adapter.buildTabletHtml = function captureHeatpumpData(data) {
     adapter.__ipadMiniHeatpumpData = { ...(data || {}) };
     return String(originalTabletBuilder({ ...(data || {}), adapterVersion: ADAPTER_VERSION }))
-      .replace(/v0\.4\.(?:5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29)/g, ADAPTER_VERSION);
+      .replace(/v0\.4\.(?:5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30)/g, ADAPTER_VERSION);
   };
 
   for (const methodName of ['buildPhoneHtml', 'buildTabletWidget', 'buildPhoneWidget']) {
@@ -179,7 +217,7 @@ function installHeatpumpStrip(adapter) {
     const original = adapter[methodName].bind(adapter);
     adapter[methodName] = function patchVersion(data) {
       return String(original({ ...(data || {}), adapterVersion: ADAPTER_VERSION }))
-        .replace(/v0\.4\.(?:5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29)/g, ADAPTER_VERSION);
+        .replace(/v0\.4\.(?:5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30)/g, ADAPTER_VERSION);
     };
   }
 
@@ -196,13 +234,13 @@ function installHeatpumpStrip(adapter) {
         await this.setStateIfChanged(IPAD_MINI_STATE, html, true);
       }
     } catch (error) {
-      if (!this.isDbClosedError(error)) this.log.warn('[IPAD-MINI] Statusleiste oder pH-Minus-Anzeige konnte nicht aktualisiert werden: ' + (error.message || error));
+      if (!this.isDbClosedError(error)) this.log.warn('[IPAD-MINI] Statusanzeigen konnten nicht aktualisiert werden: ' + (error.message || error));
     }
     return result;
   };
 
   try {
-    adapter.log.info('[IPAD-MINI] v0.4.30: pH-Minus-Stand innerhalb der pH-Kachel aktiv');
+    adapter.log.info('[IPAD-MINI] v0.4.31: Pumpenstatus in Titel, pH- und ORP-Kachel aktiv');
   } catch {}
 
   return adapter;
