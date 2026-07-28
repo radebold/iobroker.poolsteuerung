@@ -1,5 +1,5 @@
 {
   "name": "iobroker.poolsteuerung",
-  "version": "0.4.30",
+  "version": "0.4.31",
   "main": "build/main-phcalibration-fragment.js"
 }
