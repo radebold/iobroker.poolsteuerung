@@ -16,6 +16,22 @@ function install(adapter) {
       .replace(/v0\.4\.\d+/g, VERSION);
   }
 
+  async function normalizeIpadVersion() {
+    const state = await adapter.getStateAsync(IPAD_MINI_STATE);
+    if (!state || typeof state.val !== 'string' || state.val.length < 50) return;
+    const html = String(state.val).replace(/v0\.4\.\d+/g, VERSION);
+    await adapter.setStateIfChanged(IPAD_MINI_STATE, html, true);
+  }
+
+  if (typeof adapter.renderVisFull === 'function') {
+    const originalRenderVisFull = adapter.renderVisFull.bind(adapter);
+    adapter.renderVisFull = async (...args) => {
+      const result = await originalRenderVisFull(...args);
+      await normalizeIpadVersion();
+      return result;
+    };
+  }
+
   adapter.on('ready', () => {
     const handle = adapter.trackTimeout(setTimeout(async () => {
       adapter.pendingTimeouts.delete(handle);
@@ -25,6 +41,7 @@ function install(adapter) {
         adapter.lastRenderSignature = '';
         adapter.lastRenderAt = 0;
         await adapter.forceImmediateRender();
+        await normalizeIpadVersion();
         adapter.log.info('[IPAD-MINI] v0.4.33: vollständige Ansicht wiederhergestellt');
       } catch (error) {
         if (!adapter.isDbClosedError(error)) adapter.log.warn('[IPAD-MINI] Wiederherstellung fehlgeschlagen: ' + (error.message || error));
