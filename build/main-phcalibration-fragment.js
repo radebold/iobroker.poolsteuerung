@@ -2,7 +2,7 @@
 
 const createBase = require('./main-phcalibration.js');
 
-const VERSION = 'v0.4.35';
+const VERSION = 'v0.4.36';
 const HTML_STATE = 'vis.htmlPhCalibrationField';
 const WIDGET_STATE = 'vis.widgetPhCalibrationField';
 
@@ -92,7 +92,7 @@ function install(adapter) {
     }
   });
 
-  try { adapter.log.info('[PH-KAL] v0.4.35: HTML- und VIS-Fragment für PoolLab bereit'); } catch {}
+  try { adapter.log.info('[PH-KAL] v0.4.36: HTML- und VIS-Fragment für PoolLab bereit'); } catch {}
   return adapter;
 }
 
