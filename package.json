@@ -1,5 +1,5 @@
 {
   "name": "iobroker.poolsteuerung",
-  "version": "0.4.31",
-  "main": "build/main-phcalibration-fragment.js"
+  "version": "0.4.32",
+  "main": "build/main-ipadmini-scalecontrols.js"
 }
