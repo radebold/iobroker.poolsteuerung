@@ -2,7 +2,7 @@
 
 const createBase = require('./main-phcalibration-fragment.js');
 
-const VERSION = 'v0.4.42';
+const VERSION = 'v0.4.43';
 const IPAD_STATE = 'vis.htmlIpadMini';
 
 function patchVersion(html) {
