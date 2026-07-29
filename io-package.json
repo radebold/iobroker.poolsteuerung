@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.4.49",
+    "version": "0.4.50",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -103,7 +103,7 @@
       "_id": "control.ph.calibration.poollabValue",
       "type": "state",
       "common": {
-        "name": "Aktueller PoolLab-pH-Wert",
+        "name": "PoolLab-pH-Wert (Änderung speichert automatisch)",
         "type": "number",
         "role": "value.ph",
         "unit": "pH",
@@ -140,5 +140,5 @@
       "native": {}
     }
   ],
-  "version": "0.4.49"
+  "version": "0.4.50"
 }
