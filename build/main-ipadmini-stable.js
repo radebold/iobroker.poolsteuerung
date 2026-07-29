@@ -2,7 +2,7 @@
 
 const createBase = require('./main-phcalibration-fragment.js');
 
-const VERSION = 'v0.4.41';
+const VERSION = 'v0.4.42';
 const IPAD_STATE = 'vis.htmlIpadMini';
 
 function patchVersion(html) {
@@ -27,7 +27,7 @@ function install(adapter) {
       const html = String((state && state.val) || '');
       if (html.includes('</html>')) await adapter.setStateIfChanged(IPAD_STATE, patchVersion(html), true);
     } catch (error) {
-      if (!adapter.isDbClosedError(error)) adapter.log.warn('[IPAD-MINI] Versionsanzeige konnte nicht aktualisiert werden: ' + (error.message || error));
+      if (!adapter.isDbClosedError(error) && adapter.log && typeof adapter.log.warn === 'function') adapter.log.warn('[IPAD-MINI] Versionsanzeige konnte nicht aktualisiert werden: ' + (error.message || error));
     }
     return result;
   };
@@ -46,9 +46,9 @@ function install(adapter) {
           const html = patchVersion(String((state && state.val) || ''));
           if (!html.includes('</html>') || html.length < 1000) throw new Error('iPad-Mini-HTML wurde nicht vollständig erzeugt');
           await adapter.setStateIfChanged(IPAD_STATE, html, true);
-          if (delay === 3200) adapter.log.info(`[IPAD-MINI] ${VERSION}: stabile vollständige Ansicht wiederhergestellt (${Buffer.byteLength(html, 'utf8')} Bytes)`);
+          if (delay === 3200 && adapter.log && typeof adapter.log.info === 'function') adapter.log.info(`[IPAD-MINI] ${VERSION}: stabile vollständige Ansicht wiederhergestellt (${Buffer.byteLength(html, 'utf8')} Bytes)`);
         } catch (error) {
-          if (!adapter.isDbClosedError(error)) adapter.log.warn('[IPAD-MINI] Wiederherstellung fehlgeschlagen: ' + (error.message || error));
+          if (!adapter.isDbClosedError(error) && adapter.log && typeof adapter.log.warn === 'function') adapter.log.warn('[IPAD-MINI] Wiederherstellung fehlgeschlagen: ' + (error.message || error));
         }
       }, delay));
     }
