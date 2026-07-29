@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.4.48",
+    "version": "0.4.49",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -92,5 +92,53 @@
     "phCanisterWeightStateId": "mqtt.0.pool.phminus.waage.weight_kg",
     "phCanisterTareKg": 0.5
   },
-  "version": "0.4.48"
+  "instanceObjects": [
+    {
+      "_id": "control.ph.calibration",
+      "type": "channel",
+      "common": {"name": "pH-Kalibrierung"},
+      "native": {}
+    },
+    {
+      "_id": "control.ph.calibration.poollabValue",
+      "type": "state",
+      "common": {
+        "name": "Aktueller PoolLab-pH-Wert",
+        "type": "number",
+        "role": "value.ph",
+        "unit": "pH",
+        "read": true,
+        "write": true,
+        "def": 7.23
+      },
+      "native": {}
+    },
+    {
+      "_id": "control.ph.calibration.saveTrigger",
+      "type": "state",
+      "common": {
+        "name": "PoolLab-Messwert speichern",
+        "type": "number",
+        "role": "value.time",
+        "read": true,
+        "write": true,
+        "def": 0
+      },
+      "native": {}
+    },
+    {
+      "_id": "control.ph.calibration.resetTrigger",
+      "type": "state",
+      "common": {
+        "name": "Kalibriertabelle löschen",
+        "type": "number",
+        "role": "value.time",
+        "read": true,
+        "write": true,
+        "def": 0
+      },
+      "native": {}
+    }
+  ],
+  "version": "0.4.49"
 }
