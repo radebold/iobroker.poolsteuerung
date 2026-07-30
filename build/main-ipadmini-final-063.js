@@ -118,10 +118,10 @@ function install(adapter) {
 
   async function patchState() {
     try {
-      const editing = await adapter.getStateAsync(EDIT_ID);
-      if (editing && editing.val === true) return;
       const state = await adapter.getStateAsync(IPAD_ID);
       const current = String((state && state.val) || '');
+      const editing = await adapter.getStateAsync(EDIT_ID);
+      if (editing && editing.val === true && current.includes('data-ph-cal-ui-063="1"')) return;
       const next = patchIpad(current, adapter.namespace);
       if (!next || next === current) return;
       const writer = typeof adapter.__originalSetStateIfChanged056 === 'function'
@@ -150,7 +150,8 @@ function install(adapter) {
     };
   }
 
-  adapter.on('ready', () => {
+  adapter.on('ready', async () => {
+    try { await adapter.setStateIfChanged(EDIT_ID, false, true); } catch {}
     for (const delay of [1200, 3500, 8000]) {
       const handle = adapter.trackTimeout(setTimeout(async () => {
         adapter.pendingTimeouts.delete(handle);
