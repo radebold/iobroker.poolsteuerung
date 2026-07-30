@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.4.57",
+    "version": "0.4.58",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -108,8 +108,7 @@
         "role": "value.ph",
         "unit": "pH",
         "read": true,
-        "write": true,
-        "def": 7.23
+        "write": true
       },
       "native": {}
     },
@@ -153,5 +152,5 @@
       "native": {}
     }
   ],
-  "version": "0.4.57"
+  "version": "0.4.58"
 }
