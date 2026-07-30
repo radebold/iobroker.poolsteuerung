@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.4.61",
+    "version": "0.4.62",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -103,12 +103,25 @@
       "_id": "control.ph.calibration.poollabValue",
       "type": "state",
       "common": {
-        "name": "PoolLab-pH-Wert (Änderung speichert automatisch)",
+        "name": "Letzter erfasster PoolLab-pH-Wert",
         "type": "number",
         "role": "value.ph",
         "unit": "pH",
         "read": true,
         "write": true
+      },
+      "native": {}
+    },
+    {
+      "_id": "control.ph.calibration.captureRequest",
+      "type": "state",
+      "common": {
+        "name": "PoolLab-Erfassungsauftrag",
+        "type": "string",
+        "role": "json",
+        "read": true,
+        "write": true,
+        "def": ""
       },
       "native": {}
     },
@@ -152,5 +165,5 @@
       "native": {}
     }
   ],
-  "version": "0.4.61"
+  "version": "0.4.62"
 }
