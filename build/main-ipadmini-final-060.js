@@ -148,8 +148,6 @@ function install(adapter) {
       const delta = rnd(poollab - raw);
       const message = `${replaced ? 'Kalibrierpunkt aktualisiert' : 'Kalibrierpunkt gespeichert'}: PH803 ${fmt(raw)} → PoolLab ${fmt(poollab)} (${delta >= 0 ? '+' : ''}${fmt(delta)}).`;
       await adapter.setStateIfChanged('status.phCalibration.lastMessage', message, true);
-      await adapter.setStateIfChanged('status.phCalibration.autoDoseBlocked', false, true);
-      await adapter.setStateIfChanged('status.phCalibration.autoDoseBlockReason', '', true);
 
       adapter.lastRenderSignature = '';
       adapter.lastRenderAt = 0;
