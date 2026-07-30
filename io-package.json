@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.4.54",
+    "version": "0.4.55",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -138,7 +138,20 @@
         "def": 0
       },
       "native": {}
+    },
+    {
+      "_id": "control.ph.calibration.ipadMiniEditing",
+      "type": "state",
+      "common": {
+        "name": "iPad Mini PoolLab-Eingabe geöffnet",
+        "type": "boolean",
+        "role": "indicator",
+        "read": true,
+        "write": true,
+        "def": false
+      },
+      "native": {}
     }
   ],
-  "version": "0.4.54"
+  "version": "0.4.55"
 }
