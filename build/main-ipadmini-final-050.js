@@ -43,6 +43,7 @@ function install(adapter) {
   adapter.__phAutoSave050Installed = true;
   adapter.__phAutoSaveTimer = null;
   adapter.__phExplicitSaveAt = 0;
+  adapter.__phAutoSaveReady = false;
 
   function clearAutoSaveTimer() {
     if (!adapter.__phAutoSaveTimer) return;
@@ -54,7 +55,7 @@ function install(adapter) {
     clearAutoSaveTimer();
     adapter.__phAutoSaveTimer = setTimeout(async () => {
       adapter.__phAutoSaveTimer = null;
-      if (adapter.isShuttingDown) return;
+      if (adapter.isShuttingDown || !adapter.__phAutoSaveReady) return;
       if (Date.now() - adapter.__phExplicitSaveAt < 1200) return;
 
       try {
@@ -94,6 +95,10 @@ function install(adapter) {
   adapter.on('ready', () => {
     try { adapter.subscribeStates('control.ph.calibration.*'); } catch {}
     harmonizeVersions(adapter).catch(() => {});
+    const handle = adapter.trackTimeout(setTimeout(() => {
+      adapter.pendingTimeouts.delete(handle);
+      if (!adapter.isShuttingDown) adapter.__phAutoSaveReady = true;
+    }, 2500));
   });
 
   adapter.on('stateChange', (id, state) => {
@@ -108,7 +113,7 @@ function install(adapter) {
       return;
     }
 
-    if (id !== poollabFullId) return;
+    if (id !== poollabFullId || !adapter.__phAutoSaveReady) return;
     const poollabValue = parsePh(state.val);
     if (poollabValue === null) {
       if (adapter.log && typeof adapter.log.warn === 'function') {
