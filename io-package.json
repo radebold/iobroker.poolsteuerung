@@ -221,7 +221,7 @@
       "common": {
         "name": "Jetzt nach Update suchen",
         "type": "number",
-        "role": "button",
+        "role": "value.time",
         "read": true,
         "write": true,
         "def": 0
@@ -234,7 +234,7 @@
       "common": {
         "name": "GitHub-Update installieren",
         "type": "number",
-        "role": "button",
+        "role": "value.time",
         "read": true,
         "write": true,
         "def": 0
