@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.4.69",
+    "version": "0.4.70",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -185,7 +185,7 @@
         "role": "info.version",
         "read": true,
         "write": false,
-        "def": "0.4.69"
+        "def": "0.4.70"
       },
       "native": {}
     },
@@ -263,7 +263,7 @@
         "role": "text",
         "read": true,
         "write": false,
-        "def": "Installiert: 0.4.69"
+        "def": "Installiert: 0.4.70"
       },
       "native": {}
     },
@@ -320,5 +320,5 @@
       "native": {}
     }
   ],
-  "version": "0.4.69"
+  "version": "0.4.70"
 }
