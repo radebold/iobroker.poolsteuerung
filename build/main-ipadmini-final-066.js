@@ -24,11 +24,11 @@ function patchVersion(value) {
 }
 
 function extractPhInfoLabel(html) {
-  const match = String(html || '').match(/<label class="ph-wa-flag"[\s\S]*?<\/label>/);
+  const match = String(html || '').match(/<label class="ph-wa-flag(?: ph-info-compact)?"[\s\S]*?<\/label>/);
   if (!match) return '';
   return match[0]
-    .replace('class="ph-wa-flag"', 'class="ph-wa-flag ph-info-compact"')
-    .replace(/<span>WhatsApp bei pH-Dosierung<\/span>/, '<span>PH-Info</span>');
+    .replace(/class="ph-wa-flag(?: ph-info-compact)?"/, 'class="ph-wa-flag ph-info-compact"')
+    .replace(/<span>(?:WhatsApp bei pH-Dosierung|PH-Info)<\/span>/, '<span>PH-Info</span>');
 }
 
 function removeOldPhInfo(html) {
@@ -44,8 +44,8 @@ function patchPhoneHtml(htmlValue) {
   if (!label) return html;
   html = removeOldPhInfo(html);
 
-  const tempRow = /<div class="temp-row">(<div class="temp">[\s\S]*?<\/div><div class="unit">°C<\/div>)<\/div>/;
-  const widgetTempRow = /<div class="ps-tempRow">(<div class="ps-temp">[\s\S]*?<\/div><div class="ps-unit">°C<\/div>)<\/div>/;
+  const tempRow = /<div class="temp-row(?: ph-info-host)?">(<div class="temp">[\s\S]*?<\/div><div class="unit">°C<\/div>)<\/div>/;
+  const widgetTempRow = /<div class="ps-tempRow(?: ph-info-host)?">(<div class="ps-temp">[\s\S]*?<\/div><div class="ps-unit">°C<\/div>)<\/div>/;
 
   if (tempRow.test(html)) {
     html = html.replace(tempRow, `<div class="temp-row ph-info-host">$1${label}</div>`);
