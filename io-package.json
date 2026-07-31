@@ -2,13 +2,15 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.4.67",
+    "version": "0.4.68",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
     "materialize": true,
     "materializeTab": true,
-    "adminUI": {"config": "json"},
+    "adminUI": {
+      "config": "json"
+    },
     "installedFrom": "radebold/iobroker.poolsteuerung#v0.3.41"
   },
   "native": {
@@ -96,7 +98,9 @@
     {
       "_id": "control.ph.calibration",
       "type": "channel",
-      "common": {"name": "pH-Kalibrierung"},
+      "common": {
+        "name": "pH-Kalibrierung"
+      },
       "native": {}
     },
     {
@@ -163,7 +167,158 @@
         "def": false
       },
       "native": {}
+    },
+    {
+      "_id": "update",
+      "type": "channel",
+      "common": {
+        "name": "GitHub-Update"
+      },
+      "native": {}
+    },
+    {
+      "_id": "update.installedVersion",
+      "type": "state",
+      "common": {
+        "name": "Installierte Adapterversion",
+        "type": "string",
+        "role": "info.version",
+        "read": true,
+        "write": false,
+        "def": "0.4.68"
+      },
+      "native": {}
+    },
+    {
+      "_id": "update.availableVersion",
+      "type": "state",
+      "common": {
+        "name": "Auf GitHub verfügbare Version",
+        "type": "string",
+        "role": "info.version",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    },
+    {
+      "_id": "update.available",
+      "type": "state",
+      "common": {
+        "name": "Update verfügbar",
+        "type": "boolean",
+        "role": "indicator",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    },
+    {
+      "_id": "update.checkTrigger",
+      "type": "state",
+      "common": {
+        "name": "Jetzt nach Update suchen",
+        "type": "number",
+        "role": "button",
+        "read": true,
+        "write": true,
+        "def": 0
+      },
+      "native": {}
+    },
+    {
+      "_id": "update.installTrigger",
+      "type": "state",
+      "common": {
+        "name": "GitHub-Update installieren",
+        "type": "number",
+        "role": "button",
+        "read": true,
+        "write": true,
+        "def": 0
+      },
+      "native": {}
+    },
+    {
+      "_id": "update.running",
+      "type": "state",
+      "common": {
+        "name": "Update läuft",
+        "type": "boolean",
+        "role": "indicator.working",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    },
+    {
+      "_id": "update.status",
+      "type": "state",
+      "common": {
+        "name": "Update-Status",
+        "type": "string",
+        "role": "text",
+        "read": true,
+        "write": false,
+        "def": "Installiert: 0.4.68"
+      },
+      "native": {}
+    },
+    {
+      "_id": "update.lastCheck",
+      "type": "state",
+      "common": {
+        "name": "Letzte Update-Prüfung",
+        "type": "number",
+        "role": "value.time",
+        "read": true,
+        "write": false,
+        "def": 0
+      },
+      "native": {}
+    },
+    {
+      "_id": "update.lastError",
+      "type": "state",
+      "common": {
+        "name": "Letzter Update-Fehler",
+        "type": "string",
+        "role": "text",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    },
+    {
+      "_id": "update.startedAt",
+      "type": "state",
+      "common": {
+        "name": "Update gestartet am",
+        "type": "number",
+        "role": "value.time",
+        "read": true,
+        "write": false,
+        "def": 0
+      },
+      "native": {}
+    },
+    {
+      "_id": "update.targetVersion",
+      "type": "state",
+      "common": {
+        "name": "Zielversion des Updates",
+        "type": "string",
+        "role": "info.version",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
     }
   ],
-  "version": "0.4.67"
+  "version": "0.4.68"
 }
