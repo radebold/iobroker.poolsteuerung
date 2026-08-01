@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.5.6",
+    "version": "0.5.7",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -140,7 +140,7 @@
     {
       "_id": "update.installedVersion",
       "type": "state",
-      "common": { "name": "Installierte Adapterversion", "type": "string", "role": "info.version", "read": true, "write": false, "def": "0.5.6" },
+      "common": { "name": "Installierte Adapterversion", "type": "string", "role": "info.version", "read": true, "write": false, "def": "0.5.7" },
       "native": {}
     },
     {
@@ -176,7 +176,7 @@
     {
       "_id": "update.status",
       "type": "state",
-      "common": { "name": "Update-Status", "type": "string", "role": "text", "read": true, "write": false, "def": "Installiert: 0.5.6" },
+      "common": { "name": "Update-Status", "type": "string", "role": "text", "read": true, "write": false, "def": "Installiert: 0.5.7" },
       "native": {}
     },
     {
@@ -218,7 +218,7 @@
     {
       "_id": "update.runtimeVersion",
       "type": "state",
-      "common": { "name": "Aktive Update-Runtime", "type": "string", "role": "info.version", "read": true, "write": false, "def": "0.5.6" },
+      "common": { "name": "Aktive Update-Runtime", "type": "string", "role": "info.version", "read": true, "write": false, "def": "0.5.7" },
       "native": {}
     },
     {
@@ -228,5 +228,5 @@
       "native": {}
     }
   ],
-  "version": "0.5.6"
+  "version": "0.5.7"
 }
