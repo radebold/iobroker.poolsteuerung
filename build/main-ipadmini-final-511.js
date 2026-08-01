@@ -46,7 +46,7 @@ function install(adapter) {
         await adapter.ensureState(IGNORED_ID, 'boolean', 'indicator', false, false);
         await adapter.setStateIfChanged(
           POLICY_ID,
-          '0.5.11: Chlorinator-Heartbeat ist Diagnose בלבד; kein AUS/EIN-Takten. Sicherheitsfreigaben: Pumpe, Pumpen-Heartbeat, Startverzögerung und ORP.',
+          '0.5.11: Chlorinator-Heartbeat ist nur Diagnose; kein AUS/EIN-Takten. Sicherheitsfreigaben: Pumpe, Pumpen-Heartbeat, Startverzögerung und ORP.',
           true
         );
       } catch {}
