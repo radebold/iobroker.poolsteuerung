@@ -1,8 +1,8 @@
 {
-  "version": "0.5.12",
+  "version": "0.5.13",
   "published": "2026-08-01",
   "channel": "stable",
-  "notes": "Prioritätsfix gegen Chlorinator-Takten: zentrale Hysterese-Sperre unterdrückt interne AUS-Befehle, solange Pumpe/Freigaben gültig sind und der ORP-Latch EIN fordert. Jeder unterdrückte AUS-Befehl wird diagnostisch protokolliert.",
+  "notes": "Chlor-Guard aus 0.5.12 plus VIS-Fix: alte/doppelte Update-Buttons werden vollständig entfernt; genau ein aktueller AKTUELL/UPDATE-Button bleibt sichtbar.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
