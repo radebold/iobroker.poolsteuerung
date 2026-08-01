@@ -1,5 +1,5 @@
 {
   "name": "iobroker.poolsteuerung",
-  "version": "0.5.14",
-  "main": "build/main-ipadmini-final-514.js"
+  "version": "0.5.15",
+  "main": "build/main-ipadmini-final-515.js"
 }
