@@ -1,8 +1,8 @@
 {
-  "version": "0.5.10",
+  "version": "0.5.11",
   "published": "2026-08-01",
   "channel": "stable",
-  "notes": "Hotfix für Update-Buttons: robuste Normalisierung von Buttonwerten true, string true, 1 und string 1.",
+  "notes": "Prioritäts-Hotfix gegen Chlorinator-Takten: Chlorinator-Heartbeat bleibt Diagnose, schaltet den Aktor aber nicht mehr AUS. Pumpenfreigabe, Pumpen-Heartbeat, Startverzögerung und ORP-Hysterese bleiben aktiv.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
