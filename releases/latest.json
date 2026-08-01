@@ -1,8 +1,8 @@
 {
-  "version": "0.5.14",
+  "version": "0.5.15",
   "published": "2026-08-01",
   "channel": "stable",
-  "notes": "Reine Testversion für den automatischen Update-Prozess von 0.5.13 auf 0.5.14. Keine Funktionsänderung gegenüber 0.5.13.",
+  "notes": "Recovery-Version: behebt Startabbruch durch async/Promise in 0.5.12-0.5.14. Basiert direkt auf 0.5.11 und enthält Chlor-Guard sowie VIS-Button-Bereinigung synchron.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
