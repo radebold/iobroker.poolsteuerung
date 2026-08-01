@@ -1,8 +1,8 @@
 {
-  "version": "0.5.11",
+  "version": "0.5.12",
   "published": "2026-08-01",
   "channel": "stable",
-  "notes": "Prioritäts-Hotfix gegen Chlorinator-Takten: Chlorinator-Heartbeat bleibt Diagnose, schaltet den Aktor aber nicht mehr AUS. Pumpenfreigabe, Pumpen-Heartbeat, Startverzögerung und ORP-Hysterese bleiben aktiv.",
+  "notes": "Prioritätsfix gegen Chlorinator-Takten: zentrale Hysterese-Sperre unterdrückt interne AUS-Befehle, solange Pumpe/Freigaben gültig sind und der ORP-Latch EIN fordert. Jeder unterdrückte AUS-Befehl wird diagnostisch protokolliert.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
