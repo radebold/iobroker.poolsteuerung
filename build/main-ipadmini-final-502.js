@@ -1,10 +1,16 @@
 'use strict';
 
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const https = require('node:https');
+const { spawn } = require('node:child_process');
 const createBase = require('./main-ipadmini-final-500.js');
 
-const CURRENT = '0.5.2';
+let CURRENT = '0.5.2';
+try { CURRENT = String(require('../package.json').version || CURRENT).replace(/^v/i, ''); } catch {}
 const VERSION = `v${CURRENT}`;
+const REPO = 'radebold/iobroker.poolsteuerung#main';
 const RAW_PACKAGE = 'https://raw.githubusercontent.com/radebold/iobroker.poolsteuerung/main/package.json';
 const API_PACKAGE = 'https://api.github.com/repos/radebold/iobroker.poolsteuerung/contents/package.json?ref=main';
 const BUTTON_STATES = ['vis.htmlTablet', 'vis.widgetTablet', 'vis.htmlPhone', 'vis.widgetPhone'];
@@ -19,7 +25,9 @@ const IDS = {
   running: 'update.running',
   status: 'update.status',
   lastCheck: 'update.lastCheck',
-  lastError: 'update.lastError'
+  lastError: 'update.lastError',
+  startedAt: 'update.startedAt',
+  targetVersion: 'update.targetVersion'
 };
 
 function cleanVersion(value) {
@@ -119,6 +127,35 @@ async function readRemoteVersion() {
   throw new Error(errors.join(' | ') || 'GitHub-Version konnte nicht gelesen werden');
 }
 
+function cliInfo() {
+  const candidates = [
+    path.resolve(__dirname, '../../../iobroker.js'),
+    path.resolve(process.cwd(), 'iobroker.js'),
+    '/opt/iobroker/iobroker.js'
+  ];
+  for (const cli of candidates) {
+    try {
+      if (fs.statSync(cli).isFile()) return { cli, cwd: path.dirname(cli) };
+    } catch {}
+  }
+  return null;
+}
+
+function resultFile(namespace) {
+  return path.join(os.tmpdir(), `${String(namespace).replace(/[^\w.-]/g, '_')}-github-update-result.json`);
+}
+
+function helperCode() {
+  return `'use strict';\n` +
+    `const fs=require('node:fs'),{spawnSync}=require('node:child_process');\n` +
+    `const e=process.env,n=e.POOL_NODE,c=e.POOL_CLI,r=e.POOL_ROOT,f=e.POOL_RESULT,h=e.POOL_HELPER,t=e.POOL_TARGET||'',i=e.POOL_INSTANCE||'poolsteuerung.0';\n` +
+    `const tail=v=>{v=String(v||'');return v.length>12000?v.slice(-12000):v};\n` +
+    `const run=(a,m)=>spawnSync(n,[c].concat(a),{cwd:r,encoding:'utf8',timeout:m,maxBuffer:8*1024*1024,env:e});\n` +
+    `setTimeout(()=>{let x;try{x=run(['url','${REPO}','poolsteuerung'],900000)}catch(q){x={status:-1,error:q}}const ok=!!x&&!x.error&&x.status===0;` +
+    `try{fs.writeFileSync(f,JSON.stringify({ts:Date.now(),success:ok,targetVersion:t,code:x&&x.status,stdout:tail(x&&x.stdout),stderr:tail((x&&x.stderr)||(x&&x.error&&x.error.message))},null,2))}catch(q){}` +
+    `try{run(['restart',i],120000)}catch(q){}try{fs.unlinkSync(h)}catch(q){}process.exit(ok?0:1)},900);\n`;
+}
+
 function clickHandler(namespace) {
   const checkId = `${namespace}.${IDS.checkTrigger}`.replace(/'/g, "\\'");
   const installId = `${namespace}.${IDS.installTrigger}`.replace(/'/g, "\\'");
@@ -172,9 +209,10 @@ function patchButtonView(value, namespace, info) {
 function install(adapter) {
   if (!adapter || adapter.__update502Installed) return adapter;
   adapter.__update502Installed = true;
-  adapter.__update502Info = { availableVersion: '', available: false, running: false, status: `Installiert: ${CURRENT}`, error: '' };
+  adapter.__update502Info = { availableVersion: '', available: false, running: false, status: `Installiert: ${CURRENT}`, error: '', targetVersion: '' };
   adapter.__update502Busy = false;
-  adapter.__update502LastTrigger = null;
+  adapter.__update502LastCheckTrigger = null;
+  adapter.__update502LastInstallTrigger = null;
   adapter.__update502PatchTimer = null;
 
   async function ensureStates() {
@@ -188,20 +226,23 @@ function install(adapter) {
       [IDS.running, 'boolean', 'indicator.working', false, false],
       [IDS.status, 'string', 'text', `Installiert: ${CURRENT}`, false],
       [IDS.lastCheck, 'number', 'value.time', 0, false],
-      [IDS.lastError, 'string', 'text', '', false]
+      [IDS.lastError, 'string', 'text', '', false],
+      [IDS.startedAt, 'number', 'value.time', 0, false],
+      [IDS.targetVersion, 'string', 'info.version', '', false]
     ];
     for (const [id, type, role, def, write] of definitions) await adapter.ensureState(id, type, role, def, write);
     await adapter.setStateAsync(IDS.installed, CURRENT, true);
   }
 
   async function loadInfo() {
-    const states = await Promise.all([IDS.availableVersion, IDS.available, IDS.running, IDS.status, IDS.lastError].map(id => adapter.getStateAsync(id)));
+    const states = await Promise.all([IDS.availableVersion, IDS.available, IDS.running, IDS.status, IDS.lastError, IDS.targetVersion].map(id => adapter.getStateAsync(id)));
     adapter.__update502Info = {
       availableVersion: cleanVersion(states[0] && states[0].val),
       available: !!(states[1] && states[1].val),
       running: !!(states[2] && states[2].val),
       status: String((states[3] && states[3].val) || `Installiert: ${CURRENT}`),
-      error: String((states[4] && states[4].val) || '')
+      error: String((states[4] && states[4].val) || ''),
+      targetVersion: cleanVersion(states[5] && states[5].val)
     };
   }
 
@@ -214,6 +255,7 @@ function install(adapter) {
     await adapter.setStateAsync(IDS.running, !!info.running, true);
     await adapter.setStateAsync(IDS.status, info.status || '', true);
     await adapter.setStateAsync(IDS.lastError, info.error || '', true);
+    await adapter.setStateAsync(IDS.targetVersion, info.targetVersion || '', true);
     if (Object.prototype.hasOwnProperty.call(changes, 'lastCheck')) await adapter.setStateAsync(IDS.lastCheck, Number(changes.lastCheck) || 0, true);
     schedulePatch();
   }
@@ -226,7 +268,7 @@ function install(adapter) {
         const next = BUTTON_STATES.includes(id) ? patchButtonView(current, adapter.namespace, adapter.__update502Info) : patchVersion(current);
         if (next && next !== current) await adapter.setStateAsync(id, next, true);
       } catch (error) {
-        if (!adapter.isDbClosedError(error) && adapter.config.debugMode) adapter.log.debug(`[UPDATE 0.5.2] VIS-Patch ${id}: ${error.message || error}`);
+        if (!adapter.isDbClosedError(error) && adapter.config.debugMode) adapter.log.debug(`[UPDATE ${CURRENT}] VIS-Patch ${id}: ${error.message || error}`);
       }
     }
   }
@@ -242,7 +284,7 @@ function install(adapter) {
   }
 
   async function check(reason) {
-    if (adapter.__update502Busy || adapter.isShuttingDown) return;
+    if (adapter.__update502Busy || adapter.isShuttingDown) return null;
     adapter.__update502Busy = true;
     try {
       await writeInfo({ status: 'Prüfe GitHub auf neue Version …', error: '' });
@@ -255,23 +297,102 @@ function install(adapter) {
         error: '',
         lastCheck: Date.now()
       });
-      adapter.log.info(`[UPDATE 0.5.2] ${reason}: installiert ${CURRENT}, GitHub ${remote}${available ? ' – Update verfügbar' : ''}`);
+      adapter.log.info(`[UPDATE ${CURRENT}] ${reason}: installiert ${CURRENT}, GitHub ${remote}${available ? ' – Update verfügbar' : ''}`);
+      return { remote, available };
     } catch (error) {
       const message = error.message || String(error);
       await writeInfo({ available: false, status: 'Update-Prüfung fehlgeschlagen', error: message, lastCheck: Date.now() });
-      adapter.log.warn(`[UPDATE 0.5.2] ${message}`);
+      adapter.log.warn(`[UPDATE ${CURRENT}] ${message}`);
+      return null;
     } finally {
       adapter.__update502Busy = false;
     }
   }
 
-  async function pollTrigger() {
+  async function consumeHelperResult() {
+    const file = resultFile(adapter.namespace);
+    if (!fs.existsSync(file)) return;
+    let result;
+    try { result = JSON.parse(fs.readFileSync(file, 'utf8')); }
+    catch (error) { result = { success: false, stderr: error.message || String(error) }; }
+    try { fs.unlinkSync(file); } catch {}
+    const target = cleanVersion(result && result.targetVersion);
+    const reached = !target || compareVersions(CURRENT, target) >= 0;
+    if (result && result.success && reached) {
+      await writeInfo({ running: false, targetVersion: '', available: false, availableVersion: CURRENT, status: `Update erfolgreich · Version ${CURRENT}`, error: '' });
+    } else {
+      const detail = result && result.success
+        ? `Ziel ${target || '?'} nicht erreicht; installiert ${CURRENT}`
+        : String((result && (result.stderr || result.stdout)) || 'Unbekannter Installationsfehler').trim();
+      await writeInfo({ running: false, targetVersion: '', status: 'Update fehlgeschlagen', error: detail });
+    }
+    await adapter.setStateAsync(IDS.startedAt, 0, true);
+  }
+
+  async function startUpdate() {
+    if (adapter.__update502Info.running || adapter.isShuttingDown) return;
+    const result = await check('Prüfung vor Installation');
+    if (!result || !result.available) {
+      if (result && !result.available) await writeInfo({ status: `Version ${CURRENT} ist bereits aktuell` });
+      return;
+    }
+    const cli = cliInfo();
+    if (!cli) {
+      await writeInfo({ status: 'Update fehlgeschlagen', error: 'ioBroker-CLI iobroker.js wurde nicht gefunden' });
+      return;
+    }
+    const resultPath = resultFile(adapter.namespace);
+    const helperPath = path.join(os.tmpdir(), `iobroker-poolsteuerung-update-${Date.now()}.js`);
     try {
-      const state = await adapter.getStateAsync(IDS.checkTrigger);
-      const value = Number(state && state.val) || 0;
-      if (adapter.__update502LastTrigger === null) adapter.__update502LastTrigger = value;
-      else if (value && value !== adapter.__update502LastTrigger) {
-        adapter.__update502LastTrigger = value;
+      fs.writeFileSync(helperPath, helperCode(), { encoding: 'utf8', mode: 0o700 });
+      try { fs.unlinkSync(resultPath); } catch {}
+      await adapter.setStateAsync(IDS.startedAt, Date.now(), true);
+      await writeInfo({ running: true, targetVersion: result.remote, status: `Update auf ${result.remote} wird installiert …`, error: '' });
+      const child = spawn(process.execPath, [helperPath], {
+        cwd: cli.cwd,
+        detached: true,
+        stdio: 'ignore',
+        env: {
+          ...process.env,
+          POOL_NODE: process.execPath,
+          POOL_CLI: cli.cli,
+          POOL_ROOT: cli.cwd,
+          POOL_RESULT: resultPath,
+          POOL_HELPER: helperPath,
+          POOL_TARGET: result.remote,
+          POOL_INSTANCE: adapter.namespace
+        }
+      });
+      child.once('error', async error => {
+        try { fs.unlinkSync(helperPath); } catch {}
+        await adapter.setStateAsync(IDS.startedAt, 0, true);
+        await writeInfo({ running: false, targetVersion: '', status: 'Update konnte nicht gestartet werden', error: error.message || String(error) });
+      });
+      child.unref();
+      adapter.log.warn(`[UPDATE ${CURRENT}] Update auf ${result.remote} gestartet; Adapter wird durch ioBroker neu gestartet.`);
+    } catch (error) {
+      try { fs.unlinkSync(helperPath); } catch {}
+      await adapter.setStateAsync(IDS.startedAt, 0, true);
+      await writeInfo({ running: false, targetVersion: '', status: 'Update konnte nicht vorbereitet werden', error: error.message || String(error) });
+    }
+  }
+
+  async function pollTriggers() {
+    try {
+      const [checkState, installState] = await Promise.all([
+        adapter.getStateAsync(IDS.checkTrigger),
+        adapter.getStateAsync(IDS.installTrigger)
+      ]);
+      const checkValue = Number(checkState && checkState.val) || 0;
+      const installValue = Number(installState && installState.val) || 0;
+      if (adapter.__update502LastCheckTrigger === null) adapter.__update502LastCheckTrigger = checkValue;
+      if (adapter.__update502LastInstallTrigger === null) adapter.__update502LastInstallTrigger = installValue;
+
+      if (installValue && installValue !== adapter.__update502LastInstallTrigger) {
+        adapter.__update502LastInstallTrigger = installValue;
+        await startUpdate();
+      } else if (checkValue && checkValue !== adapter.__update502LastCheckTrigger) {
+        adapter.__update502LastCheckTrigger = checkValue;
         await check('Manuelle VIS-Prüfung');
       }
     } catch {}
@@ -280,7 +401,7 @@ function install(adapter) {
   function startPolling() {
     if (adapter.isShuttingDown) return;
     const timer = setTimeout(async () => {
-      try { await pollTrigger(); } finally { startPolling(); }
+      try { await pollTriggers(); } finally { startPolling(); }
     }, 750);
     if (typeof adapter.trackTimeout === 'function') adapter.trackTimeout(timer);
   }
@@ -306,15 +427,20 @@ function install(adapter) {
       try {
         await ensureStates();
         await loadInfo();
-        const trigger = await adapter.getStateAsync(IDS.checkTrigger);
-        adapter.__update502LastTrigger = Number(trigger && trigger.val) || 0;
+        await consumeHelperResult();
+        const [checkState, installState] = await Promise.all([
+          adapter.getStateAsync(IDS.checkTrigger),
+          adapter.getStateAsync(IDS.installTrigger)
+        ]);
+        adapter.__update502LastCheckTrigger = Number(checkState && checkState.val) || 0;
+        adapter.__update502LastInstallTrigger = Number(installState && installState.val) || 0;
         startPolling();
         await check('Adapterstart');
         const interval = setInterval(() => check('Automatische Minutenprüfung').catch(() => {}), 60000);
         if (typeof adapter.trackInterval === 'function') adapter.trackInterval(interval);
-        adapter.log.info('[UPDATE 0.5.2] Updatebutton für Tablet und Mobile aktiv');
+        adapter.log.info(`[UPDATE ${CURRENT}] Updatebutton für Tablet und Mobile inklusive Installation aktiv`);
       } catch (error) {
-        if (!adapter.isDbClosedError(error)) adapter.log.error(`[UPDATE 0.5.2] Initialisierung fehlgeschlagen: ${error.message || error}`);
+        if (!adapter.isDbClosedError(error)) adapter.log.error(`[UPDATE ${CURRENT}] Initialisierung fehlgeschlagen: ${error.message || error}`);
       }
     }, 3200);
     if (typeof adapter.trackTimeout === 'function') adapter.trackTimeout(timer);
