@@ -202,6 +202,18 @@
       "type": "state",
       "common": { "name": "Zielversion des Updates", "type": "string", "role": "info.version", "read": true, "write": false, "def": "" },
       "native": {}
+    },
+    {
+      "_id": "update.remoteVersionSeen",
+      "type": "state",
+      "common": { "name": "Von GitHub gelesene Version", "type": "string", "role": "info.version", "read": true, "write": false, "def": "" },
+      "native": {}
+    },
+    {
+      "_id": "update.checkSource",
+      "type": "state",
+      "common": { "name": "Quelle der Update-Prüfung", "type": "string", "role": "text", "read": true, "write": false, "def": "" },
+      "native": {}
     }
   ],
   "version": "0.5.4"
