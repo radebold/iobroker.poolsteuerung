@@ -1,8 +1,8 @@
 {
-  "version": "0.5.7",
+  "version": "0.5.8",
   "published": "2026-08-01",
   "channel": "stable",
-  "notes": "Testrelease für den manifest-basierten VIS-Updater. Keine Funktionsänderung gegenüber 0.5.6.",
+  "notes": "Testrelease für den commit-basierten VIS-Updater. Keine Funktionsänderung gegenüber 0.5.7.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
