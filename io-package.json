@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.5.3",
+    "version": "0.5.4",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -98,227 +98,111 @@
     {
       "_id": "control.ph.calibration",
       "type": "channel",
-      "common": {
-        "name": "pH-Kalibrierung"
-      },
+      "common": { "name": "pH-Kalibrierung" },
       "native": {}
     },
     {
       "_id": "control.ph.calibration.poollabValue",
       "type": "state",
-      "common": {
-        "name": "Letzter erfasster PoolLab-pH-Wert",
-        "type": "number",
-        "role": "value.ph",
-        "read": true,
-        "write": true,
-        "unit": "pH"
-      },
+      "common": { "name": "Letzter erfasster PoolLab-pH-Wert", "type": "number", "role": "value.ph", "read": true, "write": true, "unit": "pH" },
       "native": {}
     },
     {
       "_id": "control.ph.calibration.captureRequest",
       "type": "state",
-      "common": {
-        "name": "PoolLab-Erfassungsauftrag",
-        "type": "string",
-        "role": "json",
-        "read": true,
-        "write": true,
-        "def": ""
-      },
+      "common": { "name": "PoolLab-Erfassungsauftrag", "type": "string", "role": "json", "read": true, "write": true, "def": "" },
       "native": {}
     },
     {
       "_id": "control.ph.calibration.saveTrigger",
       "type": "state",
-      "common": {
-        "name": "PoolLab-Messwert speichern",
-        "type": "number",
-        "role": "value.time",
-        "read": true,
-        "write": true,
-        "def": 0
-      },
+      "common": { "name": "PoolLab-Messwert speichern", "type": "number", "role": "value.time", "read": true, "write": true, "def": 0 },
       "native": {}
     },
     {
       "_id": "control.ph.calibration.resetTrigger",
       "type": "state",
-      "common": {
-        "name": "Kalibriertabelle löschen",
-        "type": "number",
-        "role": "value.time",
-        "read": true,
-        "write": true,
-        "def": 0
-      },
+      "common": { "name": "Kalibriertabelle löschen", "type": "number", "role": "value.time", "read": true, "write": true, "def": 0 },
       "native": {}
     },
     {
       "_id": "control.ph.calibration.ipadMiniEditing",
       "type": "state",
-      "common": {
-        "name": "iPad Mini PoolLab-Eingabe geöffnet",
-        "type": "boolean",
-        "role": "indicator",
-        "read": true,
-        "write": true,
-        "def": false
-      },
+      "common": { "name": "iPad Mini PoolLab-Eingabe geöffnet", "type": "boolean", "role": "indicator", "read": true, "write": true, "def": false },
       "native": {}
     },
     {
       "_id": "update",
       "type": "channel",
-      "common": {
-        "name": "GitHub-Update"
-      },
+      "common": { "name": "GitHub-Update" },
       "native": {}
     },
     {
       "_id": "update.installedVersion",
       "type": "state",
-      "common": {
-        "name": "Installierte Adapterversion",
-        "type": "string",
-        "role": "info.version",
-        "read": true,
-        "write": false,
-        "def": "0.5.3"
-      },
+      "common": { "name": "Installierte Adapterversion", "type": "string", "role": "info.version", "read": true, "write": false, "def": "0.5.4" },
       "native": {}
     },
     {
       "_id": "update.availableVersion",
       "type": "state",
-      "common": {
-        "name": "Auf GitHub verfügbare Version",
-        "type": "string",
-        "role": "info.version",
-        "read": true,
-        "write": false,
-        "def": ""
-      },
+      "common": { "name": "Auf GitHub verfügbare Version", "type": "string", "role": "info.version", "read": true, "write": false, "def": "" },
       "native": {}
     },
     {
       "_id": "update.available",
       "type": "state",
-      "common": {
-        "name": "Update verfügbar",
-        "type": "boolean",
-        "role": "indicator",
-        "read": true,
-        "write": false,
-        "def": false
-      },
+      "common": { "name": "Update verfügbar", "type": "boolean", "role": "indicator", "read": true, "write": false, "def": false },
       "native": {}
     },
     {
       "_id": "update.checkTrigger",
       "type": "state",
-      "common": {
-        "name": "Jetzt nach Update suchen",
-        "type": "number",
-        "role": "value.time",
-        "read": true,
-        "write": true,
-        "def": 0
-      },
+      "common": { "name": "Jetzt nach Update suchen", "type": "number", "role": "value.time", "read": true, "write": true, "def": 0 },
       "native": {}
     },
     {
       "_id": "update.installTrigger",
       "type": "state",
-      "common": {
-        "name": "GitHub-Update installieren",
-        "type": "number",
-        "role": "value.time",
-        "read": true,
-        "write": true,
-        "def": 0
-      },
+      "common": { "name": "GitHub-Update installieren", "type": "number", "role": "value.time", "read": true, "write": true, "def": 0 },
       "native": {}
     },
     {
       "_id": "update.running",
       "type": "state",
-      "common": {
-        "name": "Update läuft",
-        "type": "boolean",
-        "role": "indicator.working",
-        "read": true,
-        "write": false,
-        "def": false
-      },
+      "common": { "name": "Update läuft", "type": "boolean", "role": "indicator.working", "read": true, "write": false, "def": false },
       "native": {}
     },
     {
       "_id": "update.status",
       "type": "state",
-      "common": {
-        "name": "Update-Status",
-        "type": "string",
-        "role": "text",
-        "read": true,
-        "write": false,
-        "def": "Installiert: 0.5.3"
-      },
+      "common": { "name": "Update-Status", "type": "string", "role": "text", "read": true, "write": false, "def": "Installiert: 0.5.4" },
       "native": {}
     },
     {
       "_id": "update.lastCheck",
       "type": "state",
-      "common": {
-        "name": "Letzte Update-Prüfung",
-        "type": "number",
-        "role": "value.time",
-        "read": true,
-        "write": false,
-        "def": 0
-      },
+      "common": { "name": "Letzte Update-Prüfung", "type": "number", "role": "value.time", "read": true, "write": false, "def": 0 },
       "native": {}
     },
     {
       "_id": "update.lastError",
       "type": "state",
-      "common": {
-        "name": "Letzter Update-Fehler",
-        "type": "string",
-        "role": "text",
-        "read": true,
-        "write": false,
-        "def": ""
-      },
+      "common": { "name": "Letzter Update-Fehler", "type": "string", "role": "text", "read": true, "write": false, "def": "" },
       "native": {}
     },
     {
       "_id": "update.startedAt",
       "type": "state",
-      "common": {
-        "name": "Update gestartet am",
-        "type": "number",
-        "role": "value.time",
-        "read": true,
-        "write": false,
-        "def": 0
-      },
+      "common": { "name": "Update gestartet am", "type": "number", "role": "value.time", "read": true, "write": false, "def": 0 },
       "native": {}
     },
     {
       "_id": "update.targetVersion",
       "type": "state",
-      "common": {
-        "name": "Zielversion des Updates",
-        "type": "string",
-        "role": "info.version",
-        "read": true,
-        "write": false,
-        "def": ""
-      },
+      "common": { "name": "Zielversion des Updates", "type": "string", "role": "info.version", "read": true, "write": false, "def": "" },
       "native": {}
     }
   ],
-  "version": "0.5.3"
+  "version": "0.5.4"
 }
