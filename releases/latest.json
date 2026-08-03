@@ -1,8 +1,8 @@
 {
-  "version": "0.5.19",
+  "version": "0.5.20",
   "published": "2026-08-03",
   "channel": "stable",
-  "notes": "Stabilitätsbereinigung: Die komplette Updatefunktion wurde aus der VIS und aus der Adapter-Runtime entfernt. Keine automatischen Prüfungen, keine Update-Timer, keine Installationshelper und keine durch den Updater ausgelösten Neustarts mehr. Updates werden künftig ausschließlich manuell über ioBroker/GitHub installiert. Chlorinator-Single-Owner und geglättete VIS-Kurven bleiben erhalten.",
+  "notes": "Stabilitätsfix für die pH-Minus-Waage: Der laufende Adapter schreibt den gemessenen Nettowert nicht mehr in system.adapter.poolsteuerung.0.native.phCanisterCurrentLevelL zurück. Diese Selbständerung der Adapterkonfiguration konnte ioBroker-Neustarts mit TERMINATE_YOURSELF auslösen. Waagenwerte werden ausschließlich in status.phCanister.* geführt. Die Updatefunktion bleibt vollständig entfernt; Chlorinator-Single-Owner und geglättete VIS-Kurven bleiben erhalten.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
