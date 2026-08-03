@@ -1,8 +1,8 @@
 {
-  "version": "0.5.15",
-  "published": "2026-08-01",
+  "version": "0.5.16",
+  "published": "2026-08-03",
   "channel": "stable",
-  "notes": "Recovery-Version: behebt Startabbruch durch async/Promise in 0.5.12-0.5.14. Basiert direkt auf 0.5.11 und enthält Chlor-Guard sowie VIS-Button-Bereinigung synchron.",
+  "notes": "VIS-Funktionsupdate: Temperatur-, pH- und ORP-Verlaufskurven werden optisch geglättet. Messwerte und Regelungsdaten bleiben unverändert. Gleichzeitig Test des automatischen Updates aus der VIS von 0.5.15 auf 0.5.16.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
