@@ -1,8 +1,8 @@
 {
-  "version": "0.5.18",
+  "version": "0.5.19",
   "published": "2026-08-03",
   "channel": "stable",
-  "notes": "Prioritätsfix gegen Chlorinator-Takten: Der alte 0.4.68/0.4.70-Updater und seine 5-Minuten-Legacy-Trigger werden dauerhaft blockiert. Updates werden weiterhin automatisch geprüft, aber ausschließlich nach ausdrücklichem installNow/VIS-Klick installiert. Dadurch entfallen die wiederkehrenden Adapter-Neustarts und die damit synchronen Chlorinator-Aussetzer. Diagnoseobjekte sind fest angelegt.",
+  "notes": "Stabilitätsbereinigung: Die komplette Updatefunktion wurde aus der VIS und aus der Adapter-Runtime entfernt. Keine automatischen Prüfungen, keine Update-Timer, keine Installationshelper und keine durch den Updater ausgelösten Neustarts mehr. Updates werden künftig ausschließlich manuell über ioBroker/GitHub installiert. Chlorinator-Single-Owner und geglättete VIS-Kurven bleiben erhalten.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
