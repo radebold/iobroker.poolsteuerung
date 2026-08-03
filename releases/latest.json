@@ -2,7 +2,7 @@
   "version": "0.5.17",
   "published": "2026-08-03",
   "channel": "stable",
-  "notes": "Prioritätsfix Chlorinator: autoritative ORP-Hysterese verhindert widersprüchliche AUS-Befehle paralleler Regelpfade. Bei aktiver Automatik, laufender Umwälzpumpe und gehaltenem EIN-Zustand bleibt Chlor bis ORP > Ausschaltgrenze durchgehend EIN; Heartbeats bleiben Diagnose.",
+  "notes": "Prioritätsfix Chlorinator: Single-Owner-Hysterese blockiert alle internen und direkten AUS-Schreibwege, solange ORP unter der Ausschaltgrenze gehalten werden muss. Diagnoseobjekte werden mit setObjectNotExistsAsync garantiert angelegt; unerwartetes AUS wird per StateChange und 500-ms-Supervisor sofort wieder eingeschaltet.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
