@@ -1,8 +1,8 @@
 {
-  "version": "0.5.17",
+  "version": "0.5.18",
   "published": "2026-08-03",
   "channel": "stable",
-  "notes": "Prioritätsfix Chlorinator: Single-Owner-Hysterese blockiert alle internen und direkten AUS-Schreibwege, solange ORP unter der Ausschaltgrenze gehalten werden muss. Diagnoseobjekte werden mit setObjectNotExistsAsync garantiert angelegt; unerwartetes AUS wird per StateChange und 500-ms-Supervisor sofort wieder eingeschaltet.",
+  "notes": "Prioritätsfix gegen Chlorinator-Takten: Der alte 0.4.68/0.4.70-Updater und seine 5-Minuten-Legacy-Trigger werden dauerhaft blockiert. Updates werden weiterhin automatisch geprüft, aber ausschließlich nach ausdrücklichem installNow/VIS-Klick installiert. Dadurch entfallen die wiederkehrenden Adapter-Neustarts und die damit synchronen Chlorinator-Aussetzer. Diagnoseobjekte sind fest angelegt.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
