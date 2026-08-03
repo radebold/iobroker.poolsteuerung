@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.5.17",
+    "version": "0.5.18",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -185,7 +185,7 @@
         "role": "info.version",
         "read": true,
         "write": false,
-        "def": "0.5.17"
+        "def": "0.5.18"
       },
       "native": {}
     },
@@ -289,7 +289,7 @@
         "role": "text",
         "read": true,
         "write": false,
-        "def": "Installiert: 0.5.17"
+        "def": "Installiert: 0.5.18"
       },
       "native": {}
     },
@@ -380,7 +380,7 @@
         "role": "info.version",
         "read": true,
         "write": false,
-        "def": "0.5.17"
+        "def": "0.5.18"
       },
       "native": {}
     },
@@ -422,7 +422,210 @@
         "def": ""
       },
       "native": {}
+    },
+    {
+      "_id": "update.legacyUpdaterDisabled",
+      "type": "state",
+      "common": {
+        "name": "Legacy-Updater deaktiviert",
+        "type": "boolean",
+        "role": "indicator",
+        "read": true,
+        "write": false,
+        "def": true
+      },
+      "native": {}
+    },
+    {
+      "_id": "update.legacyTriggerBlockedCount",
+      "type": "state",
+      "common": {
+        "name": "Blockierte Legacy-Update-Trigger",
+        "type": "number",
+        "role": "value",
+        "read": true,
+        "write": false,
+        "def": 0
+      },
+      "native": {}
+    },
+    {
+      "_id": "update.lastLegacyTriggerBlocked",
+      "type": "state",
+      "common": {
+        "name": "Letzter blockierter Legacy-Trigger",
+        "type": "string",
+        "role": "text",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    },
+    {
+      "_id": "update.restartProtection",
+      "type": "state",
+      "common": {
+        "name": "Update-Neustartschutz",
+        "type": "string",
+        "role": "text",
+        "read": true,
+        "write": false,
+        "def": "0.5.18 aktiv"
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.debug",
+      "type": "channel",
+      "common": {
+        "name": "Diagnose"
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.chlorGuardState",
+      "type": "state",
+      "common": {
+        "name": "Chlorinator Guard-Status",
+        "type": "string",
+        "role": "text",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.chlorSuppressedOffCount",
+      "type": "state",
+      "common": {
+        "name": "Unterdrückte Chlorinator-AUS-Befehle",
+        "type": "number",
+        "role": "value",
+        "read": true,
+        "write": false,
+        "def": 0
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.lastChlorSuppressedOff",
+      "type": "state",
+      "common": {
+        "name": "Letzter unterdrückter Chlorinator-AUS-Befehl",
+        "type": "string",
+        "role": "text",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.chlorLastReassert",
+      "type": "state",
+      "common": {
+        "name": "Letztes erzwungenes Chlorinator-EIN",
+        "type": "string",
+        "role": "text",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.chlorLastOffStack",
+      "type": "state",
+      "common": {
+        "name": "Aufrufpfad des letzten Chlorinator-AUS-Befehls",
+        "type": "string",
+        "role": "text",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.chlorSingleOwner",
+      "type": "state",
+      "common": {
+        "name": "Chlorinator Single-Owner-Modus",
+        "type": "string",
+        "role": "text",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.chlorDirectOffBlockedCount",
+      "type": "state",
+      "common": {
+        "name": "Direkt blockierte Chlorinator-AUS-Schreibzugriffe",
+        "type": "number",
+        "role": "value",
+        "read": true,
+        "write": false,
+        "def": 0
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.chlorAuthoritativeState",
+      "type": "state",
+      "common": {
+        "name": "Autoritative Chlorinator-Entscheidung",
+        "type": "string",
+        "role": "text",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.chlorLastObservedPower",
+      "type": "state",
+      "common": {
+        "name": "Letzte beobachtete Chlorinator-Rückmeldung",
+        "type": "string",
+        "role": "text",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.chlorHeartbeatPolicy",
+      "type": "state",
+      "common": {
+        "name": "Chlorinator-Heartbeat-Richtlinie",
+        "type": "string",
+        "role": "text",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.chlorHeartbeatIgnored",
+      "type": "state",
+      "common": {
+        "name": "Veralteter Chlorinator-Heartbeat ignoriert",
+        "type": "boolean",
+        "role": "indicator",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
     }
   ],
-  "version": "0.5.17"
+  "version": "0.5.18"
 }
