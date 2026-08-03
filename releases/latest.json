@@ -1,8 +1,8 @@
 {
-  "version": "0.5.20",
+  "version": "0.5.21",
   "published": "2026-08-03",
   "channel": "stable",
-  "notes": "Stabilitätsfix für die pH-Minus-Waage: Der laufende Adapter schreibt den gemessenen Nettowert nicht mehr in system.adapter.poolsteuerung.0.native.phCanisterCurrentLevelL zurück. Diese Selbständerung der Adapterkonfiguration konnte ioBroker-Neustarts mit TERMINATE_YOURSELF auslösen. Waagenwerte werden ausschließlich in status.phCanister.* geführt. Die Updatefunktion bleibt vollständig entfernt; Chlorinator-Single-Owner und geglättete VIS-Kurven bleiben erhalten.",
+  "notes": "pH-Minus-Kanister: Das Leergewicht/Tara wird ausschließlich aus der Admin-Konfiguration phCanisterTareKg verwendet. Der Wert ist in der Admin-UI als frei pflegbare kg-Angabe mit 0,001-kg-Schritten vorhanden. Tablet-, Mobile- und iPad-mini-VIS zeigen nun zusätzlich zum Nettogewicht den tatsächlich verwendeten Tara-Wert. Die Selbst-Persistenz in system.adapter.poolsteuerung.0.native bleibt deaktiviert; Updates bleiben manuell.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
