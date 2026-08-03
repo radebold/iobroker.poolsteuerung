@@ -84,7 +84,11 @@ function smoothSvgPaths(value) {
     const points = parseCoordinatePairs(d);
     const smoothed = smoothPath(points);
     if (!smoothed) return tag;
-    return `<path${before}d="${smoothed}"${after} data-pool-smoothed="1">`;
+    const selfClosing = /\/\s*$/.test(after);
+    const cleanAfter = after.replace(/\/\s*$/, '');
+    return selfClosing
+      ? `<path${before}d="${smoothed}"${cleanAfter} data-pool-smoothed="1"></path>`
+      : `<path${before}d="${smoothed}"${cleanAfter} data-pool-smoothed="1">`;
   });
 
   html = html.replace(/<polyline\b([^>]*?)\bpoints="([^"]+)"([^>]*?)(?:\/>|>\s*<\/polyline>)/gi, (tag, before, pointText, after) => {
