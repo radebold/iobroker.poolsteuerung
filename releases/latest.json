@@ -1,8 +1,8 @@
 {
-  "version": "0.5.16",
+  "version": "0.5.17",
   "published": "2026-08-03",
   "channel": "stable",
-  "notes": "VIS-Funktionsupdate: Temperatur-, pH- und ORP-Verlaufskurven werden optisch geglättet. Messwerte und Regelungsdaten bleiben unverändert. Gleichzeitig Test des automatischen Updates aus der VIS von 0.5.15 auf 0.5.16.",
+  "notes": "Prioritätsfix Chlorinator: autoritative ORP-Hysterese verhindert widersprüchliche AUS-Befehle paralleler Regelpfade. Bei aktiver Automatik, laufender Umwälzpumpe und gehaltenem EIN-Zustand bleibt Chlor bis ORP > Ausschaltgrenze durchgehend EIN; Heartbeats bleiben Diagnose.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
