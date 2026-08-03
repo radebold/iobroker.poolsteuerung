@@ -1,14 +1,30 @@
 'use strict';
 
+// 0.5.18 Basisfix: Der alte 0.4.70-Timer darf keine Legacy-Trigger mehr
+// im 5-Minuten-Takt schreiben. Versionsprüfungen übernimmt ausschließlich
+// der Einzel-Updater 5082 über checkNow/installNow.
 const createBase = require('./main-ipadmini-final-069.js');
 
-const VERSION = 'v0.4.70';
-const CHECK_TRIGGER = 'update.checkTrigger';
-const CHECK_INTERVAL_MS = 5 * 60 * 1000;
+let CURRENT = '0.5.18';
+try { CURRENT = String(require('../package.json').version || CURRENT).replace(/^v/i, ''); } catch {}
+const VERSION = `v${CURRENT}`;
 const VIS_STATES = ['vis.htmlTablet', 'vis.widgetTablet', 'vis.htmlPhone', 'vis.widgetPhone', 'vis.htmlIpadMini'];
 
 function patchVersion(value) {
-  return String(value || '').replace(/v0\.4\.\d+(?:[-+][\w.-]+)?/g, VERSION);
+  return String(value || '').replace(/v\d+\.\d+\.\d+(?:[-+][\w.-]+)?/g, VERSION);
+}
+
+function lockLegacyUpdater(adapter) {
+  try {
+    Object.defineProperty(adapter, '__githubUpdate068Busy', {
+      configurable: true,
+      enumerable: false,
+      get: () => true,
+      set: () => {}
+    });
+  } catch {
+    adapter.__githubUpdate068Busy = true;
+  }
 }
 
 async function patchExistingStates(adapter) {
@@ -19,23 +35,9 @@ async function patchExistingStates(adapter) {
       const next = patchVersion(current);
       if (next && next !== current) await adapter.setStateIfChanged(id, next, true);
     } catch (error) {
-      if (!adapter.isDbClosedError(error) && adapter.config.debugMode) {
-        adapter.log.debug(`[UPDATE] Versionsanzeige ${id} konnte nicht aktualisiert werden: ${error.message || error}`);
+      if (!adapter.isDbClosedError(error) && adapter.config && adapter.config.debugMode) {
+        adapter.log.debug(`[UPDATE] Versionsanzeige ${id}: ${error.message || error}`);
       }
-    }
-  }
-}
-
-async function triggerUpdateCheck(adapter, reason) {
-  if (!adapter || adapter.isShuttingDown) return;
-  try {
-    await adapter.setStateAsync(CHECK_TRIGGER, Date.now(), true);
-    if (adapter.config.debugMode && adapter.log && typeof adapter.log.debug === 'function') {
-      adapter.log.debug(`[UPDATE] ${reason}: GitHub-Prüfung angefordert`);
-    }
-  } catch (error) {
-    if (!adapter.isDbClosedError(error) && adapter.log && typeof adapter.log.warn === 'function') {
-      adapter.log.warn(`[UPDATE] GitHub-Prüfung konnte nicht angefordert werden: ${error.message || error}`);
     }
   }
 }
@@ -43,6 +45,7 @@ async function triggerUpdateCheck(adapter, reason) {
 function install(adapter) {
   if (!adapter || adapter.__updateRefresh070Installed) return adapter;
   adapter.__updateRefresh070Installed = true;
+  lockLegacyUpdater(adapter);
 
   for (const name of ['buildTabletHtml', 'buildTabletWidget', 'buildPhoneHtml', 'buildPhoneWidget']) {
     if (typeof adapter[name] !== 'function') continue;
@@ -60,21 +63,16 @@ function install(adapter) {
   }
 
   adapter.on('ready', () => {
-    const startup = adapter.trackTimeout(setTimeout(async () => {
-      adapter.pendingTimeouts.delete(startup);
+    lockLegacyUpdater(adapter);
+    const handle = adapter.trackTimeout(setTimeout(async () => {
+      adapter.pendingTimeouts.delete(handle);
       if (adapter.isShuttingDown) return;
+      lockLegacyUpdater(adapter);
       await patchExistingStates(adapter);
-      await triggerUpdateCheck(adapter, 'Prüfung nach Adapterstart');
-    }, 12000));
-
-    const timer = setInterval(() => {
-      triggerUpdateCheck(adapter, 'Automatische 5-Minuten-Prüfung').catch(() => {});
-    }, CHECK_INTERVAL_MS);
-    if (typeof adapter.trackInterval === 'function') adapter.trackInterval(timer);
-
-    if (adapter.log && typeof adapter.log.info === 'function') {
-      adapter.log.info(`[UPDATE] ${VERSION}: GitHub-Prüfung nach Start und alle 5 Minuten aktiv`);
-    }
+      if (adapter.log && typeof adapter.log.info === 'function') {
+        adapter.log.info('[UPDATE] Legacy-Updater 0.4.68/0.4.70 deaktiviert: kein 5-Minuten-Trigger, keine automatische Installation.');
+      }
+    }, 800));
   });
 
   return adapter;
