@@ -1,8 +1,8 @@
 {
-  "version": "0.5.21",
-  "published": "2026-08-03",
+  "version": "0.5.22",
+  "published": "2026-08-04",
   "channel": "stable",
-  "notes": "pH-Minus-Kanister: Das Leergewicht/Tara wird ausschließlich aus der Admin-Konfiguration phCanisterTareKg verwendet. Der Wert ist in der Admin-UI als frei pflegbare kg-Angabe mit 0,001-kg-Schritten vorhanden. Tablet-, Mobile- und iPad-mini-VIS zeigen nun zusätzlich zum Nettogewicht den tatsächlich verwendeten Tara-Wert. Die Selbst-Persistenz in system.adapter.poolsteuerung.0.native bleibt deaktiviert; Updates bleiben manuell.",
+  "notes": "Zentraler Lauftext für alle Pool-VIS: Neue States vis.messageText und vis.messageLevel (info/warning/error). Ein eingetragener Text wird gleichzeitig auf Tablet, Mobile und iPad mini als farbcodierter Lauftext eingeblendet; leerer Text blendet das Banner vollständig aus. Änderungen werden direkt in die vorhandenen VIS-HTML-States übernommen. Die Updatefunktion bleibt entfernt und Versionen werden weiterhin manuell installiert.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
