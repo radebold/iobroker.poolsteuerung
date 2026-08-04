@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.5.21",
+    "version": "0.5.22",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -128,7 +128,19 @@
       "type": "state",
       "common": { "name": "iPad Mini PoolLab-Eingabe geöffnet", "type": "boolean", "role": "indicator", "read": true, "write": true, "def": false },
       "native": {}
+    },
+    {
+      "_id": "vis.messageText",
+      "type": "state",
+      "common": { "name": "Lauftext für alle Pool-VIS", "type": "string", "role": "text", "read": true, "write": true, "def": "" },
+      "native": {}
+    },
+    {
+      "_id": "vis.messageLevel",
+      "type": "state",
+      "common": { "name": "Priorität des VIS-Lauftexts", "type": "string", "role": "text", "read": true, "write": true, "def": "info", "states": { "info": "Info", "warning": "Warnung", "error": "Fehler" } },
+      "native": {}
     }
   ],
-  "version": "0.5.21"
+  "version": "0.5.22"
 }
