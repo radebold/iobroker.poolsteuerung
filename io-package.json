@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.5.24",
+    "version": "0.5.25",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -140,7 +140,49 @@
       "type": "state",
       "common": { "name": "Priorität des VIS-Lauftexts", "type": "string", "role": "text", "read": true, "write": true, "def": "info", "states": { "info": "Info", "warning": "Warnung", "error": "Fehler" } },
       "native": {}
+    },
+    {
+      "_id": "status.debug.chlorHardGuard524",
+      "type": "state",
+      "common": { "name": "Chlorinator Tasmota Hardguard", "type": "string", "role": "text", "read": true, "write": false, "def": "" },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.chlorZbSendBlockedCount",
+      "type": "state",
+      "common": { "name": "Blockierte Chlorinator ZbSend AUS-Befehle", "type": "number", "role": "value", "read": true, "write": false, "def": 0 },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.chlorLastZbSendBlocked",
+      "type": "state",
+      "common": { "name": "Letzter blockierter Chlorinator ZbSend AUS-Befehl", "type": "string", "role": "text", "read": true, "write": false, "def": "" },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.chlorExternalZbSendOffCount",
+      "type": "state",
+      "common": { "name": "Beobachtete externe Chlorinator ZbSend AUS-Befehle", "type": "number", "role": "value", "read": true, "write": false, "def": 0 },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.chlorLastExternalZbSendOff",
+      "type": "state",
+      "common": { "name": "Letzter beobachteter externer Chlorinator ZbSend AUS-Befehl", "type": "string", "role": "text", "read": true, "write": false, "def": "" },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.chlorUnexpectedOffCount",
+      "type": "state",
+      "common": { "name": "Unerwartete Chlorinator AUS-Rückmeldungen", "type": "number", "role": "value", "read": true, "write": false, "def": 0 },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.chlorLastUnexpectedOff",
+      "type": "state",
+      "common": { "name": "Letzte unerwartete Chlorinator AUS-Rückmeldung", "type": "string", "role": "text", "read": true, "write": false, "def": "" },
+      "native": {}
     }
   ],
-  "version": "0.5.24"
+  "version": "0.5.25"
 }
