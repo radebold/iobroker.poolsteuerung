@@ -2,7 +2,7 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.5.25",
+    "version": "0.5.26",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
@@ -182,7 +182,73 @@
       "type": "state",
       "common": { "name": "Letzte unerwartete Chlorinator AUS-Rückmeldung", "type": "string", "role": "text", "read": true, "write": false, "def": "" },
       "native": {}
+    },
+    {
+      "_id": "status.debug.lastChlorDecision",
+      "type": "state",
+      "common": { "name": "Letzte Chlorinator-Entscheidung", "type": "string", "role": "text", "read": true, "write": false, "def": "" },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.lastCycle",
+      "type": "state",
+      "common": { "name": "Letzter Regelzyklus", "type": "string", "role": "text", "read": true, "write": false, "def": "" },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.lastDecision",
+      "type": "state",
+      "common": { "name": "Letzte Gesamtentscheidung", "type": "string", "role": "text", "read": true, "write": false, "def": "" },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.lastPhDecision",
+      "type": "state",
+      "common": { "name": "Letzte pH-Entscheidung", "type": "string", "role": "text", "read": true, "write": false, "def": "" },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.lastPhStartInfo",
+      "type": "state",
+      "common": { "name": "Letzte pH-Startinformation", "type": "string", "role": "text", "read": true, "write": false, "def": "" },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.lastPumpDecision",
+      "type": "state",
+      "common": { "name": "Letzte Pumpenentscheidung", "type": "string", "role": "text", "read": true, "write": false, "def": "" },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.lastPumpLoggedDecision",
+      "type": "state",
+      "common": { "name": "Zuletzt protokollierte Pumpenentscheidung", "type": "string", "role": "text", "read": true, "write": false, "def": "" },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.lastPumpScheduleActive",
+      "type": "state",
+      "common": { "name": "Letzter Pumpen-Zeitplan aktiv", "type": "boolean", "role": "indicator", "read": true, "write": false, "def": false },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.lastStartupError",
+      "type": "state",
+      "common": { "name": "Letzter Startfehler", "type": "string", "role": "text", "read": true, "write": false, "def": "" },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.lastVisTrace",
+      "type": "state",
+      "common": { "name": "Letzte VIS-Diagnose", "type": "string", "role": "text", "read": true, "write": false, "def": "" },
+      "native": {}
+    },
+    {
+      "_id": "status.debug.lastVisUpdate",
+      "type": "state",
+      "common": { "name": "Letzte VIS-Aktualisierung", "type": "string", "role": "text", "read": true, "write": false, "def": "" },
+      "native": {}
     }
   ],
-  "version": "0.5.25"
+  "version": "0.5.26"
 }
