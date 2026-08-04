@@ -1,8 +1,8 @@
 {
-  "version": "0.5.22",
+  "version": "0.5.23",
   "published": "2026-08-04",
   "channel": "stable",
-  "notes": "Zentraler Lauftext für alle Pool-VIS: Neue States vis.messageText und vis.messageLevel (info/warning/error). Ein eingetragener Text wird gleichzeitig auf Tablet, Mobile und iPad mini als farbcodierter Lauftext eingeblendet; leerer Text blendet das Banner vollständig aus. Änderungen werden direkt in die vorhandenen VIS-HTML-States übernommen. Die Updatefunktion bleibt entfernt und Versionen werden weiterhin manuell installiert.",
+  "notes": "Lauftext-Fix: Auf dem iPad mini wird das Banner jetzt mit höherem z-index über der vollflächigen iPad-VIS dargestellt. Die Schriftgröße wurde auf allen VIS mindestens verdoppelt: Tablet/iPad 26 px, Mobile 22 px. Bannerhöhe und Laufgeschwindigkeit wurden entsprechend angepasst. Steuerung weiterhin über vis.messageText und vis.messageLevel (info/warning/error); Updates bleiben manuell.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
