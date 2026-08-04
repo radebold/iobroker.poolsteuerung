@@ -1,8 +1,8 @@
 {
-  "version": "0.5.24",
+  "version": "0.5.25",
   "published": "2026-08-04",
   "channel": "stable",
-  "notes": "Chlorinator-Fix für Tasmota Zigbee: Der Guard schützt jetzt nicht nur den ZbReceived_*_Power-Rückmelde-State, sondern auch den tatsächlichen ZbSend-Schaltkanal. Power:0 für den konfigurierten Chlorinator wird bei HOLD EIN (z. B. ORP <= Einschaltgrenze, Pumpe läuft) direkt blockiert. Unerwartete AUS-Rückmeldungen werden sofort mit einem direkten ZbSend Power:1 korrigiert. Neue Diagnose-States unterscheiden blockierte interne ZbSend-AUS-Befehle, beobachtete externe ZbSend-AUS-Befehle und unerwartete AUS-Rückmeldungen. VIS-Lauftext und konfigurierbare pH-Minus-Tara bleiben unverändert erhalten; Updates bleiben manuell.",
+  "notes": "Hardguard-Bootstrap-Fix: Die in 0.5.24 eingeführte Tasmota-Zigbee-Überwachung wird jetzt unabhängig vom ready-Event initialisiert. Die neuen Diagnoseobjekte sind fest als instanceObjects definiert, ZbSend und die Power-Rückmeldung werden zusätzlich über robuste Fallbacks abonniert. Damit sind die Hardguard-States nach der Installation sicher sichtbar und die 0.5.24-ZbSend-Überwachung kann auch dann arbeiten, wenn eine späte Wrapper-Schicht das ready-Event verpasst. VIS-Lauftext und konfigurierbare pH-Minus-Tara bleiben unverändert erhalten; Updates bleiben manuell.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
