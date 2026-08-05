@@ -1,8 +1,8 @@
 {
-  "version": "0.5.32",
+  "version": "0.5.33",
   "published": "2026-08-05",
   "channel": "stable",
-  "notes": "Zuverlässiges Löschen in der pH-Kalibrierhistorie: Die bisherige JSON-Config-Tabelle zeigte gesetzte Checkboxen zwar an, übergab deren geänderten Zustand aber nicht zuverlässig an den sendTo-Button. Dadurch meldete der Adapter trotz sichtbarer Markierung 'noSelection'. 0.5.32 ersetzt ausschließlich diesen Tabellen-/Löschbereich durch eine echte Admin-Komponente. Sie lädt die Historie direkt vom Adapter, verwaltet die Markierungen lokal und sendet die ausgewählten Zeilen als echtes JavaScript-Objekt an den bereits atomaren Lösch-Handler aus 0.5.31. Der Löschen-Button ist ohne Auswahl deaktiviert, zeigt die Anzahl markierter Punkte, fragt vor dem Löschen nach und lädt danach Tabelle sowie Auswertung neu. Mindestens ein Kalibrierpunkt bleibt erhalten. Updates bleiben manuell.",
+  "notes": "Fix für die in 0.5.32 leere Kalibrierhistorie: Die neue Admin-Komponente war vorhanden, wurde aber mit einem unvollständigen Namen registriert. Der ioBroker-JSON-Config-Loader erwartet zwingend das Format RemoteName/Modul/Komponente. 0.5.33 verwendet nun PoolCalibrationUI/Components/PoolCalibrationHistoryEditor und passt damit exakt zum bereitgestellten Module-Federation-Container. Die Kalibrierdaten waren zu keinem Zeitpunkt gelöscht; ausschließlich die Darstellung wurde nicht geladen. Backend, feste Kalibrierung und atomare Löschlogik bleiben unverändert. Updates bleiben manuell.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
