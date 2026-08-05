@@ -166,42 +166,105 @@
       "lg": 12,
       "items": [
         {
+          "attr": "nr",
+          "type": "number",
+          "title": "Zeile",
+          "width": "65px",
+          "readOnly": true
+        },
+        {
           "attr": "date",
           "type": "text",
           "title": "Datum / Uhrzeit",
-          "width": "175px"
+          "width": "175px",
+          "readOnly": true
         },
         {
           "attr": "raw",
           "type": "text",
           "title": "PH803W roh",
-          "width": "105px"
+          "width": "105px",
+          "readOnly": true
         },
         {
           "attr": "ref",
           "type": "text",
           "title": "PoolLab",
-          "width": "95px"
+          "width": "95px",
+          "readOnly": true
         },
         {
           "attr": "delta",
           "type": "text",
           "title": "Korrektur",
-          "width": "105px"
+          "width": "105px",
+          "readOnly": true
         },
         {
           "attr": "distance",
           "type": "text",
           "title": "Abstand Median",
-          "width": "120px"
+          "width": "120px",
+          "readOnly": true
         },
         {
           "attr": "status",
           "type": "text",
           "title": "Bewertung",
-          "width": "165px"
+          "width": "165px",
+          "readOnly": true
         }
       ]
+    },
+    "_calDeleteHeader": {
+      "type": "header",
+      "text": "Einzelnen Messpunkt löschen",
+      "size": 2,
+      "newLine": true,
+      "sm": 12
+    },
+    "_calDeleteInfo": {
+      "type": "staticText",
+      "text": "Trage die Zeilennummer aus der Tabelle ein. Die Tabelle ist nach Datum absteigend sortiert: Zeile 1 ist der neueste Messpunkt. Nach dem Löschen werden Median, Streuung und Empfehlung automatisch neu berechnet. Wird der aktuell festgelegte Punkt gelöscht, hebt der Adapter diese Festlegung vorher sicher auf.",
+      "newLine": true,
+      "sm": 12
+    },
+    "_calDeleteRow": {
+      "type": "number",
+      "label": "Zu löschende Zeile",
+      "min": 1,
+      "step": 1,
+      "newLine": true,
+      "sm": 12,
+      "md": 4,
+      "lg": 4
+    },
+    "_calDeleteRowButton": {
+      "type": "sendTo",
+      "label": "Ausgewählten Kalibrierpunkt löschen",
+      "command": "phCalibrationAdminDeleteRow",
+      "jsonData": "{\"row\": ${data._calDeleteRow}}",
+      "variant": "contained",
+      "icon": "warning",
+      "showProcess": true,
+      "timeout": 15000,
+      "reloadBrowser": true,
+      "result": {
+        "deleted": {
+          "de": "Der ausgewählte Kalibrierpunkt wurde gelöscht.",
+          "en": "The selected calibration point has been deleted."
+        }
+      },
+      "error": {
+        "error": {
+          "de": "Der Kalibrierpunkt konnte nicht gelöscht werden.",
+          "en": "The calibration point could not be deleted."
+        }
+      },
+      "newLine": false,
+      "sm": 12,
+      "md": 8,
+      "lg": 8
     }
   }
 }
