@@ -117,37 +117,42 @@
                 [socket, instance]
             );
 
-            const updateParentData = React.useCallback(
-                native => {
-                    if (!native || typeof native !== 'object') return;
-                    const nextData = Object.assign({}, (props && props.data) || {}, native);
-                    try {
-                        if (props && typeof props.onChange === 'function') {
-                            props.onChange(nextData, undefined, undefined, false);
-                        }
-                    } catch {
-                        try {
-                            props.onChange(nextData);
-                        } catch {
-                            // ignore
-                        }
+            const propsRef = React.useRef(props);
+            const contextRef = React.useRef(context);
+            propsRef.current = props;
+            contextRef.current = context;
+
+            const syncParentData = native => {
+                if (!native || typeof native !== 'object') return;
+                const currentProps = propsRef.current || {};
+                const currentContext = contextRef.current || {};
+                const nextData = Object.assign({}, currentProps.data || {}, native);
+                try {
+                    if (typeof currentProps.onChange === 'function') {
+                        currentProps.onChange(nextData, undefined, undefined, false);
                     }
+                } catch {
                     try {
-                        if (context && typeof context.forceUpdate === 'function') {
-                            context.forceUpdate(Object.keys(native), nextData);
-                        }
+                        currentProps.onChange(nextData);
                     } catch {
                         // ignore
                     }
-                },
-                [props, context]
-            );
+                }
+                try {
+                    if (typeof currentContext.forceUpdate === 'function') {
+                        currentContext.forceUpdate(Object.keys(native), nextData);
+                    }
+                } catch {
+                    // ignore
+                }
+            };
 
             const loadRows = React.useCallback(
-                async preserveNotice => {
+                async options => {
+                    const opts = options || {};
                     setLoading(true);
                     setError('');
-                    if (!preserveNotice) setNotice('');
+                    if (!opts.preserveNotice) setNotice('');
                     try {
                         const response = await sendTo('phCalibrationAdminLoad', {});
                         if (!response) throw new Error('Der Adapter hat keine Antwort geliefert.');
@@ -156,18 +161,18 @@
                         const nextRows = Array.isArray(native._calHistory) ? native._calHistory : [];
                         setRows(nextRows);
                         setSelected({});
-                        updateParentData(native);
+                        if (opts.syncParent) syncParentData(native);
                     } catch (e) {
                         setError(e && e.message ? e.message : String(e));
                     } finally {
                         setLoading(false);
                     }
                 },
-                [sendTo, updateParentData]
+                [sendTo]
             );
 
             React.useEffect(() => {
-                loadRows(false);
+                loadRows({ preserveNotice: false, syncParent: false });
             }, [loadRows]);
 
             const selectedCount = rows.reduce((count, row) => count + (selected[String(row.nr)] ? 1 : 0), 0);
@@ -205,7 +210,7 @@
                     if (!response) throw new Error('Der Adapter hat keine Antwort geliefert.');
                     if (response.error) throw new Error(response.message || String(response.error));
                     setNotice(response.message || `${selectedCount} Kalibrierpunkt${selectedCount === 1 ? '' : 'e'} gelöscht.`);
-                    await loadRows(true);
+                    await loadRows({ preserveNotice: true, syncParent: true });
                 } catch (e) {
                     setError(e && e.message ? e.message : String(e));
                     setLoading(false);
@@ -287,7 +292,7 @@
                     ),
                     React.createElement(
                         'button',
-                        { type: 'button', style: secondaryButtonStyle, disabled: loading, onClick: () => loadRows(false) },
+                        { type: 'button', style: secondaryButtonStyle, disabled: loading, onClick: () => loadRows({ preserveNotice: false, syncParent: true }) },
                         loading ? 'Lädt …' : 'Aktualisieren'
                     )
                 ),
