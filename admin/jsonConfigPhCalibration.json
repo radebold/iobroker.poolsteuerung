@@ -158,7 +158,7 @@
     },
     "_calHistoryManager": {
       "type": "custom",
-      "name": "PoolCalibrationHistoryEditor",
+      "name": "PoolCalibrationUI/Components/PoolCalibrationHistoryEditor",
       "url": "custom/phCalibrationTable.js",
       "newLine": true,
       "sm": 12,
