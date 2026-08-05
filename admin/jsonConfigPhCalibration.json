@@ -179,6 +179,13 @@
           "default": false
         },
         {
+          "attr": "nr",
+          "type": "number",
+          "title": "Nr.",
+          "width": "58px",
+          "readOnly": true
+        },
+        {
           "attr": "date",
           "type": "text",
           "title": "Datum / Uhrzeit",
