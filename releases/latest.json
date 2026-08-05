@@ -1,8 +1,8 @@
 {
-  "version": "0.5.30",
+  "version": "0.5.31",
   "published": "2026-08-05",
   "channel": "stable",
-  "notes": "Komfortableres Löschen der pH-Kalibrierhistorie: Jede Tabellenzeile besitzt jetzt am Zeilenanfang eine Auswahl-Checkbox. Über den gemeinsamen Button 'Löschen' können ein oder mehrere markierte Messpunkte nach Sicherheitsabfrage entfernt werden. Die Auswahl wird von unten nach oben verarbeitet, damit die Zuordnung auch bei Mehrfachauswahl stabil bleibt. Median, MAD, Empfehlung und automatischer aktiver Kalibrierpunkt werden anschließend wie bisher neu berechnet. Wird ein festgelegter Punkt entfernt, hebt die bestehende Sicherheitslogik die Festlegung kontrolliert auf. Mindestens ein Kalibrierpunkt muss erhalten bleiben. Updates bleiben manuell.",
+  "notes": "Fix für das Löschen markierter pH-Kalibrierpunkte: 0.5.30 löschte Mehrfachauswahlen über verschachtelte interne sendTo-Aufrufe, wodurch der Vorgang mit einer allgemeinen Fehlermeldung abbrechen konnte. 0.5.31 verarbeitet die komplette Auswahl nun in einer einzigen atomaren Operation, schreibt die Kalibrierhistorie nur einmal zurück und aktualisiert aktiven Punkt, korrigierten pH-Wert, Median, MAD und Empfehlung konsistent. Der aktuell festgelegte Punkt wird vor dem Löschen kontrolliert aufgehoben, falls er markiert ist. Mindestens ein Kalibrierpunkt bleibt erhalten. Konkrete Fehler werden zusätzlich mit Log-Level error protokolliert. Updates bleiben manuell.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
