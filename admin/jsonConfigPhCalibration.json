@@ -156,6 +156,12 @@
       "newLine": true,
       "sm": 12
     },
+    "_calHistoryInfo": {
+      "type": "staticText",
+      "text": "Markiere am Zeilenanfang einen oder mehrere Messpunkte und klicke anschließend auf Löschen. Danach werden Median, Streuung und Empfehlung automatisch neu berechnet. Mindestens ein Kalibrierpunkt bleibt immer erhalten.",
+      "newLine": true,
+      "sm": 12
+    },
     "_calHistory": {
       "type": "table",
       "label": "PoolLab-Messungen",
@@ -166,11 +172,11 @@
       "lg": 12,
       "items": [
         {
-          "attr": "nr",
-          "type": "number",
-          "title": "Zeile",
-          "width": "65px",
-          "readOnly": true
+          "attr": "selected",
+          "type": "checkbox",
+          "title": "Löschen",
+          "width": "78px",
+          "default": false
         },
         {
           "attr": "date",
@@ -216,55 +222,40 @@
         }
       ]
     },
-    "_calDeleteHeader": {
-      "type": "header",
-      "text": "Einzelnen Messpunkt löschen",
-      "size": 2,
-      "newLine": true,
-      "sm": 12
-    },
-    "_calDeleteInfo": {
-      "type": "staticText",
-      "text": "Trage die Zeilennummer aus der Tabelle ein. Die Tabelle ist nach Datum absteigend sortiert: Zeile 1 ist der neueste Messpunkt. Nach dem Löschen werden Median, Streuung und Empfehlung automatisch neu berechnet. Wird der aktuell festgelegte Punkt gelöscht, hebt der Adapter diese Festlegung vorher sicher auf.",
-      "newLine": true,
-      "sm": 12
-    },
-    "_calDeleteRow": {
-      "type": "number",
-      "label": "Zu löschende Zeile",
-      "min": 1,
-      "step": 1,
-      "newLine": true,
-      "sm": 12,
-      "md": 4,
-      "lg": 4
-    },
-    "_calDeleteRowButton": {
+    "_calDeleteSelected": {
       "type": "sendTo",
-      "label": "Ausgewählten Kalibrierpunkt löschen",
-      "command": "phCalibrationAdminDeleteRow",
-      "jsonData": "{\"row\": ${data._calDeleteRow}}",
+      "label": "Löschen",
+      "command": "phCalibrationAdminDeleteSelected",
+      "jsonData": "{\"rows\": ${data._calHistory}}",
       "variant": "contained",
       "icon": "warning",
       "showProcess": true,
       "timeout": 15000,
       "reloadBrowser": true,
+      "confirm": {
+        "condition": "true",
+        "title": "Markierte Kalibrierpunkte löschen?",
+        "text": "Alle in der ersten Spalte markierten Messpunkte werden dauerhaft aus der Kalibrierhistorie entfernt.",
+        "ok": "Löschen",
+        "cancel": "Abbrechen",
+        "type": "warning"
+      },
       "result": {
         "deleted": {
-          "de": "Der ausgewählte Kalibrierpunkt wurde gelöscht.",
-          "en": "The selected calibration point has been deleted."
+          "de": "Die markierten Kalibrierpunkte wurden gelöscht.",
+          "en": "The selected calibration points have been deleted."
         }
       },
       "error": {
         "error": {
-          "de": "Der Kalibrierpunkt konnte nicht gelöscht werden.",
-          "en": "The calibration point could not be deleted."
+          "de": "Die markierten Kalibrierpunkte konnten nicht gelöscht werden.",
+          "en": "The selected calibration points could not be deleted."
         }
       },
-      "newLine": false,
+      "newLine": true,
       "sm": 12,
-      "md": 8,
-      "lg": 8
+      "md": 4,
+      "lg": 4
     }
   }
 }
