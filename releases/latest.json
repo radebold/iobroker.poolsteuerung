@@ -1,8 +1,8 @@
 {
-  "version": "0.5.26",
-  "published": "2026-08-04",
+  "version": "0.5.27",
+  "published": "2026-08-05",
   "channel": "stable",
-  "notes": "Debug-Objekt-Fix: Alle regelmäßig beschriebenen status.debug.*-States, insbesondere status.debug.lastChlorDecision, werden jetzt vor dem ersten Schreibzugriff angelegt und zusätzlich fest als instanceObjects definiert. Dadurch verschwinden die js-controller-Warnungen 'State ... has no existing object'. Chlorinator-Hardguard, VIS-Lauftext und konfigurierbare pH-Minus-Tara bleiben unverändert erhalten; Updates bleiben manuell.",
+  "notes": "Robuste pH-Kalibrierung: Neuer Admin-Reiter 'pH-Kalibrierung' mit lesbarer Historientabelle, Median-Offset, MAD-Streuung, Empfehlung und aktiv festgelegtem Kalibrierpunkt. Die Empfehlung wählt den real vorhandenen historischen Messpunkt, dessen Delta dem Median aller gültigen PoolLab-Differenzen am nächsten liegt. Per Button kann dieser Punkt bis auf weiteres festgelegt werden; neue PoolLab-Messungen erweitern danach nur die Historie und ändern den aktiven Offset nicht automatisch. Eine zweite Aktion hebt die Festlegung wieder auf. Der korrigierte PH803-Ausgang verwendet bei aktiver Festlegung den fixierten Offset. Erfordert für den neuen Admin-Tab ioBroker Admin >= 7.6.x. Updates bleiben manuell.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
