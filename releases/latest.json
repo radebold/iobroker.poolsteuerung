@@ -1,8 +1,8 @@
 {
-  "version": "0.5.29",
+  "version": "0.5.30",
   "published": "2026-08-05",
   "channel": "stable",
-  "notes": "Einzelne pH-Kalibrierpunkte können jetzt direkt im Reiter PH-KALIBRIERUNG gelöscht werden. Jede Tabellenzeile erhält eine sichtbare Zeilennummer. Nach Eingabe der Nummer löscht der Adapter genau diesen historischen Messpunkt, berechnet Median, MAD und Empfehlung neu und aktualisiert den automatischen aktiven Punkt. Wird der aktuell festgelegte Punkt gelöscht, hebt der Adapter die Festlegung vorher kontrolliert auf. Der letzte verbliebene Kalibrierpunkt ist aus Sicherheitsgründen nicht löschbar. Updates bleiben manuell.",
+  "notes": "Komfortableres Löschen der pH-Kalibrierhistorie: Jede Tabellenzeile besitzt jetzt am Zeilenanfang eine Auswahl-Checkbox. Über den gemeinsamen Button 'Löschen' können ein oder mehrere markierte Messpunkte nach Sicherheitsabfrage entfernt werden. Die Auswahl wird von unten nach oben verarbeitet, damit die Zuordnung auch bei Mehrfachauswahl stabil bleibt. Median, MAD, Empfehlung und automatischer aktiver Kalibrierpunkt werden anschließend wie bisher neu berechnet. Wird ein festgelegter Punkt entfernt, hebt die bestehende Sicherheitslogik die Festlegung kontrolliert auf. Mindestens ein Kalibrierpunkt muss erhalten bleiben. Updates bleiben manuell.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
