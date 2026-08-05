@@ -1,0 +1,211 @@
+{
+  "command": "phCalibrationTab",
+  "items": {
+    "_header": {
+      "type": "header",
+      "text": "pH-Kalibrierung – robuste Auswertung",
+      "size": 2,
+      "newLine": true,
+      "sm": 12
+    },
+    "_intro": {
+      "type": "staticText",
+      "text": "Die Empfehlung wird robust aus der gesamten PoolLab-Historie ermittelt: Zuerst wird der Median aller gültigen PH803W↔PoolLab-Differenzen berechnet. Danach wird der tatsächlich vorhandene Messpunkt gewählt, dessen Delta diesem Median am nächsten liegt. Ein festgelegter Punkt bleibt aktiv, bis du ihn bewusst neu ermittelst oder die Festlegung aufhebst. Neue PoolLab-Messungen erweitern nur die Historie.",
+      "newLine": true,
+      "sm": 12
+    },
+    "mode": {
+      "type": "text",
+      "readOnly": true,
+      "label": "Aktueller Kalibriermodus",
+      "newLine": true,
+      "sm": 12,
+      "md": 6,
+      "lg": 6
+    },
+    "measurementCount": {
+      "type": "text",
+      "readOnly": true,
+      "label": "Gültige Messpunkte",
+      "newLine": false,
+      "sm": 12,
+      "md": 2,
+      "lg": 2
+    },
+    "medianDelta": {
+      "type": "text",
+      "readOnly": true,
+      "label": "Median Offset",
+      "newLine": false,
+      "sm": 12,
+      "md": 2,
+      "lg": 2
+    },
+    "mad": {
+      "type": "text",
+      "readOnly": true,
+      "label": "Streuung (MAD)",
+      "newLine": false,
+      "sm": 12,
+      "md": 2,
+      "lg": 2,
+      "help": "MAD = Median Absolute Deviation. Kleine Werte bedeuten, dass die Kalibrierdifferenzen dicht beieinander liegen."
+    },
+    "recommended": {
+      "type": "text",
+      "readOnly": true,
+      "label": "Aktuell empfohlener Kalibrierpunkt",
+      "newLine": true,
+      "sm": 12,
+      "md": 12,
+      "lg": 12
+    },
+    "fixed": {
+      "type": "text",
+      "readOnly": true,
+      "label": "Festgelegter Kalibrierpunkt",
+      "newLine": true,
+      "sm": 12,
+      "md": 12,
+      "lg": 12
+    },
+    "current": {
+      "type": "text",
+      "readOnly": true,
+      "label": "Aktuelle Berechnung",
+      "newLine": true,
+      "sm": 12,
+      "md": 12,
+      "lg": 12
+    },
+    "_actionsHeader": {
+      "type": "header",
+      "text": "Aktionen",
+      "size": 3,
+      "newLine": true,
+      "sm": 12
+    },
+    "_selectBest": {
+      "type": "sendTo",
+      "label": "Besten Kalibrierpunkt ermitteln & festlegen",
+      "command": "phCalibrationSelectBest",
+      "data": {},
+      "variant": "contained",
+      "icon": "search",
+      "showProcess": true,
+      "timeout": 15000,
+      "reloadBrowser": true,
+      "result": {
+        "ok": {
+          "de": "Kalibrierpunkt wurde festgelegt.",
+          "en": "Calibration point has been fixed."
+        }
+      },
+      "error": {
+        "error": {
+          "de": "Kalibrierpunkt konnte nicht festgelegt werden.",
+          "en": "Calibration point could not be fixed."
+        }
+      },
+      "newLine": true,
+      "sm": 12,
+      "md": 6,
+      "lg": 6
+    },
+    "_clearFixed": {
+      "type": "sendTo",
+      "label": "Festlegung aufheben",
+      "command": "phCalibrationClearFixed",
+      "data": {},
+      "variant": "outlined",
+      "icon": "warning",
+      "showProcess": true,
+      "timeout": 15000,
+      "reloadBrowser": true,
+      "confirm": {
+        "condition": "true",
+        "title": "Feste Kalibrierung aufheben?",
+        "text": "Danach verwendet der Adapter wieder automatisch den jeweils neuesten PoolLab-Kalibrierpunkt.",
+        "ok": "Aufheben",
+        "cancel": "Abbrechen",
+        "type": "warning"
+      },
+      "result": {
+        "cleared": {
+          "de": "Feste Kalibrierung wurde aufgehoben.",
+          "en": "Fixed calibration has been cleared."
+        }
+      },
+      "error": {
+        "error": {
+          "de": "Festlegung konnte nicht aufgehoben werden.",
+          "en": "Fixed calibration could not be cleared."
+        }
+      },
+      "newLine": false,
+      "sm": 12,
+      "md": 6,
+      "lg": 6
+    },
+    "_tableHeader": {
+      "type": "header",
+      "text": "Kalibrierhistorie",
+      "size": 3,
+      "newLine": true,
+      "sm": 12
+    },
+    "history": {
+      "type": "table",
+      "label": "PoolLab-Messungen",
+      "readOnly": true,
+      "newLine": true,
+      "sm": 12,
+      "md": 12,
+      "lg": 12,
+      "items": [
+        {
+          "attr": "date",
+          "type": "text",
+          "title": "Datum / Uhrzeit",
+          "width": "190px",
+          "readOnly": true
+        },
+        {
+          "attr": "raw",
+          "type": "text",
+          "title": "PH803W roh",
+          "width": "110px",
+          "readOnly": true
+        },
+        {
+          "attr": "ref",
+          "type": "text",
+          "title": "PoolLab",
+          "width": "100px",
+          "readOnly": true
+        },
+        {
+          "attr": "delta",
+          "type": "text",
+          "title": "Korrektur",
+          "width": "110px",
+          "readOnly": true
+        },
+        {
+          "attr": "distance",
+          "type": "text",
+          "title": "Abstand Median",
+          "width": "120px",
+          "readOnly": true
+        },
+        {
+          "attr": "status",
+          "type": "text",
+          "title": "Bewertung",
+          "width": "170px",
+          "readOnly": true
+        }
+      ]
+    }
+  }
+}
