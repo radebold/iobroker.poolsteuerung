@@ -1,8 +1,8 @@
 {
-  "version": "0.5.28",
+  "version": "0.5.29",
   "published": "2026-08-05",
   "channel": "stable",
-  "notes": "pH-Kalibrierung jetzt direkt in den normalen Instanzeinstellungen: Der zuvor als separater Admin-Tab registrierte Bereich erschien dort nicht. 0.5.28 bindet deshalb einen echten Reiter 'PH-KALIBRIERUNG' zwischen PH und WÄRMEPUMPE ein. Die Daten werden beim Öffnen dynamisch per sendTo/useNative geladen und nicht in native gespeichert. Angezeigt werden Historientabelle, Median-Offset, MAD-Streuung, empfohlener und festgelegter Punkt sowie die aktuelle pH-Berechnung. Die Buttons 'Besten Kalibrierpunkt ermitteln & festlegen' und 'Festlegung aufheben' arbeiten weiterhin mit der robusten 0.5.27-Logik. Der alte separate adminTab-Eintrag wurde entfernt. Updates bleiben manuell.",
+  "notes": "Einzelne pH-Kalibrierpunkte können jetzt direkt im Reiter PH-KALIBRIERUNG gelöscht werden. Jede Tabellenzeile erhält eine sichtbare Zeilennummer. Nach Eingabe der Nummer löscht der Adapter genau diesen historischen Messpunkt, berechnet Median, MAD und Empfehlung neu und aktualisiert den automatischen aktiven Punkt. Wird der aktuell festgelegte Punkt gelöscht, hebt der Adapter die Festlegung vorher kontrolliert auf. Der letzte verbliebene Kalibrierpunkt ist aus Sicherheitsgründen nicht löschbar. Updates bleiben manuell.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
