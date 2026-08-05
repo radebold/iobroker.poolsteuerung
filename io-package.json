@@ -2,13 +2,20 @@
   "common": {
     "name": "poolsteuerung",
     "title": "Poolsteuerung",
-    "version": "0.5.26",
+    "version": "0.5.27",
     "icon": "poolsteuerung.png",
     "mode": "daemon",
     "type": "hardware",
     "materialize": true,
     "materializeTab": true,
+    "messagebox": true,
     "adminUI": { "config": "json" },
+    "adminTab": {
+      "link": "jsonTabCalibration.json",
+      "name": "pH-Kalibrierung",
+      "singleton": false,
+      "order": 80
+    },
     "installedFrom": "radebold/iobroker.poolsteuerung#v0.3.41"
   },
   "native": {
@@ -127,6 +134,78 @@
       "_id": "control.ph.calibration.ipadMiniEditing",
       "type": "state",
       "common": { "name": "iPad Mini PoolLab-Eingabe geöffnet", "type": "boolean", "role": "indicator", "read": true, "write": true, "def": false },
+      "native": {}
+    },
+    {
+      "_id": "control.ph.calibration.selectBestTrigger",
+      "type": "state",
+      "common": { "name": "Besten Kalibrierpunkt ermitteln und festlegen", "type": "boolean", "role": "button", "read": true, "write": true, "def": false },
+      "native": {}
+    },
+    {
+      "_id": "control.ph.calibration.clearFixedTrigger",
+      "type": "state",
+      "common": { "name": "Feste Kalibrierung aufheben", "type": "boolean", "role": "button", "read": true, "write": true, "def": false },
+      "native": {}
+    },
+    {
+      "_id": "status.phCalibration.fixedEnabled",
+      "type": "state",
+      "common": { "name": "Fester robuster Kalibrierpunkt aktiv", "type": "boolean", "role": "indicator", "read": true, "write": false, "def": false },
+      "native": {}
+    },
+    {
+      "_id": "status.phCalibration.fixedOffset",
+      "type": "state",
+      "common": { "name": "Festgelegter pH-Offset", "type": "number", "role": "value", "read": true, "write": false, "unit": "pH", "def": 0 },
+      "native": {}
+    },
+    {
+      "_id": "status.phCalibration.fixedPointJson",
+      "type": "state",
+      "common": { "name": "Festgelegter Kalibrierpunkt", "type": "string", "role": "json", "read": true, "write": false, "def": "{}" },
+      "native": {}
+    },
+    {
+      "_id": "status.phCalibration.fixedSince",
+      "type": "state",
+      "common": { "name": "Kalibrierpunkt festgelegt am", "type": "number", "role": "value.time", "read": true, "write": false, "def": 0 },
+      "native": {}
+    },
+    {
+      "_id": "status.phCalibration.robustMedianDelta",
+      "type": "state",
+      "common": { "name": "Robuster Median der Kalibrierdifferenzen", "type": "number", "role": "value", "read": true, "write": false, "unit": "pH", "def": 0 },
+      "native": {}
+    },
+    {
+      "_id": "status.phCalibration.robustMad",
+      "type": "state",
+      "common": { "name": "Median absolute deviation der Kalibrierdifferenzen", "type": "number", "role": "value", "read": true, "write": false, "unit": "pH", "def": 0 },
+      "native": {}
+    },
+    {
+      "_id": "status.phCalibration.recommendedPointJson",
+      "type": "state",
+      "common": { "name": "Empfohlener Kalibrierpunkt", "type": "string", "role": "json", "read": true, "write": false, "def": "{}" },
+      "native": {}
+    },
+    {
+      "_id": "status.phCalibration.effectiveMode",
+      "type": "state",
+      "common": { "name": "Effektiver pH-Kalibriermodus", "type": "string", "role": "text", "read": true, "write": false, "def": "latest-offset" },
+      "native": {}
+    },
+    {
+      "_id": "status.phCalibration.effectiveCorrected",
+      "type": "state",
+      "common": { "name": "Effektiv korrigierter pH-Wert", "type": "number", "role": "value.ph", "read": true, "write": false, "unit": "pH" },
+      "native": {}
+    },
+    {
+      "_id": "status.phCalibration.analysisSummary",
+      "type": "state",
+      "common": { "name": "Zusammenfassung Kalibrierauswertung", "type": "string", "role": "text", "read": true, "write": false, "def": "" },
       "native": {}
     },
     {
@@ -250,5 +329,5 @@
       "native": {}
     }
   ],
-  "version": "0.5.26"
+  "version": "0.5.27"
 }
