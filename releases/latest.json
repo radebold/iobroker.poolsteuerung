@@ -1,8 +1,8 @@
 {
-  "version": "0.5.33",
+  "version": "0.5.34",
   "published": "2026-08-05",
   "channel": "stable",
-  "notes": "Fix für die in 0.5.32 leere Kalibrierhistorie: Die neue Admin-Komponente war vorhanden, wurde aber mit einem unvollständigen Namen registriert. Der ioBroker-JSON-Config-Loader erwartet zwingend das Format RemoteName/Modul/Komponente. 0.5.33 verwendet nun PoolCalibrationUI/Components/PoolCalibrationHistoryEditor und passt damit exakt zum bereitgestellten Module-Federation-Container. Die Kalibrierdaten waren zu keinem Zeitpunkt gelöscht; ausschließlich die Darstellung wurde nicht geladen. Backend, feste Kalibrierung und atomare Löschlogik bleiben unverändert. Updates bleiben manuell.",
+  "notes": "Sicherheitsfix für falsche pH-Anzeigen und pH-Verlaufswerte: Der Basis-Renderer verwendete die frei konfigurierte phStateId, während der PH803W-Rohwert separat angezeigt wurde. Dadurch konnten ein falscher State – erkennbar an 1,99 bei gleichzeitigem PH803W-Rohwert 7,52 – und der echte Sensorwert in derselben pH-Kachel erscheinen. 0.5.34 führt einen autoritativen pH-Pfad ein: PH803W-Rohwert plus aktiver fester Kalibrieroffset wird nach value_korr geschrieben und ausschließlich dieser Wert wird für Regelung und alle VIS verwendet. Alte parallele Kalibrier-Caches werden auf denselben Wert synchronisiert. Unplausible pH-Verlaufspunkte außerhalb 5,5 bis 9,5 werden aus den lokalen VIS-Verläufen entfernt. Die bestehende Konfiguration wird nicht nach system.adapter.* zurückgeschrieben und löst daher keinen Neustart aus. Updates bleiben manuell.",
   "install": {
     "type": "iobroker-url",
     "repository": "radebold/iobroker.poolsteuerung#main",
