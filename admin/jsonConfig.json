@@ -338,7 +338,7 @@
         "phPumpHeartbeatMaxAgeMin": {"type": "number", "label": "Max. Alter Heartbeat (Minuten)", "newLine": true, "help": "Wenn der Heartbeat älter ist als dieser Wert, wird die pH-Dosierpumpe als veraltet markiert. 0 = keine Prüfung."},
         "phControlHeader": {"type": "header", "text": "Regelung", "size": 2},
         "phSetpoint": {"type": "text", "label": "pH Sollwert", "newLine": true, "sm": 12, "md": 6, "lg": 6},
-        "phCheckTimes": {"type": "text", "label": "pH Prüfzeiten", "newLine": false, "sm": 12, "md": 6, "lg": 6, "help": "z. B. 11:00,15:00. Nur zu diesen Zeiten wird pH bewertet."},
+        "phCheckIntervalMin": {"type": "number", "label": "pH Prüfintervall (Minuten)", "newLine": false, "sm": 12, "md": 6, "lg": 6, "min": 5, "step": 5, "help": "pH wird in diesem Abstand nur innerhalb der aktiven Umwälzpumpen-Zeitfenster geprüft. Standard: 30 Minuten."},
         "phDoseTolerance": {"type": "text", "label": "pH Toleranz über Soll", "newLine": true, "sm": 12, "md": 6, "lg": 6, "help": "Dezimalwerte erlaubt, z. B. 0.05 oder 0,05."},
         "phDoseMode": {
           "type": "select", "label": "Modus PH-Dosierung", "newLine": false, "sm": 12, "md": 6, "lg": 6,
