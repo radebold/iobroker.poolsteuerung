@@ -4,7 +4,9 @@
 // Statt 48 festen Uhrzeiten ueber den ganzen Tag werden nur Pruefzeiten innerhalb
 // der HEUTE aktiven Pumpenfenster erzeugt. Beispiel 10:30-17:00 bei 30 min:
 // 10:30,11:00,...,17:00. Sollwert und restliche Dosierlogik bleiben unveraendert.
-const createBase = require('./main-ipadmini-final-539.js');
+// WICHTIG: direkt auf 0.5.38 aufbauen; 0.5.39 wird bewusst uebersprungen,
+// weil dort vor jedem Regelzyklus erneut 00:00..23:30 gesetzt wurde.
+const createBase = require('./main-ipadmini-final-538.js');
 
 const VERSION = 'v0.5.40';
 const DEFAULT_INTERVAL_MIN = 30;
@@ -35,7 +37,7 @@ function minToHhmm(total) {
 }
 
 function todayKey() {
-  const day = new Date().getDay(); // 0=So ... 6=Sa
+  const day = new Date().getDay();
   return ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][day];
 }
 
@@ -67,7 +69,6 @@ function collectTodayWindows(cfg) {
 
   if (windows.length) return windows;
 
-  // Fallback fuer alte Konfigurationen ohne pumpSchedules.
   for (const pair of [
     ['pumpWindow1Start', 'pumpWindow1End'],
     ['pumpWindow2Start', 'pumpWindow2End']
@@ -87,7 +88,6 @@ function addWindowTimes(target, window, intervalMin) {
     return;
   }
 
-  // Fenster ueber Mitternacht.
   for (let t = window.start; t < 1440; t += step) target.add(minToHhmm(t));
   for (let t = 0; t <= window.end; t += step) target.add(minToHhmm(t));
 }
@@ -107,8 +107,6 @@ function install(adapter) {
   if (!adapter || adapter.__phInterval540Installed) return adapter;
   adapter.__phInterval540Installed = true;
 
-  // 0.5.39 erzeugt 00:00..23:30. Diese Schicht ersetzt das vor jedem relevanten
-  // Schritt wieder durch die aus Pumpenfenstern abgeleitete Liste.
   function applyEffectiveConfig() {
     if (!adapter.config) return { interval: DEFAULT_INTERVAL_MIN, times: [] };
     const effective = buildEffectiveTimes(adapter.config);
@@ -149,8 +147,6 @@ function install(adapter) {
     };
   }
 
-  // Vor VIS-Build ebenfalls dieselben effektiven Zeiten setzen, damit Anzeige,
-  // "naechste Schaltung" und Regelung nicht auseinanderlaufen.
   for (const name of ['buildTabletHtml', 'buildTabletWidget', 'buildPhoneHtml', 'buildPhoneWidget']) {
     if (typeof adapter[name] !== 'function') continue;
     const original = adapter[name].bind(adapter);
