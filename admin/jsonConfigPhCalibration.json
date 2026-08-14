@@ -2,6 +2,31 @@
   "type": "panel",
   "label": "PH-KALIBRIERUNG",
   "items": {
+    "_nightResetHeader": {
+      "type": "header",
+      "text": "Nächtlicher Automatik-Reset",
+      "size": 2,
+      "newLine": true,
+      "sm": 12
+    },
+    "nightlyAutoResetTime": {
+      "type": "text",
+      "label": "Uhrzeit Nacht-Reset (HH:MM)",
+      "newLine": true,
+      "sm": 12,
+      "md": 4,
+      "lg": 4,
+      "placeholder": "22:00",
+      "help": "Zur eingestellten Uhrzeit werden bei aktiviertem VIS-Flag zuerst alle vier Poolgeräte ausgeschaltet und danach die vier Automatikschalter wieder aktiviert. Bei aktivem Standby wird der Vorgang komplett übersprungen."
+    },
+    "_nightResetInfo": {
+      "type": "staticText",
+      "text": "Aktiviert/deaktiviert wird der Nacht-Reset über den Flag-Schalter in den Pool-VIS. Standardzeit: 22:00 Uhr.",
+      "newLine": false,
+      "sm": 12,
+      "md": 8,
+      "lg": 8
+    },
     "_calLoad": {
       "type": "sendTo",
       "label": "Auswertung aktualisieren",
@@ -114,7 +139,7 @@
       "error": {
         "error": {
           "de": "Der Kalibrierpunkt konnte nicht festgelegt werden.",
-          "en": "The calibration point could not be fixed."
+          "en": "The recommended calibration point could not be fixed."
         }
       },
       "newLine": true,
