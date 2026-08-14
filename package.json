@@ -3,6 +3,6 @@
   "version": "0.5.50",
   "main": "build/main-ipadmini-final-550.js",
   "scripts": {
-    "postinstall": "node scripts/patch-objects-549.js"
+    "postinstall": "node scripts/patch-objects-550.js"
   }
 }
