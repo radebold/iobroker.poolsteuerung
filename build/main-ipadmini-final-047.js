@@ -89,8 +89,13 @@ function install(adapter) {
       for (const id of VIS_STATES) await patchState(adapter, id);
       const ipad = await adapter.getStateAsync('vis.htmlIpadMini');
       const html = String((ipad && ipad.val) || '');
-      if (!html.includes('data-dose="60"') || !html.includes('onclick="') || html.includes('<script data-ipad-final="1">')) {
-        throw new Error('iPad-Dosierhandler wurde nicht vollständig erzeugt');
+
+      // 0.4.47 only validates the legacy iPad page it was built for.
+      // Current VIS generations use different event wiring and must not be
+      // treated as a failed legacy doser handler.
+      const isLegacyIpad047 = html.includes('data-ipad-final="1"') && html.includes('data-dose="60"');
+      if (isLegacyIpad047 && (!html.includes('onclick="') || html.includes('<script data-ipad-final="1">'))) {
+        throw new Error('Legacy-iPad-Dosierhandler 0.4.47 wurde nicht vollständig erzeugt');
       }
     } catch (error) {
       if (!adapter.isDbClosedError(error) && adapter.log && typeof adapter.log.warn === 'function') {
