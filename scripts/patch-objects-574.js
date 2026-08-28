@@ -1,0 +1,12 @@
+'use strict';
+const fs=require('fs');
+const path=require('path');
+const root=path.resolve(__dirname,'..');
+require('./patch-objects-572.js');
+const ioFile=path.join(root,'io-package.json');
+const io=JSON.parse(fs.readFileSync(ioFile,'utf8'));
+io.version='0.5.74';
+io.common=io.common||{};
+io.common.version='0.5.74';
+fs.writeFileSync(ioFile,JSON.stringify(io,null,2)+'\n');
+console.log('[0.5.74] Zentraler VIS-Versionsbesitzer aktiv: finaler setStateAsync-Guard verhindert Rueckspruenge auf 0.5.41/0.5.51/etc.');
