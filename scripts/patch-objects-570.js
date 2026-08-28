@@ -1,0 +1,12 @@
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const root = path.resolve(__dirname, '..');
+require('./patch-objects-569.js');
+const ioFile = path.join(root, 'io-package.json');
+const io = JSON.parse(fs.readFileSync(ioFile, 'utf8'));
+io.version = '0.5.70';
+io.common = io.common || {};
+io.common.version = '0.5.70';
+fs.writeFileSync(ioFile, JSON.stringify(io, null, 2) + '\n');
+console.log('[0.5.70] Finaler Phone-VIS-Writer aktiv: Legacy-v0.5.51-Overwrite umgangen; 24h-Temperatur direkt aus History');
