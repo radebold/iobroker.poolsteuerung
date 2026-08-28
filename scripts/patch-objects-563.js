@@ -1,0 +1,12 @@
+'use strict';
+const fs=require('fs');
+const path=require('path');
+const root=path.resolve(__dirname,'..');
+require('./patch-objects-562.js');
+const ioFile=path.join(root,'io-package.json');
+const io=JSON.parse(fs.readFileSync(ioFile,'utf8'));
+io.version='0.5.63';
+io.common=io.common||{};
+io.common.version='0.5.63';
+fs.writeFileSync(ioFile,JSON.stringify(io,null,2)+'\n');
+console.log('[0.5.63] Phone-VIS nur textlich verdichtet; Abmessungen unveraendert; io-package auf 0.5.63 gesetzt');
