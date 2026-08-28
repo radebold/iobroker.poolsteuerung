@@ -1,0 +1,12 @@
+'use strict';
+const fs=require('fs');
+const path=require('path');
+const root=path.resolve(__dirname,'..');
+require('./patch-objects-565.js');
+const file=path.join(root,'io-package.json');
+const io=JSON.parse(fs.readFileSync(file,'utf8'));
+io.version='0.5.66';
+io.common=io.common||{};
+io.common.version='0.5.66';
+fs.writeFileSync(file,JSON.stringify(io,null,2)+'\n');
+console.log('[0.5.66] Sichtbaren VIS-State direkt gepatcht: PH-Info rechts + 24h-Pooltemperaturkurve; Groesse unveraendert');
