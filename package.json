@@ -1,8 +1,8 @@
 {
   "name": "iobroker.poolsteuerung",
-  "version": "0.5.64",
-  "main": "build/main-ipadmini-final-564.js",
+  "version": "0.5.65",
+  "main": "build/main-ipadmini-final-565.js",
   "scripts": {
-    "postinstall": "node scripts/patch-objects-564.js"
+    "postinstall": "node scripts/patch-objects-565.js"
   }
 }
