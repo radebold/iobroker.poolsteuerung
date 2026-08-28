@@ -1,0 +1,12 @@
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const root = path.resolve(__dirname, '..');
+require('./patch-objects-568.js');
+const ioFile = path.join(root, 'io-package.json');
+const io = JSON.parse(fs.readFileSync(ioFile, 'utf8'));
+io.version = '0.5.69';
+io.common = io.common || {};
+io.common.version = '0.5.69';
+fs.writeFileSync(ioFile, JSON.stringify(io, null, 2) + '\n');
+console.log('[0.5.69] Phone 24h-Pooltemperaturkurve aus gespeicherten History-States; nur vis.htmlPhone/vis.widgetPhone');
