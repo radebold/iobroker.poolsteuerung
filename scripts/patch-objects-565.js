@@ -1,0 +1,12 @@
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const root = path.resolve(__dirname, '..');
+require('./patch-objects-564.js');
+const ioFile = path.join(root, 'io-package.json');
+const io = JSON.parse(fs.readFileSync(ioFile, 'utf8'));
+io.version = '0.5.65';
+io.common = io.common || {};
+io.common.version = '0.5.65';
+fs.writeFileSync(ioFile, JSON.stringify(io, null, 2) + '\n');
+console.log('[0.5.65] Phone-State nach Render gepatcht: PH-Info rechts, 24h-Pooltemperaturkurve in bestehender Zeile, Groesse unveraendert');
