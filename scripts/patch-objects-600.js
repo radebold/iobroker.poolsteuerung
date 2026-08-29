@@ -1,0 +1,12 @@
+'use strict';
+const fs=require('fs');
+const path=require('path');
+const root=path.resolve(__dirname,'..');
+require('./patch-objects-573.js');
+const ioFile=path.join(root,'io-package.json');
+const io=JSON.parse(fs.readFileSync(ioFile,'utf8'));
+io.version='0.6.0';
+io.common=io.common||{};
+io.common.version='0.6.0';
+fs.writeFileSync(ioFile,JSON.stringify(io,null,2)+'\n');
+console.log('[0.6.0] Single VIS Owner: genau ein renderVisFull besitzt html/widget Tablet, Phone und iPad Mini. Legacy-VIS-Schreibversuche werden blockiert.');
