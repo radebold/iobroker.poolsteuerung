@@ -1,0 +1,12 @@
+'use strict';
+const fs=require('fs');
+const path=require('path');
+const root=path.resolve(__dirname,'..');
+require('./patch-objects-573.js');
+const ioFile=path.join(root,'io-package.json');
+const io=JSON.parse(fs.readFileSync(ioFile,'utf8'));
+io.version='0.5.76';
+io.common=io.common||{};
+io.common.version='0.5.76';
+fs.writeFileSync(ioFile,JSON.stringify(io,null,2)+'\n');
+console.log('[0.5.76] Einheitlicher VIS-Versionsbesitzer + 24h-Pooltemperaturkurve; keine 0.5.74/0.5.75-Nachschreibkette.');
