@@ -1,14 +1,15 @@
 'use strict';
 
 /*
- * 0.6.0 architecture candidate – NOT the package entry point yet.
+ * 0.6.0 – consolidated VIS architecture.
  *
- * Goal: one runtime owner for the VIS states.  All legacy wrappers may keep
- * their control/safety logic, but their builder/render/state post-processing
- * is bypassed here.  This file is deliberately staged before package.json is
- * switched to it.
+ * There is exactly one runtime owner for all five VIS states. The historical
+ * wrapper chain is still loaded for control/safety behaviour, but its VIS
+ * builders, render wrappers and delayed post-writes are bypassed here.
  */
+const { AsyncLocalStorage } = require('async_hooks');
 const createLegacyRuntime = require('./main-ipadmini-final-573.js');
+const { buildIpadMini } = require('./vis-ipad-builder-600.js');
 
 const VERSION = 'v0.6.0';
 const VIS_IDS = new Set([
@@ -17,12 +18,6 @@ const VIS_IDS = new Set([
   'vis.htmlPhone',
   'vis.widgetPhone',
   'vis.htmlIpadMini'
-]);
-const MAIN_VIS_IDS = new Set([
-  'vis.htmlTablet',
-  'vis.widgetTablet',
-  'vis.htmlPhone',
-  'vis.widgetPhone'
 ]);
 
 function localId(adapter, id) {
@@ -56,14 +51,14 @@ function patchPhoneGeneratedHtml(adapter, htmlValue, data) {
   let html = String(htmlValue || '');
   if (!html) return html;
 
-  // Version belongs to the generator input, not to post-write regex guards.
-  // This fallback only catches a hard-coded legacy literal inside old base HTML.
+  // The normal path gets VERSION through adapterVersion. This only removes the
+  // one hard-coded base fallback literal if it appears in generated HTML.
   html = html.replace(/v0\.4\.1\b/g, VERSION);
 
-  // PH-Info is generated directly in the temperature header – never moved after write.
+  // Generate PH-Info at the desired position inside the builder output.
   const labelMatch = html.match(/<label\b[^>]*class="[^"]*\bph-wa-flag\b[^"]*"[^>]*>[\s\S]*?<\/label>/i);
   if (labelMatch) {
-    let label = labelMatch[0]
+    const label = labelMatch[0]
       .replace(/<span>[\s\S]*?<\/span>/i, '<span>PH-Info</span>')
       .replace(/^<label\b[^>]*>/i, tag => addClass(tag, 'ph-info-single-owner'));
     html = html.replace(/\s*<label\b[^>]*class="[^"]*\bph-wa-flag\b[^"]*"[^>]*>[\s\S]*?<\/label>/gi, '');
@@ -83,30 +78,28 @@ function patchPhoneGeneratedHtml(adapter, htmlValue, data) {
     }
   }
 
-  // 24h pool-temperature curve is part of the generated phone markup.  It is
-  // placed inside the existing temperature row so page/card dimensions do not grow.
+  // 24h pool temperature is generated from the render data that main.js has
+  // already obtained. No second history fetch and no post-write HTML injection.
   const svg = String((data && data.poolTempSparklineSvg) || '').trim();
-  if (svg.includes('<svg')) {
+  if (svg.includes('<svg') && !html.includes('phone-temp-24h-single')) {
     const curve = `<div class="phone-temp-24h-single" aria-label="Pooltemperatur 24 Stunden">${svg}</div>`;
-    if (!html.includes('phone-temp-24h-single')) {
-      let inserted = false;
-      html = html.replace(/(<div class="temp-row[^>]*>[\s\S]*?)(<\/div>\s*<div class="scale">)/i, (_m, row, tail) => {
+    let inserted = false;
+    html = html.replace(/(<div class="temp-row[^>]*>[\s\S]*?)(<\/div>\s*<div class="scale">)/i, (_m, row, tail) => {
+      if (inserted) return _m;
+      inserted = true;
+      return `${row}${curve}</div>${tail.slice(6)}`;
+    });
+    if (!inserted) {
+      html = html.replace(/(<div class="ps-tempRow[^>]*>[\s\S]*?)(<\/div>\s*<div class="ps-scale">)/i, (_m, row, tail) => {
         if (inserted) return _m;
         inserted = true;
         return `${row}${curve}</div>${tail.slice(6)}`;
       });
-      if (!inserted) {
-        html = html.replace(/(<div class="ps-tempRow[^>]*>[\s\S]*?)(<\/div>\s*<div class="ps-scale">)/i, (_m, row, tail) => {
-          if (inserted) return _m;
-          inserted = true;
-          return `${row}${curve}</div>${tail.slice(6)}`;
-        });
-      }
     }
   }
 
-  // Keep the compact information that was previously supplied by 0.5.63,
-  // but generate it here from render data instead of parsing another VIS state.
+  // Compact pH information is produced from the same render model instead of
+  // parsing Tablet HTML or rewriting a VIS state after render.
   const interval = Math.max(5, Number(adapter.config && adapter.config.phCheckIntervalMin) || 30);
   if (data) {
     const last = data.phLastDoseTime && data.phLastDoseTime !== '-'
@@ -152,20 +145,22 @@ function install(adapter) {
 
   const rawSetStateAsync = adapter.setStateAsync.bind(adapter);
   const previousSetStateIfChanged = adapter.setStateIfChanged.bind(adapter);
-  let writeScope = null;
+  const ownerContext = new AsyncLocalStorage();
   let blockedLegacyWrites = 0;
   let lastBlocked = '';
   let canonicalData = null;
 
-  function allowed(local) {
-    return !!writeScope && writeScope.has(local);
+  function isCanonicalWrite() {
+    const store = ownerContext.getStore();
+    return !!store && store.owner === 'single-vis-0.6.0';
   }
 
-  // Hard state ownership boundary.  Old ready timers / render wrappers can still
-  // execute their business code, but they cannot mutate a VIS state anymore.
+  // Hard ownership boundary. AsyncLocalStorage is important here: a legacy
+  // timeout firing while a canonical render awaits I/O is still outside the
+  // canonical async context and therefore remains blocked.
   adapter.setStateAsync = async function singleVisStateOwner(id, value, ack, ...rest) {
     const local = localId(adapter, id);
-    if (VIS_IDS.has(local) && !allowed(local)) {
+    if (VIS_IDS.has(local) && !isCanonicalWrite()) {
       blockedLegacyWrites += 1;
       lastBlocked = `${local} · ${new Date().toISOString()}`;
       return { id: String(id), notChanged: true, blockedBy: 'single-vis-owner-0.6.0' };
@@ -175,7 +170,7 @@ function install(adapter) {
 
   adapter.setStateIfChanged = async function singleVisStateIfChanged(id, value, ack = true, ...rest) {
     const local = localId(adapter, id);
-    if (VIS_IDS.has(local) && !allowed(local)) {
+    if (VIS_IDS.has(local) && !isCanonicalWrite()) {
       blockedLegacyWrites += 1;
       lastBlocked = `${local} · ${new Date().toISOString()}`;
       return false;
@@ -183,6 +178,9 @@ function install(adapter) {
     return previousSetStateIfChanged(id, value, ack, ...rest);
   };
 
+  // These four functions are the only active HTML/widget builders for the main
+  // dashboard. They call the untouched Poolsteuerung prototype directly, not a
+  // wrapper from the historical chain.
   adapter.buildTabletHtml = function buildTabletHtmlSingle(data) {
     canonicalData = { ...(data || {}), adapterVersion: VERSION, namespace: adapter.namespace };
     return String(baseBuilders.buildTabletHtml.call(adapter, canonicalData));
@@ -199,36 +197,39 @@ function install(adapter) {
     return patchPhoneGeneratedHtml(adapter, baseBuilders.buildPhoneWidget.call(adapter, next), next);
   };
 
+  // The sole VIS render owner. main.js creates the four regular views and this
+  // same transaction creates iPad Mini from the exact same render model.
   adapter.renderVisFull = async function renderVisFullSingle(force = false) {
     if (adapter.__singleVis600RenderActive) return;
     adapter.__singleVis600RenderActive = true;
-    writeScope = MAIN_VIS_IDS;
     try {
-      const result = await baseRenderVisFull.call(adapter, force);
+      return await ownerContext.run({ owner: 'single-vis-0.6.0' }, async () => {
+        const result = await baseRenderVisFull.call(adapter, force);
+        if (!canonicalData) throw new Error('[VIS 0.6.0] render data was not captured');
 
-      // iPad-Mini is intentionally NOT delegated to the historical renderer.
-      // Until the canonical iPad builder is moved into this module, keep the
-      // existing state untouched.  This staging file is therefore not activated
-      // through package.json yet.
-      await adapter.setObjectNotExistsAsync('status.debug.singleVisOwner600', {
-        type: 'state',
-        common: { name: 'Single VIS owner 0.6.0', type: 'string', role: 'text', read: true, write: false, def: '' },
-        native: {}
+        const ipadHtml = await buildIpadMini(adapter, canonicalData);
+        await rawSetStateAsync('vis.htmlIpadMini', ipadHtml, true);
+
+        await adapter.setObjectNotExistsAsync('status.debug.singleVisOwner600', {
+          type: 'state',
+          common: { name: 'Single VIS owner 0.6.0', type: 'string', role: 'text', read: true, write: false, def: '' },
+          native: {}
+        });
+        await rawSetStateAsync(
+          'status.debug.singleVisOwner600',
+          `AKTIV · 1 renderVisFull · 5 VIS-States · legacy VIS writes blocked ${blockedLegacyWrites}x` +
+            `${lastBlocked ? ` · last ${lastBlocked}` : ''}`,
+          true
+        );
+        return result;
       });
-      await rawSetStateAsync(
-        'status.debug.singleVisOwner600',
-        `STAGING · canonical Phone/Tablet generator active in module · legacy writes blocked ${blockedLegacyWrites}x` +
-          `${lastBlocked ? ` · last ${lastBlocked}` : ''}` +
-          `${canonicalData ? ' · render data captured' : ' · no render data'}`,
-        true
-      );
-      return result;
     } finally {
-      writeScope = null;
       adapter.__singleVis600RenderActive = false;
     }
   };
 
+  // forceImmediateRender from the original class ultimately calls this.renderVis,
+  // which now reaches the single render owner above.
   if (baseForceImmediateRender) {
     adapter.forceImmediateRender = function forceImmediateRenderSingle(...args) {
       return baseForceImmediateRender.apply(adapter, args);
