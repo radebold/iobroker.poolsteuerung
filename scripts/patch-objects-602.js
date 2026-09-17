@@ -1,0 +1,12 @@
+'use strict';
+const fs=require('fs');
+const path=require('path');
+const root=path.resolve(__dirname,'..');
+require('./patch-objects-600.js');
+const ioFile=path.join(root,'io-package.json');
+const io=JSON.parse(fs.readFileSync(ioFile,'utf8'));
+io.version='0.6.2';
+io.common=io.common||{};
+io.common.version='0.6.2';
+fs.writeFileSync(ioFile,JSON.stringify(io,null,2)+'\n');
+console.log('[0.6.2] Standby per VIS deaktivierbar; Umwälzpumpe im Standby manuell EIN/AUS; Single VIS Owner unverändert.');
